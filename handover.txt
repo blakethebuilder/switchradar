@@ -1,0 +1,46 @@
+# SwitchRadar Handover Documentation
+
+## 🚀 Project Overview
+SwitchRadar is a modernized lead intelligence platform designed for visual market analysis. It allows teams to import large datasets (JSON, XLSX, CSV), map them to a unified format, and visualize them on a high-performance interactive map with provider-specific branding.
+
+## 🛠 Tech Stack
+- **Frontend**: React 18 + Vite
+- **Styling**: Tailwind 4 (Modern Syntax)
+- **Database**: IndexedDB (via Dexie.js for persistence)
+- **Mapping**: Leaflet + React-Leaflet + MarkerCluster
+- **Parsing**: SheetJS (XLSX)
+
+## ✨ Key Features
+1. **Visual Lead Intelligence**: Full-screen map view with diamond markers and advanced clustering.
+2. **Branded Markers**: Custom icons for major providers (MTN, Telkom, Vodacom, VOX, etc.) with specific brand colors.
+3. **Smart Import**:
+   - Column-guessing algorithm.
+   - Automatic Latitude/Longitude derivation from Google Maps Links.
+   - Robust XLSX/JSON support.
+4. **Data Persistence**: All imported leads stay in the browser (IndexedDB) until explicitly cleared.
+5. **Dynamic Filtering**: Instant search and network layer toggles that sync between Map and Table views.
+
+## 🎨 Brand Color Mappings
+- **MTN**: Yellow (#EFCC00)
+- **Telkom**: Blue (#005FB8)
+- **Vodacom**: Red (#E60000)
+- **TELKMOBL**: Turquoise (#40E0D0)
+- **VOX**: Lime Green (#32CD32)
+- **HEROGNP**: Orange (#FF8C00)
+- **BACKSPACE**: Dark Blue (#00008B)
+
+## ⚡ Performance Optimizations
+- **Memoization**: Core filtering and map calculations are memoized to handle 2000+ leads without re-render lag.
+- **Marker Clustering**: Automatically groups leads when zoomed out and scatters them (radius 40) for granular view.
+- **IndexedDB**: Fast data access without hitting a backend.
+
+## 📂 Project Structure
+- `/src/components`: UI components (Table, Map, Modals, Nav).
+- `/src/db.ts`: IndexedDB schema and setup.
+- `/src/utils`: Data processors, color logic, and coordinate extraction.
+- `/src/types`: TypeScript interfaces for the Business lead model.
+
+## 🔮 Future Recommendations
+- **Mobile optimization**: The map is full-width, but some overlays might need smaller padding on mobile.
+- **Advanced Export**: Add PDF reporting or custom CSV templates.
+- **Scraper Integration**: Direct API link for upcoming scraping tools.
