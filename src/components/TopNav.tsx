@@ -16,7 +16,6 @@ interface TopNavProps {
   onClearCloudData?: () => Promise<void>;
   onPushToCloud?: () => void;
   onPullFromCloud?: () => void;
-  onRouteClick?: () => void;
 }
 
 export const TopNav = ({
@@ -32,7 +31,6 @@ export const TopNav = ({
   onClearCloudData,
   onPushToCloud,
   onPullFromCloud,
-  onRouteClick
 }: TopNavProps) => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);

@@ -73,7 +73,7 @@ export const sampleData: Business[] = [
   }
 ];
 
-const getValue = (row: Record<string, any>, key?: string) => {
+const getValue = (row: Record<string, unknown>, key?: string) => {
   if (!key) {
     return undefined;
   }
@@ -105,7 +105,7 @@ const toNumber = (value: unknown) => {
   return undefined;
 };
 
-const buildCoordinates = (row: Record<string, any>, mapping: ImportMapping) => {
+const buildCoordinates = (row: Record<string, unknown>, mapping: ImportMapping) => {
   const latValue = getValue(row, mapping.lat);
   const lngValue = getValue(row, mapping.lng);
 
@@ -128,7 +128,7 @@ const buildCoordinates = (row: Record<string, any>, mapping: ImportMapping) => {
 };
 
 export const processImportedData = (
-  rows: Record<string, any>[],
+  rows: Record<string, unknown>[],
   mapping?: ImportMapping
 ): Business[] => {
   const now = Date.now();

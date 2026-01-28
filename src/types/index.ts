@@ -1,3 +1,8 @@
+export interface BusinessMetadata {
+  interest?: 'high' | 'low' | 'none' | string;
+  [key: string]: unknown; // Allow other properties
+}
+
 export interface Business {
   id: string;
   name: string;
@@ -19,7 +24,7 @@ export interface Business {
   importedAt: Date;
   source: 'manual' | 'klerksdorp' | 'scraped' | 'api';
   phoneTypeOverride?: 'landline' | 'mobile';
-  metadata: Record<string, any>;
+  metadata: BusinessMetadata;
   mapsLink?: string;
 }
 

@@ -28,7 +28,7 @@ const findCoordinatesFromUrl = (url: string) => {
   return null;
 };
 
-export const deriveCoordinates = (row: Record<string, any>, fallback: { lat: number; lng: number }) => {
+export const deriveCoordinates = (row: Record<string, unknown>, fallback: { lat: number; lng: number }) => {
   const possibleUrl = row.maps_link || row.maps_address || row.maps_url || row.google_maps_url || row.map_link;
   if (typeof possibleUrl === 'string') {
     const coords = findCoordinatesFromUrl(possibleUrl);
@@ -44,7 +44,7 @@ export const normalizeProvider = (provider: string) => {
 };
 
 export const mapRowToBusiness = (
-  row: Record<string, any>,
+  row: Record<string, unknown>,
   index: number,
   defaults: { lat: number; lng: number }
 ): Business => {

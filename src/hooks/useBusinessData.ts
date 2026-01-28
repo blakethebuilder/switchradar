@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { filterBusinesses } from '../utils/dataProcessors';
@@ -21,15 +21,6 @@ export const useBusinessData = () => {
         () => Array.from(new Set(businesses.map(b => b.provider))).filter(Boolean).sort(),
         [businesses]
     );
-
-    // Initialize visible providers only once when data is first loaded
-    const [isInitialized, setIsInitialized] = useState(false);
-    useEffect(() => {
-        if (!isInitialized && availableProviders.length > 0) {
-            setVisibleProviders(availableProviders);
-            setIsInitialized(true);
-        }
-    }, [availableProviders, isInitialized]);
 
     // Load initial data from Cloud if available
     const loadFromCloud = async (token: string | null) => {
@@ -58,8 +49,8 @@ export const useBusinessData = () => {
                     await db.route.bulkAdd(cloudRoutes);
                 }
             }
-        } catch (err) {
-            console.error('Failed to load data from cloud:', err);
+        } catch (error) {
+            console.error('Failed to load data from cloud:', error);
         }
     };
 

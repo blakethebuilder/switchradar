@@ -45,7 +45,7 @@ function App() {
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState('');
   const [lastImportName, setLastImportName] = useState('');
-  const [importRows, setImportRows] = useState<Record<string, any>[]>([]);
+  const [importRows, setImportRows] = useState<Record<string, unknown>[]>([]);
   const [importColumns, setImportColumns] = useState<string[]>([]);
   const [pendingFileName, setPendingFileName] = useState('');
   const [isFiltersVisible, setIsFiltersVisible] = useState(true);
@@ -64,7 +64,7 @@ function App() {
     if (isAuthenticated && token) {
       loadFromCloud(token);
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, token, loadFromCloud]);
 
   const providerCount = availableProviders.length;
 
@@ -81,19 +81,19 @@ function App() {
           setImportColumns(Object.keys(rows[0] || {}));
           setIsMappingOpen(true);
           setIsImportOpen(false);
-        } catch (err) {
+        } catch (error) {
           setImportError('Invalid JSON file format.');
         }
       } else {
         import('xlsx').then(XLSX => {
              const workbook = XLSX.read(data, { type: 'array' });
              const sheetName = workbook.SheetNames[0];
-             const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+             const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as Record<string, unknown>[];
              setImportRows(rows as any[]);
              setImportColumns(Object.keys(rows[0] || {}));
              setIsMappingOpen(true);
              setIsImportOpen(false);
-        }).catch(err => setImportError('Failed to load Excel parser'));
+         }).catch((_error) => setImportError('Failed to load Excel parser'));
       }
     };
     if (file.name.endsWith('.json')) reader.readAsText(file);
@@ -107,7 +107,7 @@ function App() {
     try {
       const processed = processImportedData(importRows, mapping);
       await applyNewBusinesses(processed, pendingFileName);
-    } catch (err) {
+    } catch (error) {
       setImportError('Failed to process data. Check column mappings.');
     } finally {
       setIsImporting(false);
