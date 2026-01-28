@@ -1,4 +1,4 @@
-import { Building2, Mail, Map, Trash2, Landmark, Smartphone } from 'lucide-react';
+import { Building2, Mail, Map, Trash2, Landmark, Smartphone, Route } from 'lucide-react';
 import type { Business } from '../types';
 import { ProviderBadge } from './ProviderBadge';
 import { isMobileProvider } from '../utils/phoneUtils';
@@ -8,13 +8,15 @@ interface BusinessTableProps {
   onBusinessSelect?: (business: Business) => void;
   onDelete?: (id: string) => void;
   onTogglePhoneType?: (id: string, currentType: 'landline' | 'mobile') => void;
+  onAddToRoute?: (id: string) => void;
 }
 
 export const BusinessTable: React.FC<BusinessTableProps> = ({
   businesses,
   onBusinessSelect,
   onDelete,
-  onTogglePhoneType
+  onTogglePhoneType,
+  onAddToRoute
 }) => {
   if (businesses.length === 0) {
     return (
@@ -119,6 +121,13 @@ export const BusinessTable: React.FC<BusinessTableProps> = ({
                         <Map className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={(e) => { e.stopPropagation(); onAddToRoute?.(business.id); }}
+                        className="p-2 rounded-lg text-slate-300 hover:text-green-600 hover:bg-white hover:shadow-md transition-all"
+                        title="Add to Route"
+                      >
+                        <Route className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={(e) => { e.stopPropagation(); onDelete?.(business.id); }}
                         className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-white hover:shadow-md transition-all"
                         title="Delete business"
@@ -131,6 +140,13 @@ export const BusinessTable: React.FC<BusinessTableProps> = ({
               );
             })}
           </tbody>
+          <tfoot>
+            <tr className="bg-slate-50/50 border-t border-slate-100">
+              <td colSpan={5} className="px-6 py-3 text-center text-xs font-bold text-slate-500">
+                Displaying {businesses.length} businesses
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>

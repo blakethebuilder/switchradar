@@ -23,7 +23,7 @@ export interface Business {
   mapsLink?: string;
 }
 
-export type ViewMode = 'table' | 'map' | 'stats';
+export type ViewMode = 'table' | 'map' | 'stats' | 'settings';
 
 export interface FilterState {
   searchTerm: string;

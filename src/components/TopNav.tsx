@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, Cloud, User as UserIcon, LogOut, Menu, X, CloudUpload, Route } from 'lucide-react';
+import { Database, Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, Cloud, User as UserIcon, LogOut, Menu, X, CloudUpload, Route, Settings } from 'lucide-react';
 import type { ViewMode } from '../types';
 import { useAuth } from '../context/AuthContext';
 
@@ -102,6 +102,17 @@ export const TopNav = ({
           >
             <Route className="h-4 w-4" />
             <span className="hidden md:inline">Route</span>
+          </button>
+          <button
+            onClick={() => onViewModeChange('settings')}
+            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all ${viewMode === 'settings'
+              ? 'bg-white text-indigo-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
+            title="Settings"
+          >
+            <Settings className="h-4 w-4" />
+            <span className="hidden md:inline">Settings</span>
           </button>
         </nav>
 
