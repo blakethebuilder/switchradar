@@ -21,7 +21,7 @@ export interface Business {
   metadata: Record<string, any>;
 }
 
-export type ViewMode = 'table' | 'map';
+export type ViewMode = 'table' | 'map' | 'stats';
 
 export interface FilterState {
   searchTerm: string;

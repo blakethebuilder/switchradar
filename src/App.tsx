@@ -1,12 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { FilterPanel } from './components/FilterPanel';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
+import { MarketIntelligence } from './components/MarketIntelligence';
 import { Dashboard } from './components/Dashboard';
 import { ImportModal } from './components/ImportModal';
 import { ImportMappingModal } from './components/ImportMappingModal';
 import { TopNav } from './components/TopNav';
+import { LoginModal } from './components/LoginModal';
+import { useAuth } from './context/AuthContext';
 import { ProviderBar } from './components/ProviderBar';
 import type { Business, ImportMapping, ViewMode } from './types';
 import { sampleData, filterBusinesses, processImportedData } from './utils/dataProcessors';
@@ -37,6 +40,10 @@ function App() {
   const [isFiltersVisible, setIsFiltersVisible] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [isRoutePlannerOpen, setIsRoutePlannerOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const { isAuthenticated, token } = useAuth();
 
   const currentRouteIds = useMemo(() => new Set(routeItems.map(item => item.businessId)), [routeItems]);
 
@@ -56,6 +63,83 @@ function App() {
     () => Array.from(new Set(businesses.map(b => b.provider))).filter(Boolean).sort(),
     [businesses]
   );
+
+  // Cloud Sync Effect
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+
+    const syncToCloud = async () => {
+      setIsSyncing(true);
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || '';
+
+        // Sync Leads
+        await fetch(`${API_URL}/api/leads/sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ leads: businesses }),
+        });
+
+        // Sync Routes
+        await fetch(`${API_URL}/api/route/sync`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ routeItems }),
+        });
+      } catch (err) {
+        console.error('Sync failed:', err);
+      } finally {
+        setIsSyncing(false);
+      }
+    };
+
+    const timer = setTimeout(syncToCloud, 2000); // Debounce sync
+    return () => clearTimeout(timer);
+  }, [businesses, routeItems, isAuthenticated, token]);
+
+  // Initial Load from Cloud
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+
+    const loadFromCloud = async () => {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || '';
+
+        const leadsRes = await fetch(`${API_URL}/api/leads`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (leadsRes.ok) {
+          const cloudLeads = await leadsRes.json();
+          if (cloudLeads.length > 0) {
+            await db.businesses.clear();
+            await db.businesses.bulkAdd(cloudLeads);
+          }
+        }
+
+        const routeRes = await fetch(`${API_URL}/api/route`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (routeRes.ok) {
+          const cloudRoutes = await routeRes.json();
+          if (cloudRoutes.length > 0) {
+            await db.route.clear();
+            await db.route.bulkAdd(cloudRoutes);
+          }
+        }
+      } catch (err) {
+        console.error('Load failed:', err);
+      }
+    };
+
+    loadFromCloud();
+  }, [isAuthenticated, token]);
+
   const providerCount = availableProviders.length;
   const townCount = towns.length;
 
@@ -235,6 +319,8 @@ function App() {
         onClearData={handleClearData}
         totalCount={businesses.length}
         lastImportName={lastImportName}
+        onLoginClick={() => setIsLoginOpen(true)}
+        isSyncing={isSyncing}
       />
 
       <main className={`flex-grow flex flex-col ${viewMode === 'map' ? 'p-0' : 'max-w-[1600px] mx-auto w-full px-6 py-10 lg:px-12'}`}>
@@ -354,7 +440,7 @@ function App() {
                     setViewMode('map');
                   }}
                 />
-              ) : (
+              ) : viewMode === 'map' ? (
                 <div className="h-full w-full flex overflow-hidden">
                   <div className="flex-grow h-full relative">
                     <BusinessMap
@@ -396,6 +482,8 @@ function App() {
                     />
                   </div>
                 </div>
+              ) : (
+                <MarketIntelligence businesses={filteredBusinesses} />
               )}
             </div>
           </div>
@@ -427,6 +515,10 @@ function App() {
         initialMapping={{}}
         onConfirm={handleConfirmMapping}
         onBack={handleBackToImport}
+      />
+      <LoginModal
+        isOpen={isLoginOpen}
+        onClose={() => setIsLoginOpen(false)}
       />
     </div>
   );

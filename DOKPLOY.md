@@ -39,5 +39,11 @@ This guide outlines how to deploy SwitchRadar to your Dokploy VPS.
 - **Port**: 80
 - **SPA Routing**: Handled via `nginx.conf` (redirects all non-file requests to `index.html`).
 
+## ☁️ Cloud Sync & Auth
+SwitchRadar now includes a Node.js backend with SQLite for cloud synchronization.
+- **Persistence**: Data loaded while logged in is synced to your VPS and available across devices.
+- **Setup**: No extra steps needed; Dokploy will build the full stack automatically.
+- **Database**: The SQLite file is stored in `/app/data/switchradar.db` within the container. (For permanent storage, map a volume to `/app/data`).
+
 ## 🔄 Updating the App
 Simply push your changes to your GitHub `main` branch. If you have "Auto Deploy" enabled in Dokploy, it will rebuild and redeploy automatically.

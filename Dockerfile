@@ -1,25 +1,43 @@
-# Build stage
-FROM node:20-alpine as build
-
+# Build Stage
+FROM node:20-alpine AS build
 WORKDIR /app
-
-# Install dependencies
 COPY package*.json ./
 RUN npm install
-
-# Copy source and build
 COPY . .
 RUN npm run build
 
-# Production stage
-FROM nginx:stable-alpine
+# Production Stage
+FROM node:20-alpine
+WORKDIR /app
 
-# Copy built assets from build stage
+# Install Nginx
+RUN apk add --no-cache nginx
+
+# Copy frontend build
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx config for SPA routing
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copy Nginx config
+COPY nginx.conf /etc/nginx/http.d/default.conf
 
+# Copy backend files
+COPY server ./server
+COPY package*.json ./
+RUN npm install --omit=dev
+
+# Install server specific dependencies
+WORKDIR /app/server
+RUN npm install
+
+WORKDIR /app
+
+# Create data directory for SQLite
+RUN mkdir -p data
+
+# Expose port 80
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+# Start script
+COPY start.sh .
+RUN chmod +x start.sh
+
+CMD ["./start.sh"]
