@@ -224,6 +224,50 @@ function App() {
     setIsImportOpen(true);
   };
 
+  // --- Authentication Gate ---
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-50">
+        <div className="flex min-h-screen flex-col items-center justify-center px-4">
+          <div className="w-full max-w-md">
+            {/* Logo and Branding */}
+            <div className="text-center mb-8">
+              <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-indigo-600 flex items-center justify-center shadow-2xl shadow-indigo-200">
+                <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h1 className="text-4xl font-black text-slate-900 mb-2">
+                Switch<span className="text-indigo-600">Radar</span>
+              </h1>
+              <p className="text-sm font-semibold text-slate-400">Powered by Smart Integrate</p>
+              <p className="text-xs text-slate-500 mt-4 max-w-sm mx-auto">
+                Lead Intelligence & Route Planning Platform
+              </p>
+            </div>
+
+            {/* Login Card */}
+            <div className="glass-card rounded-3xl shadow-2xl border border-slate-100 p-8">
+              <h2 className="text-xl font-black text-slate-900 mb-6 text-center">Sign In to Continue</h2>
+              <LoginModal
+                isOpen={true}
+                onClose={() => { }}
+              />
+            </div>
+
+            {/* Footer */}
+            <div className="mt-8 text-center">
+              <p className="text-xs text-slate-400">
+                Secure cloud-synced workspace for your business intelligence
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Main Authenticated App ---
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
       <TopNav
