@@ -49,36 +49,39 @@ export const TopNav = ({
         </div>
 
         <div className="flex items-center gap-3 md:gap-6">
-          <nav className="hidden items-center gap-1 rounded-2xl bg-slate-100 p-1 md:flex shadow-inner">
+          <nav className="flex items-center gap-1 rounded-2xl bg-slate-100 p-1 shadow-inner">
             <button
               onClick={() => onViewModeChange('table')}
-              className={`flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold transition-all ${viewMode === 'table'
+              className={`flex items-center gap-2 rounded-xl px-3 md:px-5 py-2 text-sm font-bold transition-all ${viewMode === 'table'
                 ? 'bg-white text-indigo-600 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
                 }`}
+              title="Table View"
             >
               <Table className="h-4 w-4" />
-              Table
+              <span className="hidden md:inline">Table</span>
             </button>
             <button
               onClick={() => onViewModeChange('map')}
-              className={`flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold transition-all ${viewMode === 'map'
+              className={`flex items-center gap-2 rounded-xl px-3 md:px-5 py-2 text-sm font-bold transition-all ${viewMode === 'map'
                 ? 'bg-white text-indigo-600 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
                 }`}
+              title="Map View"
             >
               <Map className="h-4 w-4" />
-              Map
+              <span className="hidden md:inline">Map</span>
             </button>
             <button
               onClick={() => onViewModeChange('stats')}
-              className={`flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold transition-all ${viewMode === 'stats'
+              className={`flex items-center gap-2 rounded-xl px-3 md:px-5 py-2 text-sm font-bold transition-all ${viewMode === 'stats'
                 ? 'bg-white text-indigo-600 shadow-sm'
                 : 'text-slate-500 hover:text-slate-700'
                 }`}
+              title="Intelligence View"
             >
               <BarChart3 className="h-4 w-4" />
-              Intelligence
+              <span className="hidden md:inline">Intelligence</span>
             </button>
           </nav>
 
