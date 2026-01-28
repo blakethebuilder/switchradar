@@ -28,7 +28,9 @@ export const TopNav = ({
   lastImportName,
   onLoginClick,
   isSyncing,
-  onClearCloudData
+  onClearCloudData,
+  onPushToCloud,
+  onRouteClick
 }: TopNavProps) => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);

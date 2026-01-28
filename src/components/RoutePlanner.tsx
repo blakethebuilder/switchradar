@@ -13,6 +13,7 @@ interface RoutePlannerProps {
     onSelectBusiness: (business: Business | null) => void;
     onClose: () => void;
     onTogglePhoneType?: (id: string, currentType: 'landline' | 'mobile') => void;
+    onUpdateBusiness?: (id: string, updates: Partial<Business>) => void;
 }
 
 export const RoutePlanner: React.FC<RoutePlannerProps> = ({
