@@ -71,7 +71,11 @@ function App() {
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
 
   const { isAuthenticated, token } = useAuth();
-  const { isSyncing, clearCloudData } = useCloudSync(businesses, routeItems, isAuthenticated, token);
+  const { isSyncing, clearCloudData, pushToCloud } = useCloudSync(businesses, routeItems, isAuthenticated, token);
+
+  const handleUpdateBusiness = async (id: string, updates: Partial<Business>) => {
+    await db.businesses.update(id, updates);
+  };
 
 
   // Initial Load from Cloud
@@ -269,31 +273,41 @@ function App() {
 
   // --- Main Authenticated App ---
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
-      <TopNav
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onImportClick={openImportModal}
-        onExportClick={handleExport}
-        onClearData={handleClearAll}
-        totalCount={businesses.length}
-        lastImportName={lastImportName}
-        isSyncing={isSyncing}
-        onLoginClick={() => setIsLoginOpen(true)}
-        onClearCloudData={clearCloudData}
-      />
-
-      <main className={`${viewMode === 'map' ? 'h-[calc(100vh-80px)] w-full relative' : 'container mx-auto px-4 md:px-6 pt-20 md:pt-24 pb-12 relative'}`}>
-        {businesses.length > 0 ? (
-          <div className={`flex flex-col ${viewMode === 'map' ? 'h-full' : 'gap-10'}`}>
-            {/* Header Section - Only for Table/Stats */}
-            {(viewMode === 'table' || viewMode === 'stats') && (
-              <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between animate-in fade-in slide-in-from-top-4 duration-700">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Database Active</span>
-                  </div>
+<div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 flex">
+      <main className="flex-1 flex flex-col">
+        <TopNav
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onImportClick={openImportModal}
+          onExportClick={handleExport}
+          onClearData={handleClearAll}
+          totalCount={businesses.length}
+          lastImportName={lastImportName}
+          isSyncing={isSyncing}
+          onLoginClick={() => setIsLoginOpen(true)}
+          onClearCloudData={clearCloudData}
+          onPushToCloud={pushToCloud}
+          onRouteClick={() => setIsRoutePlannerOpen(!isRoutePlannerOpen)}
+        />
+        {/* The rest of your main content */}
+      </main>
+      
+      {/* Route Planner Sidebar */}
+      <div className={`transition-all duration-500 ${isRoutePlannerOpen ? 'w-96' : 'w-0'} bg-white shadow-2xl border-l border-slate-100 flex-shrink-0`}>
+        <RoutePlanner
+          routeItems={routeItems}
+          businesses={businesses}
+          selectedBusiness={selectedBusiness}
+          onAddToRoute={handleAddToRoute}
+          onRemoveFromRoute={handleRemoveFromRoute}
+          onClearRoute={handleClearRoute}
+          onSelectBusiness={setSelectedBusiness}
+          onClose={() => setIsRoutePlannerOpen(false)}
+          onTogglePhoneType={handleTogglePhoneType}
+          onUpdateBusiness={handleUpdateBusiness}
+        />
+      </div>
+    </div>
                   <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
                     {lastImportName || 'Workspace Live'}
                   </h1>
@@ -469,6 +483,7 @@ function App() {
                         onSelectBusiness={setSelectedBusiness}
                         onClose={() => setIsRoutePlannerOpen(false)}
                         onTogglePhoneType={handleTogglePhoneType}
+                        onUpdateBusiness={handleUpdateBusiness}
                       />
                     </div>
                   </div>
@@ -511,6 +526,7 @@ function App() {
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
+        onLoginSuccess={() => loadFromCloud(token)}
       />
     </div>
   );

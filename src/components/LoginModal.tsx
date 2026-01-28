@@ -5,11 +5,12 @@ import { useAuth } from '../context/AuthContext';
 interface LoginModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onLoginSuccess: () => void;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 
-export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
     const { login } = useAuth();
     const [isRegister, setIsRegister] = useState(false);
     const [username, setUsername] = useState('');
@@ -44,6 +45,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                 setError('Account created! Please login.');
             } else {
                 login(data.token, { id: data.userId, username: data.username });
+                onLoginSuccess();
                 onClose();
             }
         } catch (err: any) {

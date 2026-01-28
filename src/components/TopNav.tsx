@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, Cloud, User as UserIcon, LogOut, Menu, X } from 'lucide-react';
+import { Database, Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, Cloud, User as UserIcon, LogOut, Menu, X, CloudUpload, Route } from 'lucide-react';
 import type { ViewMode } from '../types';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,6 +14,8 @@ interface TopNavProps {
   onLoginClick: () => void;
   isSyncing?: boolean;
   onClearCloudData?: () => Promise<void>;
+  onPushToCloud?: () => void;
+  onRouteClick?: () => void;
 }
 
 export const TopNav = ({
@@ -30,6 +32,7 @@ export const TopNav = ({
 }: TopNavProps) => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-white/80 backdrop-blur-md">
@@ -79,7 +82,7 @@ export const TopNav = ({
             <Map className="h-4 w-4" />
             <span className="hidden md:inline">Map</span>
           </button>
-          <button
+<button
             onClick={() => onViewModeChange('stats')}
             className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all ${viewMode === 'stats'
               ? 'bg-white text-indigo-600 shadow-sm'
@@ -90,6 +93,14 @@ export const TopNav = ({
             <BarChart3 className="h-4 w-4" />
             <span className="hidden md:inline">Intel</span>
           </button>
+          <button
+            onClick={onRouteClick}
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-500 hover:text-slate-700"
+            title="Route Planner"
+          >
+            <Route className="h-4 w-4" />
+            <span className="hidden md:inline">Route</span>
+          </button>
         </nav>
 
         {/* Right: Desktop Actions */}
@@ -98,41 +109,54 @@ export const TopNav = ({
 
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
-              <div className="flex items-center gap-4">
-                {isSyncing && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600 animate-pulse">
-                    <Cloud className="h-3.5 w-3.5" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Syncing</span>
-                  </div>
-                )}
-                <div className="h-8 w-px bg-slate-200" />
-                <div className="flex items-center gap-3 pl-2 group relative">
+              <div className="relative">
+                <button
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                  className="flex items-center gap-3 pl-2 group"
+                >
                   <div className="flex flex-col items-end">
                     <span className="text-xs font-black text-slate-900 leading-none">{user?.username}</span>
                     <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-0.5">Cloud Connected</span>
                   </div>
-
-                  <div className="flex items-center gap-1">
+                  <UserIcon className="h-8 w-8 p-1.5 rounded-full bg-slate-100 text-slate-500" />
+                </button>
+                {isUserMenuOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-10 animate-in fade-in zoom-in-95">
+                    {isSyncing && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 mb-2">
+                        <Cloud className="h-3.5 w-3.5 animate-pulse" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Syncing...</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => { onPushToCloud?.(); setIsUserMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors text-sm font-bold"
+                    >
+                      <CloudUpload className="h-4 w-4" />
+                      <span>Push to Cloud</span>
+                    </button>
+                    <div className="h-px bg-slate-100 my-1" />
                     <button
                       onClick={async () => {
                         if (window.confirm('WARNING: This will wipe all data from your Cloud Workspace. Local data will remain. Continue?')) {
                           await onClearCloudData?.();
                         }
+                        setIsUserMenuOpen(false);
                       }}
-                      className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all shadow-sm border border-slate-100"
-                      title="Clear Cloud Data"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors text-sm font-bold"
                     >
                       <Trash2 className="h-4 w-4" />
+                      <span>Clear Cloud Data</span>
                     </button>
                     <button
-                      onClick={() => logout()}
-                      className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all shadow-sm border border-slate-100"
-                      title="Sign Out"
+                      onClick={() => { logout(); setIsUserMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors text-sm font-bold"
                     >
                       <LogOut className="h-4 w-4" />
+                      <span>Sign Out</span>
                     </button>
                   </div>
-                </div>
+                )}
               </div>
             ) : (
               <button
