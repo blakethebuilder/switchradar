@@ -47,3 +47,10 @@ export type ImportFieldKey =
   | 'mapsLink';
 
 export type ImportMapping = Partial<Record<ImportFieldKey, string>>;
+
+export interface RouteItem {
+  id?: number;
+  businessId: string;
+  order: number;
+  addedAt: Date;
+}

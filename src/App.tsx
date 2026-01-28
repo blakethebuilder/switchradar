@@ -11,7 +11,8 @@ import { ProviderBar } from './components/ProviderBar';
 import type { Business, ImportMapping, ViewMode } from './types';
 import { sampleData, filterBusinesses, processImportedData } from './utils/dataProcessors';
 import './App.css';
-import { Database, Network, MapPin as MapPinIcon, ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Database, Network, MapPin as MapPinIcon, ChevronDown, ChevronUp, SlidersHorizontal, Route } from 'lucide-react';
+import { RoutePlanner } from './components/RoutePlanner';
 
 import { db } from './db';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -20,6 +21,7 @@ const defaultMapCenter: [number, number] = [-26.8521, 26.6667];
 
 function App() {
   const businesses = useLiveQuery(() => db.businesses.toArray()) || [];
+  const routeItems = useLiveQuery(() => db.route.orderBy('order').toArray()) || [];
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTown, setSelectedTown] = useState('');
@@ -34,6 +36,9 @@ function App() {
   const [pendingFileName, setPendingFileName] = useState('');
   const [isFiltersVisible, setIsFiltersVisible] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const [isRoutePlannerOpen, setIsRoutePlannerOpen] = useState(false);
+
+  const currentRouteIds = useMemo(() => new Set(routeItems.map(item => item.businessId)), [routeItems]);
 
   const filteredBusinesses = useMemo(() => {
     return filterBusinesses(businesses, {
@@ -187,6 +192,26 @@ function App() {
     setLastImportName('');
   };
 
+  const handleAddToRoute = async (businessId: string) => {
+    const existing = await db.route.where('businessId').equals(businessId).first();
+    if (!existing) {
+      const maxOrder = await db.route.count();
+      await db.route.add({
+        businessId,
+        order: maxOrder,
+        addedAt: new Date()
+      });
+    }
+  };
+
+  const handleRemoveFromRoute = async (businessId: string) => {
+    await db.route.where('businessId').equals(businessId).delete();
+  };
+
+  const handleClearRoute = async () => {
+    await db.route.clear();
+  };
+
   const mapCenter = useMemo(() => {
     if (selectedBusiness) {
       return [selectedBusiness.coordinates.lat, selectedBusiness.coordinates.lng] as [number, number];
@@ -330,12 +355,47 @@ function App() {
                   }}
                 />
               ) : (
-                <BusinessMap
-                  businesses={filteredBusinesses}
-                  center={mapCenter}
-                  zoom={12}
-                  fullScreen={true}
-                />
+                <div className="h-full w-full flex overflow-hidden">
+                  <div className="flex-grow h-full relative">
+                    <BusinessMap
+                      businesses={filteredBusinesses}
+                      center={mapCenter}
+                      zoom={12}
+                      fullScreen={true}
+                      onAddToRoute={handleAddToRoute}
+                      onRemoveFromRoute={handleRemoveFromRoute}
+                      currentRouteIds={currentRouteIds}
+                    />
+
+                    {/* Route Planner Toggle Button (Map View Only) */}
+                    <button
+                      onClick={() => setIsRoutePlannerOpen(true)}
+                      className={`absolute bottom-8 right-8 z-[1000] flex items-center gap-3 px-6 py-4 rounded-[2rem] bg-slate-900 text-white shadow-2xl shadow-indigo-200 border-2 border-white/20 transition-all active:scale-95 ${isRoutePlannerOpen ? 'translate-x-32 opacity-0' : 'translate-x-0 opacity-100'
+                        }`}
+                    >
+                      <Route className="h-5 w-5 text-emerald-400" />
+                      <div className="flex flex-col items-start leading-none">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Planner</span>
+                        <span className="text-sm font-bold">{currentRouteIds.size} Stops</span>
+                      </div>
+                    </button>
+                  </div>
+
+                  {/* Route Planner Sidebar */}
+                  <div
+                    className={`h-full bg-white border-l border-slate-100 transition-all duration-500 ease-in-out shadow-[-20px_0_40px_-15px_rgba(0,0,0,0.05)] z-[1001] ${isRoutePlannerOpen ? 'w-[450px]' : 'w-0 overflow-hidden opacity-0'
+                      }`}
+                  >
+                    <RoutePlanner
+                      routeItems={routeItems}
+                      businesses={businesses}
+                      onRemoveFromRoute={handleRemoveFromRoute}
+                      onClearRoute={handleClearRoute}
+                      onSelectBusiness={setSelectedBusiness}
+                      onClose={() => setIsRoutePlannerOpen(false)}
+                    />
+                  </div>
+                </div>
               )}
             </div>
           </div>
