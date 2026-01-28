@@ -3,7 +3,6 @@ import { Map, Plus, Zap, ShieldCheck, Globe } from 'lucide-react';
 interface DashboardProps {
   businessCount: number;
   providerCount: number;
-  townCount: number;
   onImportClick: () => void;
   onViewMapClick: () => void;
 }

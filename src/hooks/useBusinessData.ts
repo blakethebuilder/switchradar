@@ -8,12 +8,12 @@ export const useBusinessData = () => {
     const routeItems = useLiveQuery(() => db.route.orderBy('order').toArray()) || [];
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedTown, setSelectedTown] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState('');
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
     const [phoneType, setPhoneType] = useState<'all' | 'landline' | 'mobile'>('all');
 
-    const towns = useMemo(
-        () => Array.from(new Set(businesses.map(b => b.town))).filter(Boolean).sort(),
+    const categories = useMemo(
+        () => Array.from(new Set(businesses.map(b => b.category))).filter(Boolean).sort(),
         [businesses]
     );
 
@@ -66,22 +66,22 @@ export const useBusinessData = () => {
     const filteredBusinesses = useMemo(() => {
         return filterBusinesses(businesses, {
             searchTerm,
-            selectedTown,
+            selectedCategory,
             visibleProviders,
             phoneType
         });
-    }, [businesses, searchTerm, selectedTown, visibleProviders, phoneType]);
+    }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType]);
 
     return {
         businesses,
         routeItems,
         filteredBusinesses,
-        towns,
+        categories,
         availableProviders,
         searchTerm,
         setSearchTerm,
-        selectedTown,
-        setSelectedTown,
+        selectedCategory,
+        setSelectedCategory,
         visibleProviders,
         setVisibleProviders,
         phoneType,

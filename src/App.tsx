@@ -42,12 +42,12 @@ function App() {
     businesses,
     routeItems,
     filteredBusinesses,
-    towns,
+    categories,
     availableProviders,
     searchTerm,
     setSearchTerm,
-    selectedTown,
-    setSelectedTown,
+    selectedCategory,
+    setSelectedCategory,
     visibleProviders,
     setVisibleProviders,
     phoneType,
@@ -82,7 +82,6 @@ function App() {
   }, [isAuthenticated, token]);
 
   const providerCount = availableProviders.length;
-  const townCount = towns.length;
 
   // --- Handlers ---
 
@@ -165,7 +164,7 @@ function App() {
   const handleClearProviders = () => setVisibleProviders([]);
   const handleClearFilters = () => {
     setSearchTerm('');
-    setSelectedTown('');
+    setSelectedCategory('');
     setVisibleProviders(availableProviders);
   };
 
@@ -312,11 +311,11 @@ function App() {
                         <FilterPanel
                           searchTerm={searchTerm}
                           onSearchChange={setSearchTerm}
-                          selectedTown={selectedTown}
-                          onTownChange={setSelectedTown}
+                          selectedCategory={selectedCategory}
+                          onCategoryChange={setSelectedCategory}
                           phoneType={phoneType}
                           onPhoneTypeChange={setPhoneType}
-                          towns={towns}
+                          categories={categories}
                           onClearFilters={handleClearFilters}
                         />
                       </div>
@@ -371,11 +370,11 @@ function App() {
                             <FilterPanel
                               searchTerm={searchTerm}
                               onSearchChange={setSearchTerm}
-                              selectedTown={selectedTown}
-                              onTownChange={setSelectedTown}
+                              selectedCategory={selectedCategory}
+                              onCategoryChange={setSelectedCategory}
                               phoneType={phoneType}
                               onPhoneTypeChange={setPhoneType}
-                              towns={towns}
+                              categories={categories}
                               onClearFilters={handleClearFilters}
                             />
                           </div>
@@ -440,7 +439,6 @@ function App() {
             <Dashboard
               businessCount={businesses.length}
               providerCount={providerCount}
-              townCount={townCount}
               onImportClick={openImportModal}
               onViewMapClick={() => setViewMode('map')}
             />

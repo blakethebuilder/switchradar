@@ -1,27 +1,27 @@
-import { Search, X, MapPin, SlidersHorizontal, Smartphone, Landmark, LayoutGrid } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Smartphone, Landmark, LayoutGrid, Layers } from 'lucide-react';
 
 interface FilterPanelProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  selectedTown: string;
-  onTownChange: (town: string) => void;
+  selectedCategory: string;
+  onCategoryChange: (category: string) => void;
   phoneType: 'all' | 'landline' | 'mobile';
   onPhoneTypeChange: (type: 'all' | 'landline' | 'mobile') => void;
-  towns: string[];
+  categories: string[];
   onClearFilters: () => void;
 }
 
 export const FilterPanel = ({
   searchTerm,
   onSearchChange,
-  selectedTown,
-  onTownChange,
+  selectedCategory,
+  onCategoryChange,
   phoneType,
   onPhoneTypeChange,
-  towns,
+  categories,
   onClearFilters
 }: FilterPanelProps) => {
-  const hasActiveFilters = searchTerm || selectedTown || phoneType !== 'all';
+  const hasActiveFilters = searchTerm || selectedCategory || phoneType !== 'all';
 
   return (
     <div className="group relative mb-6">
@@ -74,19 +74,19 @@ export const FilterPanel = ({
           </button>
         </div>
 
-        {/* Town Filter */}
+        {/* Category Filter */}
         <div className="relative min-w-[200px]">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500">
-            <MapPin className="h-4 w-4" />
+            <Layers className="h-4 w-4" />
           </div>
           <select
             className="h-14 w-full appearance-none rounded-2xl border-2 border-slate-100 bg-white pl-12 pr-10 text-sm font-bold text-slate-700 shadow-sm transition-all focus:border-indigo-500/30 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 outline-none cursor-pointer"
-            value={selectedTown}
-            onChange={(e) => onTownChange(e.target.value)}
+            value={selectedCategory}
+            onChange={(e) => onCategoryChange(e.target.value)}
           >
-            <option value="">Select Town...</option>
-            {towns.map(town => (
-              <option key={town} value={town}>{town}</option>
+            <option value="">Select Category...</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
           <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-300">

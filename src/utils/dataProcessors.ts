@@ -168,7 +168,7 @@ export const filterBusinesses = (
   businesses: Business[],
   filters: {
     searchTerm: string;
-    selectedTown: string;
+    selectedCategory: string;
     visibleProviders: string[];
     phoneType?: 'all' | 'landline' | 'mobile';
   }
@@ -179,7 +179,7 @@ export const filterBusinesses = (
       biz.address.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
       biz.provider.toLowerCase().includes(filters.searchTerm.toLowerCase());
 
-    const matchesTown = filters.selectedTown === '' || biz.town === filters.selectedTown;
+    const matchesCategory = filters.selectedCategory === '' || biz.category === filters.selectedCategory;
     const matchesProvider = filters.visibleProviders.length === 0 || filters.visibleProviders.includes(biz.provider);
 
     const isMobile = biz.phoneTypeOverride
@@ -190,6 +190,6 @@ export const filterBusinesses = (
       (filters.phoneType === 'landline' && !isMobile) ||
       (filters.phoneType === 'mobile' && isMobile);
 
-    return matchesSearch && matchesTown && matchesProvider && matchesPhoneType;
+    return matchesSearch && matchesCategory && matchesProvider && matchesPhoneType;
   });
 };
