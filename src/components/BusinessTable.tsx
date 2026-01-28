@@ -1,15 +1,20 @@
-import { Building2, MapPin, Phone, Mail, ChevronRight } from 'lucide-react';
+import { Building2, Mail, Map, Trash2, Landmark, Smartphone } from 'lucide-react';
 import type { Business } from '../types';
 import { ProviderBadge } from './ProviderBadge';
+import { isMobileProvider } from '../utils/phoneUtils';
 
 interface BusinessTableProps {
   businesses: Business[];
   onBusinessSelect?: (business: Business) => void;
+  onDelete?: (id: string) => void;
+  onTogglePhoneType?: (id: string, currentType: 'landline' | 'mobile') => void;
 }
 
 export const BusinessTable: React.FC<BusinessTableProps> = ({
   businesses,
-  onBusinessSelect
+  onBusinessSelect,
+  onDelete,
+  onTogglePhoneType
 }) => {
   if (businesses.length === 0) {
     return (
@@ -24,93 +29,107 @@ export const BusinessTable: React.FC<BusinessTableProps> = ({
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50 transition-all">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 transition-all">
       <div className="overflow-x-auto custom-scrollbar">
-        <table className="w-full text-left border-collapse">
+        <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
           <thead>
             <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-slate-500">Business Details</th>
-              <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-slate-500">Contact Info</th>
-              <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-slate-500">Location</th>
-              <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-slate-500">Provider</th>
-              <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-slate-500">Status</th>
-              <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-slate-500"></th>
+              <th className="w-[30%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Business Details</th>
+              <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</th>
+              <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Location</th>
+              <th className="w-[15%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Network</th>
+              <th className="w-[15%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-right pr-12">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
-            {businesses.slice(0, 200).map((business) => (
-              <tr
-                key={business.id}
-                className="group hover:bg-slate-50/70 cursor-pointer transition-all active:bg-slate-100"
-                onClick={() => onBusinessSelect?.(business)}
-              >
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 font-bold text-lg group-hover:bg-indigo-100 transition-colors">
-                      {business.name.charAt(0)}
-                    </div>
-                    <div>
-                      <div className="text-base font-bold text-slate-900 leading-tight mb-0.5">
-                        {business.name}
+          <tbody className="divide-y divide-slate-50">
+            {businesses.slice(0, 300).map((business) => {
+              const isMobile = business.phoneTypeOverride
+                ? business.phoneTypeOverride === 'mobile'
+                : isMobileProvider(business.provider);
+              return (
+                <tr
+                  key={business.id}
+                  className="group hover:bg-indigo-50/30 cursor-pointer transition-colors"
+                >
+                  <td className="px-6 py-3" onClick={() => onBusinessSelect?.(business)}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 font-bold text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
+                        {business.name.charAt(0)}
                       </div>
-                      <div className="text-xs font-semibold text-slate-400">
-                        {business.category}
+                      <div className="min-w-0">
+                        <div className="text-sm font-black text-slate-900 leading-none mb-1 truncate">
+                          {business.name}
+                        </div>
+                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter truncate">
+                          {business.category}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </td>
+                  </td>
 
-                <td className="px-8 py-6">
-                  <div className="space-y-1.5 focus-within:ring-0">
-                    {business.phone && (
-                      <div className="flex items-center text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
-                        <Phone className="w-3.5 h-3.5 mr-2 opacity-60" />
-                        {business.phone}
-                      </div>
-                    )}
-                    {business.email && (
-                      <div className="flex items-center text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">
-                        <Mail className="w-3.5 h-3.5 mr-2 opacity-60" />
-                        {business.email}
-                      </div>
-                    )}
-                  </div>
-                </td>
-
-                <td className="px-8 py-6">
-                  <div className="flex flex-col gap-1">
-                    <div className="flex items-center text-sm font-bold text-slate-700">
-                      <MapPin className="w-3.5 h-3.5 mr-2 text-indigo-500" />
-                      {business.town}
+                  <td className="px-6 py-3">
+                    <div className="flex flex-col gap-0.5">
+                      {business.phone && (
+                        <div className="flex items-center text-[11px] font-bold text-slate-700">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onTogglePhoneType?.(business.id, isMobile ? 'mobile' : 'landline');
+                            }}
+                            className={`mr-1.5 p-1 rounded-md transition-all hover:scale-110 active:scale-95 ${isMobile ? 'text-rose-500 hover:bg-rose-50' : 'text-emerald-500 hover:bg-emerald-50'
+                              }`}
+                            title={`Switch to ${isMobile ? 'Landline' : 'Cellphone'}`}
+                          >
+                            {isMobile ? <Smartphone className="w-3.5 h-3.5" /> : <Landmark className="w-3.5 h-3.5" />}
+                          </button>
+                          {business.phone}
+                        </div>
+                      )}
+                      {business.email && (
+                        <div className="flex items-center text-[10px] font-semibold text-slate-400 truncate">
+                          <Mail className="w-2.5 h-2.5 mr-1.5 opacity-60" />
+                          {business.email}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-xs font-medium text-slate-400 pl-5.5 truncate max-w-[200px]">
-                      {business.address}
+                  </td>
+
+                  <td className="px-6 py-3">
+                    <div className="flex flex-col">
+                      <div className="text-[11px] font-black text-indigo-600 uppercase tracking-tighter">
+                        {business.town}
+                      </div>
+                      <div className="text-[10px] font-semibold text-slate-400 truncate max-w-[180px]">
+                        {business.address}
+                      </div>
                     </div>
-                  </div>
-                </td>
+                  </td>
 
-                <td className="px-8 py-6">
-                  <ProviderBadge provider={business.provider} className="font-bold scale-110" />
-                </td>
+                  <td className="px-6 py-3">
+                    <ProviderBadge provider={business.provider} className="scale-90 origin-left" />
+                  </td>
 
-                <td className="px-8 py-6">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-sm ${business.status === 'active'
-                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                    : business.status === 'contacted'
-                      ? 'bg-sky-50 text-sky-700 border border-sky-100'
-                      : 'bg-slate-50 text-slate-600 border border-slate-100'
-                    }`}>
-                    {business.status}
-                  </span>
-                </td>
-
-                <td className="px-8 py-6 text-right">
-                  <button className="p-2 text-slate-300 group-hover:text-indigo-600 group-hover:bg-white rounded-xl shadow-none group-hover:shadow-lg transition-all">
-                    <ChevronRight className="w-5 h-5" />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  <td className="px-6 py-3">
+                    <div className="flex items-center justify-end gap-1 pr-6">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onBusinessSelect?.(business); }}
+                        className="p-2 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-white hover:shadow-md transition-all"
+                        title="Show on map"
+                      >
+                        <Map className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDelete?.(business.id); }}
+                        className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-white hover:shadow-md transition-all"
+                        title="Delete business"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

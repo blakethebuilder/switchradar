@@ -1,10 +1,12 @@
-import { Search, X, MapPin, SlidersHorizontal } from 'lucide-react';
+import { Search, X, MapPin, SlidersHorizontal, Smartphone, Landmark, LayoutGrid } from 'lucide-react';
 
 interface FilterPanelProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   selectedTown: string;
   onTownChange: (town: string) => void;
+  phoneType: 'all' | 'landline' | 'mobile';
+  onPhoneTypeChange: (type: 'all' | 'landline' | 'mobile') => void;
   towns: string[];
   onClearFilters: () => void;
 }
@@ -14,10 +16,12 @@ export const FilterPanel = ({
   onSearchChange,
   selectedTown,
   onTownChange,
+  phoneType,
+  onPhoneTypeChange,
   towns,
   onClearFilters
 }: FilterPanelProps) => {
-  const hasActiveFilters = searchTerm || selectedTown;
+  const hasActiveFilters = searchTerm || selectedTown || phoneType !== 'all';
 
   return (
     <div className="group relative mb-6">
@@ -36,6 +40,40 @@ export const FilterPanel = ({
           />
         </div>
 
+        {/* Phone Type Segment Control */}
+        <div className="flex rounded-2xl border-2 border-slate-100 bg-white p-1 shadow-sm">
+          <button
+            onClick={() => onPhoneTypeChange('all')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all ${phoneType === 'all'
+              ? 'bg-slate-900 text-white shadow-lg'
+              : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
+              }`}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">All</span>
+          </button>
+          <button
+            onClick={() => onPhoneTypeChange('landline')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all ${phoneType === 'landline'
+              ? 'bg-emerald-500 text-white shadow-lg'
+              : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
+              }`}
+          >
+            <Landmark className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">Fixed</span>
+          </button>
+          <button
+            onClick={() => onPhoneTypeChange('mobile')}
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all ${phoneType === 'mobile'
+              ? 'bg-rose-500 text-white shadow-lg'
+              : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'
+              }`}
+          >
+            <Smartphone className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">Mobile</span>
+          </button>
+        </div>
+
         {/* Town Filter */}
         <div className="relative min-w-[200px]">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500">
@@ -46,7 +84,7 @@ export const FilterPanel = ({
             value={selectedTown}
             onChange={(e) => onTownChange(e.target.value)}
           >
-            <option value="">Global Coverage</option>
+            <option value="">Select Town...</option>
             {towns.map(town => (
               <option key={town} value={town}>{town}</option>
             ))}

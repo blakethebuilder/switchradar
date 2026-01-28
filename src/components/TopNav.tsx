@@ -48,8 +48,8 @@ export const TopNav = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <nav className="hidden items-center gap-1 rounded-2xl bg-slate-100 p-1 lg:flex shadow-inner">
+        <div className="flex items-center gap-3 md:gap-6">
+          <nav className="hidden items-center gap-1 rounded-2xl bg-slate-100 p-1 md:flex shadow-inner">
             <button
               onClick={() => onViewModeChange('table')}
               className={`flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-bold transition-all ${viewMode === 'table'

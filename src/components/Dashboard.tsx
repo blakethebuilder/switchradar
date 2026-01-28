@@ -10,8 +10,6 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({
   businessCount,
-  providerCount,
-  townCount,
   onImportClick,
   onViewMapClick
 }) => {
@@ -26,11 +24,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         <h2 className="mb-4 text-4xl font-extrabold tracking-tight text-slate-900 lg:text-5xl">
-          Visual Lead <span className="text-indigo-600">Intelligence</span>
+          Visual Business <span className="text-indigo-600">Intelligence</span>
         </h2>
 
         <p className="mx-auto mb-12 max-w-lg text-lg font-medium text-slate-500 leading-relaxed">
-          The ultimate command center for your scraped business leads.
+          The ultimate command center for your scraped business intelligence.
           Analyze market coverage, filter by providers, and dominate the map.
         </p>
 
@@ -67,20 +65,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-3 gap-6">
-              <div className="rounded-3xl bg-white p-8 border border-slate-100 shadow-xl shadow-slate-100">
-                <div className="mb-1 text-3xl font-extrabold text-indigo-600">{businessCount}</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">LEADS</div>
-              </div>
-              <div className="rounded-3xl bg-white p-8 border border-slate-100 shadow-xl shadow-slate-100">
-                <div className="mb-1 text-3xl font-extrabold text-indigo-600">{providerCount}</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">NETWORKS</div>
-              </div>
-              <div className="rounded-3xl bg-white p-8 border border-slate-100 shadow-xl shadow-slate-100">
-                <div className="mb-1 text-3xl font-extrabold text-indigo-600">{townCount}</div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-slate-400">TOWNS</div>
-              </div>
-            </div>
 
             <div className="flex justify-center gap-4">
               <button

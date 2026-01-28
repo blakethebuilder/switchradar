@@ -1,82 +1,70 @@
 # 📡 SwitchRadar
 
-**SwitchRadar** is a premium, high-performance lead intelligence platform designed for visual market analysis and network provider tracking. Built with React and optimized for large datasets, it transforms raw CSV/Excel leads into actionable geospatial intelligence.
-
-![SwitchRadar Preview](https://via.placeholder.com/1200x600?text=SwitchRadar+Geospatial+Intelligence)
+**SwitchRadar** is a premium, high-performance business intelligence platform designed for visual market analysis and optimized visit planning. Built with React and powered by a Node.js backend, it transforms raw spreadsheets into actionable geospatial intelligence.
 
 ## 🚀 Key Features
 
-- **📍 Immersive Mapping**: Full-screen interactive map with advanced clustering and "Spiderfy" animations for overlapping leads.
-- **🎨 Brand Integration**: Automatic color-coding for major South African providers (MTN, Telkom, Vodacom, VOX, etc.).
-- **⚡ High Performance**: Optimized to handle 2000+ leads with zero lag using React memoization and IndexedDB.
-- **🔄 Smart Import Engine**: Intelligent column mapping with automatic coordinate extraction from Google Maps links.
-- **💾 Local Persistence**: All data stays in your browser via IndexedDB for instant loads and offline capability.
-- **📊 Dual Mode View**: Seamlessly toggle between a dense data table and a high-level map visualization.
+- **📍 Intelligent Mapping**: High-performance Leaflet integration optimized for 2000+ businesses using canvas rendering and clustered markers.
+- **🗺️ Interactive Detail Sidebar**: Seamless sidebar integration for business details, removing intrusive map popups.
+- **🚗 Route Planner**: Build and manage optimized visit routes with one-click export to Google Maps.
+- **📊 Intelligence Dashboard**: Real-time market analytics including network distribution, town penetration, and category trends.
+- **☁️ Cloud Sync & Auth**: Secure Node.js/SQLite backend for persistence across devices and team collaboration.
+- **⚡ Performance First**: Local-first architecture (IndexedDB) with background cloud synchronization for a lag-free experience.
+- **� Phone Identification**: Visual indicators for Landline vs. Mobile numbers based on network provider intelligence.
 
 ## 🛠 Tech Stack
 
-- **Core**: React 18, TypeScript, Vite
-- **Styling**: Tailwind CSS 4
-- **Database**: IndexedDB (via Dexie.js)
-- **Mapping**: Leaflet, React-Leaflet, MarkerCluster
-- **Icons**: Lucide React
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS
+- **Database**: IndexedDB (Frontend via Dexie), SQLite (Backend)
+- **Backend**: Node.js, Express, JWT Auth
+- **Mapping**: Leaflet, MarkerCluster (Canvas-optimized)
+- **Analytics**: Recharts (Customized Area, Pie, and Bar charts)
 
-## 🎯 Brand Color Guide
+## 🎯 Architecture
 
-SwitchRadar automatically maps the following providers to their official brand colors:
-
-| Provider | Color | HEX |
-| :--- | :--- | :--- |
-| **MTN** | Yellow | `#EFCC00` |
-| **Telkom** | Blue | `#005FB8` |
-| **Vodacom** | Red | `#E60000` |
-| **TELKMOBL** | Turquoise | `#40E0D0` |
-| **VOX** | Lime Green | `#32CD32` |
-| **HEROGNP** | Orange | `#FF8C00` |
-| **BACKSPACE** | Dark Blue | `#00008B` |
+The app uses a **Local-First Sync** pattern:
+1. Data is primarily managed in the browser's **IndexedDB** for instant updates.
+2. A debounced **Cloud Sync** hook pushes changes to the SQLite backend.
+3. On login, data is automatically hydrated from the cloud to ensure consistency across devices.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 20+
 - npm or yarn
 
-### Installation
+### Development
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/blakethebuilder/switchradar.git
-   cd switchradar
-   ```
-
-2. Install dependencies:
+1. **Install Dependencies**:
    ```bash
    npm install
    ```
 
-3. Run in development mode:
+2. **Start Development Stack**:
    ```bash
    npm run dev
    ```
+   *Note: This starts both the Vite frontend and the Node.js server (configured via proxy).*
 
-## 🐳 Docker & VPS Deployment
+## 🐳 Deployment (Dokploy / VPS)
 
-SwitchRadar is container-ready. To deploy on your own VPS (e.g., via Dokploy):
+SwitchRadar is dockerized for easy deployment. It uses a multi-process Dockerfile running Nginx (for the frontend) and Node.js (for the backend) simultaneously.
 
 ```bash
 docker build -t switchradar .
 docker run -p 80:80 switchradar
 ```
 
-*See [DOKPLOY.md](./DOKPLOY.md) for detailed deployment instructions.*
+*See [DOKPLOY.md](./DOKPLOY.md) for detailed deployment walkthroughs.*
 
-## 📂 Project Structure
+## 📂 Folder Structure
 
-- `src/components`: UI components (Map, Table, Modals, Nav).
-- `src/utils`: Data processing engine, color mapping, and coordinate sniffer.
-- `src/db.ts`: IndexedDB schema and Dexie configuration.
-- `src/types`: TypeScript definitions for project-wide safety.
+- `src/hooks`: Custom React hooks for business logic and synchronization.
+- `src/components`: Modular UI components.
+- `src/utils`: Data processing and provider coloring logic.
+- `server/`: Node.js backend with SQLite integration.
+- `src/db/`: Dexie database schema and migrations.
 
 ## 📄 License
 

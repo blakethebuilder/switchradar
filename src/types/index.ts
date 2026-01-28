@@ -18,7 +18,9 @@ export interface Business {
   notes: string[];
   importedAt: Date;
   source: 'manual' | 'klerksdorp' | 'scraped' | 'api';
+  phoneTypeOverride?: 'landline' | 'mobile';
   metadata: Record<string, any>;
+  mapsLink?: string;
 }
 
 export type ViewMode = 'table' | 'map' | 'stats';

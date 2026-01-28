@@ -1,5 +1,6 @@
 import type { Business, ImportMapping } from '../types';
 import { deriveCoordinates, normalizeProvider } from './importMapper';
+import { isMobileProvider } from './phoneUtils';
 
 const DEFAULT_COORDINATES = { lat: -26.8521, lng: 26.6667 };
 
@@ -157,7 +158,8 @@ export const processImportedData = (
       notes: [],
       importedAt: new Date(),
       source: 'scraped',
-      metadata: row
+      metadata: row,
+      mapsLink: resolvedMapping.mapsLink ? String(getValue(row, resolvedMapping.mapsLink) ?? '') : undefined
     };
   });
 };
@@ -168,6 +170,7 @@ export const filterBusinesses = (
     searchTerm: string;
     selectedTown: string;
     visibleProviders: string[];
+    phoneType?: 'all' | 'landline' | 'mobile';
   }
 ): Business[] => {
   return businesses.filter(biz => {
@@ -177,8 +180,16 @@ export const filterBusinesses = (
       biz.provider.toLowerCase().includes(filters.searchTerm.toLowerCase());
 
     const matchesTown = filters.selectedTown === '' || biz.town === filters.selectedTown;
-    const matchesProvider = filters.visibleProviders.includes(biz.provider);
+    const matchesProvider = filters.visibleProviders.length === 0 || filters.visibleProviders.includes(biz.provider);
 
-    return matchesSearch && matchesTown && matchesProvider;
+    const isMobile = biz.phoneTypeOverride
+      ? biz.phoneTypeOverride === 'mobile'
+      : isMobileProvider(biz.provider);
+
+    const matchesPhoneType = !filters.phoneType || filters.phoneType === 'all' ||
+      (filters.phoneType === 'landline' && !isMobile) ||
+      (filters.phoneType === 'mobile' && isMobile);
+
+    return matchesSearch && matchesTown && matchesProvider && matchesPhoneType;
   });
 };

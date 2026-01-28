@@ -1,46 +1,38 @@
 # SwitchRadar Handover Documentation
 
-## 🚀 Project Overview
-SwitchRadar is a modernized lead intelligence platform designed for visual market analysis. It allows teams to import large datasets (JSON, XLSX, CSV), map them to a unified format, and visualize them on a high-performance interactive map with provider-specific branding.
+## Project Overview
+SwitchRadar has been upgraded from a simple frontend-only tracker to a Full-Stack Business Intelligence platform. It is designed to handle thousands of business records with geospatial visualization and visit route planning.
 
-## 🛠 Tech Stack
-- **Frontend**: React 18 + Vite
-- **Styling**: Tailwind 4 (Modern Syntax)
-- **Database**: IndexedDB (via Dexie.js for persistence)
-- **Mapping**: Leaflet + React-Leaflet + MarkerCluster
-- **Parsing**: SheetJS (XLSX)
+## Key Refactorings Done
+1. **Separation of Concerns**: Main application logic has been moved from `App.tsx` into custom hooks:
+   - `useBusinessData.ts`: Handles data fetching (Dexie), search filtering, and cloud loading.
+   - `useCloudSync.ts`: Manages background synchronization with the Node.js API.
+2. **Performance Optimizations**:
+   - Leaflet is now configured to use `preferCanvas: true`, which significantly improves rendering for 2000+ pins.
+   - `MarkerClusterGroup` uses `chunkedLoading` and `removeOutsideVisibleBounds: true`.
+3. **UI Improvements**:
+   - Removed map popups in favor of a dedicated Right Sidebar.
+   - Added a "Details" tab handle on the map for quick access when the sidebar is closed.
+   - Minimized table view for high-density business management.
 
-## ✨ Key Features
-1. **Visual Lead Intelligence**: Full-screen map view with diamond markers and advanced clustering.
-2. **Branded Markers**: Custom icons for major providers (MTN, Telkom, Vodacom, VOX, etc.) with specific brand colors.
-3. **Smart Import**:
-   - Column-guessing algorithm.
-   - Automatic Latitude/Longitude derivation from Google Maps Links.
-   - Robust XLSX/JSON support.
-4. **Data Persistence**: All imported leads stay in the browser (IndexedDB) until explicitly cleared.
-5. **Dynamic Filtering**: Instant search and network layer toggles that sync between Map and Table views.
+## Backend & Persistence
+- **Backend**: Node.js/Express server in `/server`.
+- **Database**: SQLite (`/server/data/switchradar.db`).
+- **Sync Pattern**: Debounced POST requests to `/api/leads/sync` and `/api/route/sync`.
 
-## 🎨 Brand Color Mappings
-- **MTN**: Yellow (#EFCC00)
-- **Telkom**: Blue (#005FB8)
-- **Vodacom**: Red (#E60000)
-- **TELKMOBL**: Turquoise (#40E0D0)
-- **VOX**: Lime Green (#32CD32)
-- **HEROGNP**: Orange (#FF8C00)
-- **BACKSPACE**: Dark Blue (#00008B)
+## Critical Files
+- `src/App.tsx`: Main entry point and layout shell.
+- `src/hooks/useBusinessData.ts`: Central data engine.
+- `src/utils/phoneUtils.ts`: Logic for identifying Landline vs Mobile providers (MTN, Vodacom, etc).
+- `src/components/BusinessMap.tsx`: High-performance mapping component.
 
-## ⚡ Performance Optimizations
-- **Memoization**: Core filtering and map calculations are memoized to handle 2000+ leads without re-render lag.
-- **Marker Clustering**: Automatically groups leads when zoomed out and scatters them (radius 40) for granular view.
-- **IndexedDB**: Fast data access without hitting a backend.
+## Maintenance Notes
+- **To add a new provider color**: Update `src/utils/providerColors.ts`.
+- **To change sync behavior**: Adjust the timer in `src/hooks/useCloudSync.ts`.
+- **To modify SQLite schema**: The schema is automatically initialized in `server/db/index.js`.
 
-## 📂 Project Structure
-- `/src/components`: UI components (Table, Map, Modals, Nav).
-- `/src/db.ts`: IndexedDB schema and setup.
-- `/src/utils`: Data processors, color logic, and coordinate extraction.
-- `/src/types`: TypeScript interfaces for the Business lead model.
+## Deployment
+The app is configured for Dokploy. Ensure you map a volume to `/app/data` in the Docker container to persist the SQLite database across redeploys.
 
-## 🔮 Future Recommendations
-- **Mobile optimization**: The map is full-width, but some overlays might need smaller padding on mobile.
-- **Advanced Export**: Add PDF reporting or custom CSV templates.
-- **Scraper Integration**: Direct API link for upcoming scraping tools.
+---
+*Created January 2026 - Advanced Agentic Coding Session*

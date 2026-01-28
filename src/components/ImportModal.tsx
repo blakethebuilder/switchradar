@@ -57,8 +57,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       <div className="relative w-full max-w-xl overflow-hidden rounded-[2.5rem] bg-white shadow-2xl animate-in zoom-in-95 duration-300">
         <div className="flex items-center justify-between border-b border-slate-100 px-8 py-6">
           <div>
-            <h2 className="text-2xl font-extrabold text-slate-900">Import Leads</h2>
-            <p className="text-sm font-semibold text-slate-400">Scale your outreach with new data</p>
+            <h2 className="text-2xl font-extrabold text-slate-900">Import Data</h2>
+            <p className="text-sm font-semibold text-slate-400">Scale your outreach with new datasets</p>
           </div>
           <button
             onClick={onClose}
@@ -77,8 +77,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             }}
             onDragLeave={() => setDragActive(false)}
             className={`group relative flex flex-col items-center justify-center rounded-[2rem] border-[3px] border-dashed p-12 text-center transition-all ${dragActive
-                ? 'border-indigo-500 bg-indigo-50/50'
-                : 'border-slate-100 bg-slate-50/30 hover:border-slate-200 hover:bg-slate-50/50'
+              ? 'border-indigo-500 bg-indigo-50/50'
+              : 'border-slate-100 bg-slate-50/30 hover:border-slate-200 hover:bg-slate-50/50'
               }`}
           >
             <div className={`mb-4 flex h-20 w-20 items-center justify-center rounded-3xl bg-white shadow-xl shadow-slate-200/50 transition-transform group-hover:scale-110 ${dragActive ? 'scale-110 animate-bounce' : ''}`}>
@@ -149,7 +149,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             className="text-xs font-black uppercase tracking-widest text-indigo-600 hover:text-indigo-700 transition-colors"
             disabled={isImporting}
           >
-            Load Sample Leads
+            Load Sample Dataset
           </button>
           <button
             type="button"

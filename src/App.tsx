@@ -1,5 +1,7 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
+
+// Components
 import { FilterPanel } from './components/FilterPanel';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
@@ -9,26 +11,51 @@ import { ImportModal } from './components/ImportModal';
 import { ImportMappingModal } from './components/ImportMappingModal';
 import { TopNav } from './components/TopNav';
 import { LoginModal } from './components/LoginModal';
-import { useAuth } from './context/AuthContext';
 import { ProviderBar } from './components/ProviderBar';
-import type { Business, ImportMapping, ViewMode } from './types';
-import { sampleData, filterBusinesses, processImportedData } from './utils/dataProcessors';
-import './App.css';
-import { Database, Network, MapPin as MapPinIcon, ChevronDown, ChevronUp, SlidersHorizontal, Route } from 'lucide-react';
 import { RoutePlanner } from './components/RoutePlanner';
 
+// Hooks
+import { useAuth } from './context/AuthContext';
+import { useBusinessData } from './hooks/useBusinessData';
+import { useCloudSync } from './hooks/useCloudSync';
+
+// Utils & Assets
+import { processImportedData, sampleData } from './utils/dataProcessors';
 import { db } from './db';
-import { useLiveQuery } from 'dexie-react-hooks';
+import './App.css';
+import {
+  ChevronDown,
+  ChevronUp,
+  SlidersHorizontal,
+  PanelRightOpen
+} from 'lucide-react';
+import type { Business, ImportMapping, ViewMode } from './types';
 
-const defaultMapCenter: [number, number] = [-26.8521, 26.6667];
-
+/**
+ * Main Application Component
+ * 
+ * SwitchRadar: A visual business intelligence and route planning tool.
+ * Handles data import, cloud synchronization, mapping, and analytics.
+ */
 function App() {
-  const businesses = useLiveQuery(() => db.businesses.toArray()) || [];
-  const routeItems = useLiveQuery(() => db.route.orderBy('order').toArray()) || [];
+  const {
+    businesses,
+    routeItems,
+    filteredBusinesses,
+    towns,
+    availableProviders,
+    searchTerm,
+    setSearchTerm,
+    selectedTown,
+    setSelectedTown,
+    visibleProviders,
+    setVisibleProviders,
+    phoneType,
+    setPhoneType,
+    loadFromCloud
+  } = useBusinessData();
+
   const [viewMode, setViewMode] = useState<ViewMode>('table');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTown, setSelectedTown] = useState('');
-  const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isMappingOpen, setIsMappingOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -41,251 +68,114 @@ function App() {
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [isRoutePlannerOpen, setIsRoutePlannerOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
 
   const { isAuthenticated, token } = useAuth();
+  const { isSyncing } = useCloudSync(businesses, routeItems, isAuthenticated, token);
 
-  const currentRouteIds = useMemo(() => new Set(routeItems.map(item => item.businessId)), [routeItems]);
-
-  const filteredBusinesses = useMemo(() => {
-    return filterBusinesses(businesses, {
-      searchTerm,
-      selectedTown,
-      visibleProviders
-    });
-  }, [businesses, searchTerm, selectedTown, visibleProviders]);
-
-  const towns = useMemo(
-    () => Array.from(new Set(businesses.map(b => b.town))).filter(Boolean).sort(),
-    [businesses]
-  );
-  const availableProviders = useMemo(
-    () => Array.from(new Set(businesses.map(b => b.provider))).filter(Boolean).sort(),
-    [businesses]
-  );
-
-  // Cloud Sync Effect
-  useEffect(() => {
-    if (!isAuthenticated || !token) return;
-
-    const syncToCloud = async () => {
-      setIsSyncing(true);
-      try {
-        const API_URL = import.meta.env.VITE_API_URL || '';
-
-        // Sync Leads
-        await fetch(`${API_URL}/api/leads/sync`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ leads: businesses }),
-        });
-
-        // Sync Routes
-        await fetch(`${API_URL}/api/route/sync`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ routeItems }),
-        });
-      } catch (err) {
-        console.error('Sync failed:', err);
-      } finally {
-        setIsSyncing(false);
-      }
-    };
-
-    const timer = setTimeout(syncToCloud, 2000); // Debounce sync
-    return () => clearTimeout(timer);
-  }, [businesses, routeItems, isAuthenticated, token]);
 
   // Initial Load from Cloud
   useEffect(() => {
-    if (!isAuthenticated || !token) return;
-
-    const loadFromCloud = async () => {
-      try {
-        const API_URL = import.meta.env.VITE_API_URL || '';
-
-        const leadsRes = await fetch(`${API_URL}/api/leads`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (leadsRes.ok) {
-          const cloudLeads = await leadsRes.json();
-          if (cloudLeads.length > 0) {
-            await db.businesses.clear();
-            await db.businesses.bulkAdd(cloudLeads);
-          }
-        }
-
-        const routeRes = await fetch(`${API_URL}/api/route`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (routeRes.ok) {
-          const cloudRoutes = await routeRes.json();
-          if (cloudRoutes.length > 0) {
-            await db.route.clear();
-            await db.route.bulkAdd(cloudRoutes);
-          }
-        }
-      } catch (err) {
-        console.error('Load failed:', err);
-      }
-    };
-
-    loadFromCloud();
+    if (isAuthenticated && token) {
+      loadFromCloud(token);
+    }
   }, [isAuthenticated, token]);
 
   const providerCount = availableProviders.length;
   const townCount = towns.length;
+
+  // --- Handlers ---
+
+  const handleFileSelected = (file: File) => {
+    setPendingFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = e.target?.result;
+      if (file.name.endsWith('.json')) {
+        try {
+          const json = JSON.parse(data as string);
+          const rows = Array.isArray(json) ? json : [json];
+          setImportRows(rows);
+          setImportColumns(Object.keys(rows[0] || {}));
+          setIsMappingOpen(true);
+          setIsImportOpen(false);
+        } catch (err) {
+          setImportError('Invalid JSON file format.');
+        }
+      } else {
+        try {
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+          if (!rows || rows.length === 0) {
+            setImportError('The selected file appears to be empty.');
+            return;
+          }
+          setImportRows(rows as any[]);
+          setImportColumns(Object.keys(rows[0] || {}));
+          setIsMappingOpen(true);
+          setIsImportOpen(false);
+        } catch (err) {
+          setImportError('Failed to read Excel/CSV file. Ensure it is not corrupted.');
+        }
+      }
+    };
+    if (file.name.endsWith('.json')) reader.readAsText(file);
+    else reader.readAsArrayBuffer(file);
+  };
+
+  const handleConfirmMapping = async (mapping: ImportMapping) => {
+    setIsMappingOpen(false);
+    setIsImporting(true);
+    setImportError('');
+    try {
+      const processed = processImportedData(importRows, mapping);
+      await applyNewBusinesses(processed, pendingFileName);
+    } catch (err) {
+      setImportError('Failed to process data. Check column mappings.');
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const applyNewBusinesses = async (items: Business[], sourceName: string) => {
     const providers = Array.from(new Set(items.map(b => b.provider))).filter(Boolean);
     await db.businesses.clear();
     await db.businesses.bulkAdd(items);
     setVisibleProviders(providers);
-    setSearchTerm('');
-    setSelectedTown('');
     setLastImportName(sourceName);
   };
 
-  const openImportModal = () => {
-    setImportError('');
-    setIsMappingOpen(false);
-    setIsImportOpen(true);
-  };
-
-  const handleImportSample = () => {
-    applyNewBusinesses(sampleData, 'Demo Dataset');
-    setViewMode('table');
-    setIsImportOpen(false);
-    setIsMappingOpen(false);
-    setImportRows([]);
-    setImportColumns([]);
-    setPendingFileName('');
-  };
-
-  const parseFileToRows = async (file: File) => {
-    if (file.name.toLowerCase().endsWith('.json')) {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      if (!Array.isArray(parsed)) {
-        throw new Error('JSON must be an array of objects.');
-      }
-      return parsed as Record<string, any>[];
-    }
-
-    const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) {
-      throw new Error('No worksheet found in file.');
-    }
-    const sheet = workbook.Sheets[sheetName];
-    return XLSX.utils.sheet_to_json(sheet, { defval: '' }) as Record<string, any>[];
-  };
-
-  const handleFileSelected = async (file: File) => {
+  const handleImportSample = async () => {
     setIsImporting(true);
-    setImportError('');
-    try {
-      const rows = await parseFileToRows(file);
-      if (rows.length === 0) {
-        throw new Error('No rows found to import.');
-      }
-      const columns = Array.from(
-        new Set(rows.slice(0, 100).flatMap(row => Object.keys(row)))
-      ).sort();
-
-      setImportRows(rows);
-      setImportColumns(columns);
-      setPendingFileName(file.name);
-      setIsImportOpen(false);
-      setIsMappingOpen(true);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Import failed.';
-      setImportError(message);
-    } finally {
+    setTimeout(async () => {
+      await applyNewBusinesses(sampleData, 'Global Sample Dataset');
       setIsImporting(false);
-    }
-  };
-
-  const handleConfirmMapping = (mapping: ImportMapping) => {
-    const importedBusinesses = processImportedData(importRows, mapping);
-    if (importedBusinesses.length > 0) {
-      applyNewBusinesses(importedBusinesses, pendingFileName || 'Recent Upload');
-      setViewMode('table');
-    }
-    setIsMappingOpen(false);
-    setImportRows([]);
-    setImportColumns([]);
-    setPendingFileName('');
-  };
-
-  const handleBackToImport = () => {
-    setIsMappingOpen(false);
-    setIsImportOpen(true);
+      setIsImportOpen(false);
+    }, 1000);
   };
 
   const handleToggleProvider = (provider: string) => {
     setVisibleProviders(prev =>
-      prev.includes(provider)
-        ? prev.filter(p => p !== provider)
-        : [...prev, provider]
+      prev.includes(provider) ? prev.filter(p => p !== provider) : [...prev, provider]
     );
   };
 
+  const handleSelectAllProviders = () => setVisibleProviders(availableProviders);
+  const handleClearProviders = () => setVisibleProviders([]);
   const handleClearFilters = () => {
     setSearchTerm('');
     setSelectedTown('');
-    setSelectedBusiness(null);
-  };
-
-  const handleSelectAllProviders = () => {
     setVisibleProviders(availableProviders);
   };
 
-  const handleClearProviders = () => {
-    setVisibleProviders([]);
-  };
-
-  const handleExportData = () => {
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + "Name,Address,Phone,Provider,Town,Status\n"
-      + filteredBusinesses.map(b =>
-        `"${b.name}","${b.address}","${b.phone}","${b.provider}","${b.town}","${b.status}"`
-      ).join("\n");
-
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'switchradar_export.csv');
-    document.body.appendChild(link);
-    link.click();
-  };
-
-  const handleClearData = async () => {
-    await db.businesses.clear();
-    setVisibleProviders([]);
-    setSearchTerm('');
-    setSelectedTown('');
-    setLastImportName('');
-  };
-
   const handleAddToRoute = async (businessId: string) => {
-    const existing = await db.route.where('businessId').equals(businessId).first();
-    if (!existing) {
-      const maxOrder = await db.route.count();
-      await db.route.add({
-        businessId,
-        order: maxOrder,
-        addedAt: new Date()
-      });
-    }
+    const maxOrder = Math.max(...routeItems.map(i => i.order), 0);
+    await db.route.add({
+      businessId,
+      order: maxOrder + 1,
+      addedAt: new Date()
+    });
   };
 
   const handleRemoveFromRoute = async (businessId: string) => {
@@ -296,189 +186,222 @@ function App() {
     await db.route.clear();
   };
 
-  const mapCenter = useMemo(() => {
-    if (selectedBusiness) {
-      return [selectedBusiness.coordinates.lat, selectedBusiness.coordinates.lng] as [number, number];
+  const handleDeleteBusiness = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this business?')) {
+      await db.businesses.delete(id);
+      await db.route.where('businessId').equals(id).delete();
+      if (selectedBusiness?.id === id) setSelectedBusiness(null);
     }
-    if (filteredBusinesses.length > 0) {
-      const firstWithCoords = filteredBusinesses.find(b => b.coordinates.lat && b.coordinates.lng);
-      if (firstWithCoords) {
-        return [firstWithCoords.coordinates.lat, firstWithCoords.coordinates.lng] as [number, number];
-      }
+  };
+
+  const handleSelectBusinessOnMap = (b: Business) => {
+    setSelectedBusiness(b);
+    setIsRoutePlannerOpen(true);
+    // Explicitly don't set mapTarget here so the map doesn't move
+  };
+
+  const handleTogglePhoneType = async (id: string, currentType: 'landline' | 'mobile') => {
+    const newType = currentType === 'landline' ? 'mobile' : 'landline';
+    await db.businesses.update(id, { phoneTypeOverride: newType });
+  };
+
+  const handleExport = () => {
+    const worksheet = XLSX.utils.json_to_sheet(filteredBusinesses);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Businesses");
+    XLSX.writeFile(workbook, "switchradar_export.xlsx");
+  };
+
+  const handleClearAll = async () => {
+    if (window.confirm('Delete ALL businesses and routes? This cannot be undone.')) {
+      await db.businesses.clear();
+      await db.route.clear();
+      setSelectedBusiness(null);
     }
-    return defaultMapCenter;
-  }, [filteredBusinesses, selectedBusiness]);
+  };
+
+  const openImportModal = () => {
+    setImportError('');
+    setIsImportOpen(true);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-900 flex flex-col">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900">
       <TopNav
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onImportClick={openImportModal}
-        onExportClick={handleExportData}
-        onClearData={handleClearData}
+        onExportClick={handleExport}
+        onClearData={handleClearAll}
         totalCount={businesses.length}
         lastImportName={lastImportName}
-        onLoginClick={() => setIsLoginOpen(true)}
         isSyncing={isSyncing}
+        onLoginClick={() => setIsLoginOpen(true)}
       />
 
-      <main className={`flex-grow flex flex-col ${viewMode === 'map' ? 'p-0' : 'max-w-[1600px] mx-auto w-full px-6 py-10 lg:px-12'}`}>
+      <main className={`${viewMode === 'map' ? 'h-[calc(100vh-80px)] w-full relative' : 'container mx-auto px-4 md:px-6 pt-20 md:pt-24 pb-12 relative'}`}>
         {businesses.length > 0 ? (
-          <div className={`flex flex-col h-full ${viewMode === 'map' ? '' : 'animate-in fade-in slide-in-from-bottom-4 duration-700'}`}>
-
-            {/* Context Header - Only show in Table view or Dashboard */}
-            {viewMode === 'table' && (
-              <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div>
+          <div className={`flex flex-col ${viewMode === 'map' ? 'h-full' : 'gap-10'}`}>
+            {/* Header Section - Only for Table/Stats */}
+            {(viewMode === 'table' || viewMode === 'stats') && (
+              <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between animate-in fade-in slide-in-from-top-4 duration-700">
+                <div className="space-y-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Live Workspace</span>
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Database Active</span>
                   </div>
                   <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
-                    {lastImportName}
+                    {lastImportName || 'Workspace Live'}
                   </h1>
-                </div>
-
-                <div className="flex flex-wrap gap-4">
-                  <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 px-6 shadow-sm">
-                    <Database className="h-5 w-5 text-indigo-500" />
-                    <div>
-                      <div className="text-lg font-extrabold text-slate-900">{filteredBusinesses.length}</div>
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Leads</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 px-6 shadow-sm">
-                    <Network className="h-5 w-5 text-emerald-500" />
-                    <div>
-                      <div className="text-lg font-extrabold text-slate-900">{providerCount}</div>
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Networks</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 rounded-2xl bg-white border border-slate-100 p-4 px-6 shadow-sm">
-                    <MapPinIcon className="h-5 w-5 text-rose-500" />
-                    <div>
-                      <div className="text-lg font-extrabold text-slate-900">{townCount}</div>
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Towns</div>
-                    </div>
-                  </div>
                 </div>
               </div>
             )}
 
-            {/* UI Filters Overlay for Map or Standard for Table */}
-            <div className={viewMode === 'map' ? 'absolute top-24 left-6 right-6 z-[1000] pointer-events-none' : ''}>
-              <div className={viewMode === 'map' ? 'max-w-4xl mx-auto w-full pointer-events-auto flex flex-col gap-4' : ''}>
-                {viewMode === 'map' && (
-                  <div className="glass-card rounded-[2rem] shadow-2xl border-white/50 backdrop-blur-xl overflow-hidden transition-all duration-500">
-                    <div className="p-4 border-b border-white/20 flex items-center justify-between pointer-events-auto">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
-                          <SlidersHorizontal className="h-4 w-4" />
-                        </div>
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-900">Workspace Filters</span>
-                      </div>
-                      <button
-                        onClick={() => setIsFiltersVisible(!isFiltersVisible)}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/5 hover:bg-slate-900/10 transition-colors"
-                      >
-                        <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
-                          {isFiltersVisible ? 'Hide Controls' : 'Show Controls'}
-                        </span>
-                        {isFiltersVisible ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
-                      </button>
-                    </div>
 
-                    <div className={`transition-all duration-500 ${isFiltersVisible ? 'opacity-100 p-6' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-                      <ProviderBar
-                        availableProviders={availableProviders}
-                        visibleProviders={visibleProviders}
-                        onToggleProvider={handleToggleProvider}
-                        onSelectAll={handleSelectAllProviders}
-                        onClearAll={handleClearProviders}
-                      />
-                      <FilterPanel
-                        searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-                        selectedTown={selectedTown}
-                        onTownChange={setSelectedTown}
-                        towns={towns}
-                        onClearFilters={handleClearFilters}
-                      />
+            {/* Main Content Area */}
+            <div className={`flex-grow h-full ${viewMode === 'map' ? 'relative' : 'mt-8'}`}>
+              {viewMode === 'table' ? (
+                <>
+                  {/* Workspace Filters for Table View */}
+                  <div className="mb-8">
+                    <div className="glass-card rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden transition-all duration-500">
+                      <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
+                            <SlidersHorizontal className="h-4 w-4" />
+                          </div>
+                          <span className="text-xs font-black uppercase tracking-widest text-slate-900">Workspace Filters</span>
+                        </div>
+                        <button
+                          onClick={() => setIsFiltersVisible(!isFiltersVisible)}
+                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/5 hover:bg-slate-900/10 transition-colors"
+                        >
+                          <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
+                            {isFiltersVisible ? 'Hide Controls' : 'Show Controls'}
+                          </span>
+                          {isFiltersVisible ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                        </button>
+                      </div>
+
+                      <div className={`transition-all duration-500 ${isFiltersVisible ? 'opacity-100 p-6' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                        <ProviderBar
+                          availableProviders={availableProviders}
+                          visibleProviders={visibleProviders}
+                          onToggleProvider={handleToggleProvider}
+                          onSelectAll={handleSelectAllProviders}
+                          onClearAll={handleClearProviders}
+                        />
+                        <FilterPanel
+                          searchTerm={searchTerm}
+                          onSearchChange={setSearchTerm}
+                          selectedTown={selectedTown}
+                          onTownChange={setSelectedTown}
+                          phoneType={phoneType}
+                          onPhoneTypeChange={setPhoneType}
+                          towns={towns}
+                          onClearFilters={handleClearFilters}
+                        />
+                      </div>
                     </div>
                   </div>
-                )}
 
-                {viewMode === 'table' && (
-                  <>
-                    <ProviderBar
-                      availableProviders={availableProviders}
-                      visibleProviders={visibleProviders}
-                      onToggleProvider={handleToggleProvider}
-                      onSelectAll={handleSelectAllProviders}
-                      onClearAll={handleClearProviders}
-                    />
-                    <FilterPanel
-                      searchTerm={searchTerm}
-                      onSearchChange={setSearchTerm}
-                      selectedTown={selectedTown}
-                      onTownChange={setSelectedTown}
-                      towns={towns}
-                      onClearFilters={handleClearFilters}
-                    />
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className={`transition-all duration-500 ${viewMode === 'map' ? 'h-[calc(100vh-80px)] w-full relative' : 'mt-8'}`}>
-              {viewMode === 'table' ? (
-                <BusinessTable
-                  businesses={filteredBusinesses}
-                  onBusinessSelect={(b) => {
-                    setSelectedBusiness(b);
-                    setViewMode('map');
-                  }}
-                />
+                  <BusinessTable
+                    businesses={filteredBusinesses}
+                    onBusinessSelect={(b) => {
+                      setSelectedBusiness(b);
+                      setViewMode('map');
+                      setIsRoutePlannerOpen(true);
+                      setMapTarget({ center: [b.coordinates.lat, b.coordinates.lng], zoom: 15 });
+                    }}
+                    onDelete={handleDeleteBusiness}
+                    onTogglePhoneType={handleTogglePhoneType}
+                  />
+                </>
               ) : viewMode === 'map' ? (
-                <div className="h-full w-full flex overflow-hidden">
+                <div className="h-full w-full flex overflow-hidden rounded-[2.5rem] shadow-2xl border border-white relative group/map-container">
                   <div className="flex-grow h-full relative">
+                    {/* Workspace Filters (Center-aligned within map area) */}
+                    <div className="absolute top-4 md:top-6 left-0 right-0 z-[1002] pointer-events-none px-4 md:px-6">
+                      <div className="max-w-4xl mx-auto w-full pointer-events-auto flex flex-col gap-4 transition-all duration-500">
+                        <div className={`glass-card rounded-[2rem] shadow-2xl border-white/50 backdrop-blur-xl overflow-hidden transition-all duration-500`}>
+                          <div className="p-4 border-b border-white/20 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
+                                <SlidersHorizontal className="h-4 w-4" />
+                              </div>
+                              <span className="text-xs font-black uppercase tracking-widest text-slate-900">Workspace Filters</span>
+                            </div>
+                            <button
+                              onClick={() => setIsFiltersVisible(!isFiltersVisible)}
+                              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/5 hover:bg-slate-900/10 transition-colors"
+                            >
+                              <span className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-500">
+                                {isFiltersVisible ? 'Hide Controls' : 'Show Controls'}
+                              </span>
+                              {isFiltersVisible ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+                            </button>
+                          </div>
+
+                          <div className={`transition-all duration-500 ${isFiltersVisible ? 'opacity-100 p-6' : 'max-h-0 opacity-0 overflow-hidden'}`}>
+                            <ProviderBar
+                              availableProviders={availableProviders}
+                              visibleProviders={visibleProviders}
+                              onToggleProvider={handleToggleProvider}
+                              onSelectAll={handleSelectAllProviders}
+                              onClearAll={handleClearProviders}
+                            />
+                            <FilterPanel
+                              searchTerm={searchTerm}
+                              onSearchChange={setSearchTerm}
+                              selectedTown={selectedTown}
+                              onTownChange={setSelectedTown}
+                              phoneType={phoneType}
+                              onPhoneTypeChange={setPhoneType}
+                              towns={towns}
+                              onClearFilters={handleClearFilters}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     <BusinessMap
                       businesses={filteredBusinesses}
-                      center={mapCenter}
-                      zoom={12}
+                      targetLocation={mapTarget?.center}
+                      zoom={mapTarget?.zoom}
                       fullScreen={true}
-                      onAddToRoute={handleAddToRoute}
-                      onRemoveFromRoute={handleRemoveFromRoute}
-                      currentRouteIds={currentRouteIds}
+                      onBusinessSelect={handleSelectBusinessOnMap}
                     />
 
-                    {/* Route Planner Toggle Button (Map View Only) */}
-                    <button
-                      onClick={() => setIsRoutePlannerOpen(true)}
-                      className={`absolute bottom-8 right-8 z-[1000] flex items-center gap-3 px-6 py-4 rounded-[2rem] bg-slate-900 text-white shadow-2xl shadow-indigo-200 border-2 border-white/20 transition-all active:scale-95 ${isRoutePlannerOpen ? 'translate-x-32 opacity-0' : 'translate-x-0 opacity-100'
-                        }`}
-                    >
-                      <Route className="h-5 w-5 text-emerald-400" />
-                      <div className="flex flex-col items-start leading-none">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Planner</span>
-                        <span className="text-sm font-bold">{currentRouteIds.size} Stops</span>
-                      </div>
-                    </button>
+                    {/* Minimized Sidebar Tab */}
+                    {!isRoutePlannerOpen && (
+                      <button
+                        onClick={() => setIsRoutePlannerOpen(true)}
+                        className="absolute top-1/2 -right-1 z-[1001] h-24 w-10 bg-white border border-slate-200 border-r-0 rounded-l-2xl shadow-xl flex flex-col items-center justify-center gap-2 text-indigo-600 hover:w-12 transition-all group"
+                      >
+                        <PanelRightOpen className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                        <div className="[writing-mode:vertical-lr] rotate-180 text-[9px] font-black uppercase tracking-widest whitespace-nowrap">
+                          Details
+                        </div>
+                      </button>
+                    )}
                   </div>
 
-                  {/* Route Planner Sidebar */}
+                  {/* Route Planner / Detail Sidebar */}
                   <div
-                    className={`h-full bg-white border-l border-slate-100 transition-all duration-500 ease-in-out shadow-[-20px_0_40px_-15px_rgba(0,0,0,0.05)] z-[1001] ${isRoutePlannerOpen ? 'w-[450px]' : 'w-0 overflow-hidden opacity-0'
+                    className={`h-full bg-white border-l border-slate-100 transition-all duration-500 ease-in-out shadow-[-20px_0_40px_-15px_rgba(0,0,0,0.15)] z-[1003] shrink-0 fixed inset-0 md:relative md:sticky top-0 ${isRoutePlannerOpen ? 'w-full md:w-[450px]' : 'w-0 overflow-hidden opacity-0'
                       }`}
                   >
                     <RoutePlanner
                       routeItems={routeItems}
                       businesses={businesses}
+                      selectedBusiness={selectedBusiness}
+                      onAddToRoute={handleAddToRoute}
                       onRemoveFromRoute={handleRemoveFromRoute}
                       onClearRoute={handleClearRoute}
                       onSelectBusiness={setSelectedBusiness}
                       onClose={() => setIsRoutePlannerOpen(false)}
+                      onTogglePhoneType={handleTogglePhoneType}
                     />
                   </div>
                 </div>
@@ -500,6 +423,7 @@ function App() {
         )}
       </main>
 
+      {/* Modals */}
       <ImportModal
         isOpen={isImportOpen}
         isImporting={isImporting}
@@ -514,8 +438,9 @@ function App() {
         columns={importColumns}
         initialMapping={{}}
         onConfirm={handleConfirmMapping}
-        onBack={handleBackToImport}
+        onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }}
       />
+
       <LoginModal
         isOpen={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
@@ -525,3 +450,4 @@ function App() {
 }
 
 export default App;
+

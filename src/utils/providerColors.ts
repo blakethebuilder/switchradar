@@ -7,6 +7,8 @@ export const PROVIDER_COLORS: Record<string, string> = {
   'VOX': '#32CD32',      // Lime Green
   'HEROGNP': '#FF8C00',  // Orange
   'BACKSPACE': '#00008B',// Dark Blue
+  'VODAGNP': '#E60000',   // Red (Landline)
+  'MTNBSGNP': '#EFCC00',  // Yellow (Landline)
 
   // Secondary Providers
   'Cell C': '#000000',
@@ -45,6 +47,8 @@ export const getProviderColor = (provider: string): string => {
   if (normalized.includes('VOX')) return PROVIDER_COLORS['VOX'];
   if (normalized.includes('HEROGNP')) return PROVIDER_COLORS['HEROGNP'];
   if (normalized.includes('BACKSPACE')) return PROVIDER_COLORS['BACKSPACE'];
+  if (normalized.includes('VODAGNP')) return PROVIDER_COLORS['VODAGNP'];
+  if (normalized.includes('MTNBSGNP')) return PROVIDER_COLORS['MTNBSGNP'];
   if (normalized.includes('CELL')) return PROVIDER_COLORS['Cell C'];
   if (normalized.includes('RAIN')) return PROVIDER_COLORS['Rain'];
 
