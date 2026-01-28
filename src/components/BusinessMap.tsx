@@ -62,25 +62,25 @@ const createProviderIcon = (provider: string) => {
     html: `
       <div style="
         background-color: ${color};
-        width: 32px;
-        height: 32px;
-        border-radius: 10px;
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
         border: 2px solid white;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        box-shadow: 0 2px 4px -1px rgb(0 0 0 / 0.1);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: 800;
-        font-size: 9px;
-        letter-spacing: 0.2px;
+        font-size: 7px;
+        letter-spacing: -0.2px;
         transform: rotate(45deg);
       ">
         <div style="transform: rotate(-45deg);">${label}</div>
       </div>
     `,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   });
 
   iconCache[provider] = icon;
