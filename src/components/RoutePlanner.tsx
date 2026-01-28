@@ -32,19 +32,20 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
 
     const isInRoute = selectedBusiness ? routeItems.some(item => item.businessId === selectedBusiness.id) : false;
 
+    // View: Empty State
     if (!selectedBusiness && routeBusinesses.length === 0) {
         return (
-            <div className="h-full flex items-center justify-between px-6 py-4 bg-white">
+            <div className="flex items-center justify-between px-6 py-6 bg-white rounded-t-[2rem]">
                 <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300">
+                    <div className="h-10 w-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
                         <MapPin className="h-5 w-5" />
                     </div>
                     <div>
-                        <h3 className="text-sm font-black text-slate-900">Ready to explore</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select a pin to view details</p>
+                        <h3 className="text-sm font-black text-slate-900 leading-none">Ready to explore</h3>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Select a pin to view details</p>
                     </div>
                 </div>
-                <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-50 rounded-lg">
+                <button onClick={onClose} className="p-2 bg-slate-50 rounded-full text-slate-400 hover:text-slate-900">
                     <X className="h-5 w-5" />
                 </button>
             </div>
@@ -54,41 +55,41 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
     // View: Route List (No Selection)
     if (!selectedBusiness) {
         return (
-            <div className="flex flex-col h-full bg-white max-h-[300px]">
-                <div className="px-6 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+            <div className="flex flex-col bg-white rounded-t-[2rem] max-h-[40vh]">
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10 rounded-t-[2rem]">
                     <div className="flex items-center gap-2">
                         <Navigation className="h-4 w-4 text-indigo-600" />
                         <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest">Route Plan ({routeBusinesses.length})</h3>
                     </div>
                     <div className="flex items-center gap-2">
                         {routeBusinesses.length > 0 && (
-                            <button onClick={onClearRoute} className="text-[10px] font-bold text-rose-500 hover:text-rose-600 px-2">
-                                CLEAR
+                            <button onClick={onClearRoute} className="text-[10px] font-bold text-rose-500 hover:text-rose-600 px-2 uppercase tracking-wide">
+                                Clear
                             </button>
                         )}
-                        <button onClick={onClose} className="p-1 text-slate-400 hover:text-slate-600">
+                        <button onClick={onClose} className="p-1.5 bg-slate-50 rounded-full text-slate-400 hover:text-slate-600">
                             <X className="h-4 w-4" />
                         </button>
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                <div className="flex-1 overflow-y-auto px-4 py-2 space-y-2 custom-scrollbar">
                     {routeBusinesses.map((b, idx) => (
                         <div
                             key={b.id}
                             onClick={() => onSelectBusiness(b)}
-                            className="flex items-center gap-3 p-2 rounded-xl border border-slate-100 bg-white hover:border-indigo-100 hover:shadow-sm cursor-pointer"
+                            className="flex items-center gap-3 p-3 rounded-2xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-indigo-100 hover:shadow-md transition-all cursor-pointer"
                         >
-                            <div className="h-6 w-6 rounded-lg bg-slate-900 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                            <span className="h-6 w-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm">
                                 {idx + 1}
-                            </div>
+                            </span>
                             <div className="min-w-0 flex-1">
-                                <div className="text-xs font-bold text-slate-900 truncate">{b.name}</div>
-                                <div className="text-[10px] text-slate-400 truncate">{b.town}</div>
+                                <div className="text-sm font-bold text-slate-900 truncate leading-tight">{b.name}</div>
+                                <div className="text-[10px] text-slate-400 truncate font-semibold">{b.town}</div>
                             </div>
                             <button
                                 onClick={(e) => { e.stopPropagation(); onRemoveFromRoute(b.id); }}
-                                className="p-2 text-slate-300 hover:text-rose-500"
+                                className="p-2 text-slate-300 hover:text-rose-500 transition-colors"
                             >
                                 <Trash2 className="h-4 w-4" />
                             </button>
@@ -96,102 +97,95 @@ export const RoutePlanner: React.FC<RoutePlannerProps> = ({
                     ))}
                 </div>
 
-                {routeBusinesses.length > 0 && (
-                    <div className="p-3 border-t border-slate-100 bg-white">
-                        <button
-                            onClick={() => {
-                                const coords = routeBusinesses.map(b => `${b.coordinates.lat},${b.coordinates.lng}`).join('/');
-                                window.open(`https://www.google.com/maps/dir/${coords}`, '_blank');
-                            }}
-                            className="w-full h-10 flex items-center justify-center gap-2 rounded-xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 shadow-lg shadow-indigo-100"
-                        >
-                            <ExternalLink className="h-3 w-3" />
-                            Navigate Route
-                        </button>
-                    </div>
-                )}
+                <div className="p-4 bg-white border-t border-slate-100 pb-8 md:pb-4">
+                    <button
+                        onClick={() => {
+                            const coords = routeBusinesses.map(b => `${b.coordinates.lat},${b.coordinates.lng}`).join('/');
+                            window.open(`https://www.google.com/maps/dir/${coords}`, '_blank');
+                        }}
+                        className="w-full h-12 flex items-center justify-center gap-2 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200"
+                    >
+                        <ExternalLink className="h-4 w-4" />
+                        Start Navigation
+                    </button>
+                </div>
             </div>
         );
     }
 
-    // View: Selected Business Detail
+    // View: Selected Business Detail (Compact)
     const isMobile = selectedBusiness.phoneTypeOverride
         ? selectedBusiness.phoneTypeOverride === 'mobile'
         : isMobileProvider(selectedBusiness.provider, selectedBusiness.phone);
 
     return (
-        <div className="bg-white h-auto max-h-[400px] overflow-y-auto">
-            <div className="sticky top-0 right-0 z-20 flex justify-end p-2 absolute">
-                <button onClick={onClose} className="h-8 w-8 rounded-full bg-white/80 backdrop-blur shadow-sm border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900">
-                    <X className="h-4 w-4" />
-                </button>
-            </div>
+        <div className="bg-white rounded-t-[2rem] shadow-2xl relative">
+            {/* Close Button Absolute */}
+            <button onClick={onClose} className="absolute top-4 right-4 z-20 h-8 w-8 rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center transition-colors">
+                <X className="h-4 w-4" />
+            </button>
 
-            <div className="p-5 md:p-6 pb-2">
-                {/* Header Row */}
-                <div className="flex items-start gap-4 mb-4">
-                    <div className="h-12 w-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                        <Landmark className="h-6 w-6" />
+            <div className="p-6 pb-8 md:pb-6">
+                {/* Top Row: Icon + Info */}
+                <div className="flex gap-4 items-start mb-6 pr-8">
+                    <div className="h-14 w-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 shadow-sm border border-indigo-100">
+                        <Landmark className="h-7 w-7" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                            <ProviderBadge provider={selectedBusiness.provider} className="scale-90 origin-left" />
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <ProviderBadge provider={selectedBusiness.provider} className="scale-90 origin-left shadow-sm" />
                         </div>
-                        <h2 className="text-lg font-black text-slate-900 leading-tight truncate">{selectedBusiness.name}</h2>
-                        <p className="text-xs text-slate-500 font-medium truncate">{selectedBusiness.address}, {selectedBusiness.town}</p>
+                        <h2 className="text-xl font-black text-slate-900 leading-none truncate mb-1">{selectedBusiness.name}</h2>
+                        <p className="text-xs font-semibold text-slate-400 truncate">{selectedBusiness.address}, {selectedBusiness.town}</p>
                     </div>
                 </div>
 
-                {/* Actions Row */}
-                <div className="flex flex-wrap gap-2 mb-4">
+                {/* Phone Row (Compact) */}
+                {selectedBusiness.phone && (
+                    <div className="flex items-center justify-between py-2 px-1 mb-4 border-t border-b border-slate-50">
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => onTogglePhoneType?.(selectedBusiness.id, isMobile ? 'mobile' : 'landline')}
+                                className={`h-8 w-8 rounded-full flex items-center justify-center transition-colors ${isMobile ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'
+                                    }`}
+                            >
+                                {isMobile ? <Smartphone className="h-4 w-4" /> : <Landmark className="h-4 w-4" />}
+                            </button>
+                            <span className="text-sm font-black text-slate-700 font-mono tracking-tight">{selectedBusiness.phone}</span>
+                        </div>
+                        <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${isMobile ? 'bg-rose-50 text-rose-500' : 'bg-emerald-50 text-emerald-500'
+                            }`}>
+                            {isMobile ? 'Mobile' : 'Landline'}
+                        </span>
+                    </div>
+                )}
+
+                {/* Action Buttons (Big & Tappable) */}
+                <div className="grid grid-cols-[1fr_auto] gap-3">
                     <button
                         onClick={() => isInRoute ? onRemoveFromRoute(selectedBusiness.id) : onAddToRoute(selectedBusiness.id)}
-                        className={`flex-1 min-w-[140px] h-10 flex items-center justify-center gap-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isInRoute
-                            ? 'bg-rose-50 text-rose-600 border border-rose-100'
-                            : 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                        className={`h-14 rounded-2xl flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest shadow-lg transition-all active:scale-95 ${isInRoute
+                            ? 'bg-white border-2 border-rose-100 text-rose-600 hover:bg-rose-50'
+                            : 'bg-indigo-600 text-white shadow-indigo-300/50 hover:bg-indigo-700'
                             }`}
                     >
-                        {isInRoute ? <Minus className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                        {isInRoute ? <Minus className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                         {isInRoute ? 'Remove Stop' : 'Add to Route'}
                     </button>
 
-                    <div className="flex gap-2 flex-1">
-                        <button
-                            onClick={() => {
-                                const mapsUrl = selectedBusiness.mapsLink && selectedBusiness.mapsLink.startsWith('http')
-                                    ? selectedBusiness.mapsLink
-                                    : `https://www.google.com/maps/search/?api=1&query=${selectedBusiness.coordinates.lat},${selectedBusiness.coordinates.lng}`;
-                                window.open(mapsUrl, '_blank');
-                            }}
-                            className="h-10 w-10 flex items-center justify-center rounded-xl bg-slate-50 text-slate-600 border border-slate-100 hover:bg-indigo-50 hover:text-indigo-600"
-                            title="Open in Maps"
-                        >
-                            <Globe className="h-4 w-4" />
-                        </button>
-
-                        {selectedBusiness.phone && (
-                            <button
-                                onClick={() => onTogglePhoneType?.(selectedBusiness.id, isMobile ? 'mobile' : 'landline')}
-                                className={`flex-1 h-10 px-3 rounded-xl border flex items-center justify-center gap-2 transition-colors ${isMobile
-                                        ? 'bg-rose-50 border-rose-100 text-rose-600'
-                                        : 'bg-emerald-50 border-emerald-100 text-emerald-600'
-                                    }`}
-                                title="Toggle Phone Type"
-                            >
-                                {isMobile ? <Smartphone className="h-3 w-3" /> : <Landmark className="h-3 w-3" />}
-                                <span className="text-[10px] font-black uppercase">{isMobile ? 'Mobile' : 'Landline'}</span>
-                            </button>
-                        )}
-                    </div>
+                    <button
+                        onClick={() => {
+                            const mapsUrl = selectedBusiness.mapsLink && selectedBusiness.mapsLink.startsWith('http')
+                                ? selectedBusiness.mapsLink
+                                : `https://www.google.com/maps/search/?api=1&query=${selectedBusiness.coordinates.lat},${selectedBusiness.coordinates.lng}`;
+                            window.open(mapsUrl, '_blank');
+                        }}
+                        className="h-14 w-14 flex items-center justify-center rounded-2xl bg-white border-2 border-slate-100 text-slate-600 hover:border-indigo-100 hover:text-indigo-600 transition-all shadow-sm active:scale-95"
+                        title="Open in Google Maps"
+                    >
+                        <Globe className="h-6 w-6" />
+                    </button>
                 </div>
-
-                {/* Phone Number Display */}
-                {selectedBusiness.phone && (
-                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 mb-2 flex justify-between items-center">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Contact Number</span>
-                        <span className="text-sm font-black text-slate-900 font-mono tracking-tight">{selectedBusiness.phone}</span>
-                    </div>
-                )}
             </div>
         </div>
     );

@@ -395,20 +395,22 @@ function App() {
 
                   {/* Route Planner / Detail Bottom Sheet */}
                   <div
-                    className={`fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] z-[1003] transition-transform duration-500 ease-in-out ${isRoutePlannerOpen ? 'translate-y-0' : 'translate-y-[120%]'
-                      } max-h-[50vh] md:max-h-[320px] rounded-t-[2rem]`}
+                    className={`fixed bottom-0 left-0 right-0 z-[1003] transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${isRoutePlannerOpen ? 'translate-y-0' : 'translate-y-[110%]'
+                      }`}
                   >
-                    <RoutePlanner
-                      routeItems={routeItems}
-                      businesses={businesses}
-                      selectedBusiness={selectedBusiness}
-                      onAddToRoute={handleAddToRoute}
-                      onRemoveFromRoute={handleRemoveFromRoute}
-                      onClearRoute={handleClearRoute}
-                      onSelectBusiness={setSelectedBusiness}
-                      onClose={() => setIsRoutePlannerOpen(false)}
-                      onTogglePhoneType={handleTogglePhoneType}
-                    />
+                    <div className="mx-auto max-w-2xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] rounded-t-[2rem] overflow-hidden">
+                      <RoutePlanner
+                        routeItems={routeItems}
+                        businesses={businesses}
+                        selectedBusiness={selectedBusiness}
+                        onAddToRoute={handleAddToRoute}
+                        onRemoveFromRoute={handleRemoveFromRoute}
+                        onClearRoute={handleClearRoute}
+                        onSelectBusiness={setSelectedBusiness}
+                        onClose={() => setIsRoutePlannerOpen(false)}
+                        onTogglePhoneType={handleTogglePhoneType}
+                      />
+                    </div>
                   </div>
                 </div>
               ) : (
