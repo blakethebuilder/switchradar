@@ -374,24 +374,29 @@ function App() {
                       onBusinessSelect={handleSelectBusinessOnMap}
                     />
 
-                    {/* Minimized Sidebar Tab */}
+                    {/* Minimized Toolbar Toggle */}
                     {!isRoutePlannerOpen && (
                       <button
                         onClick={() => setIsRoutePlannerOpen(true)}
-                        className="absolute top-1/2 -right-1 z-[1001] h-24 w-10 bg-white border border-slate-200 border-r-0 rounded-l-2xl shadow-xl flex flex-col items-center justify-center gap-2 text-indigo-600 hover:w-12 transition-all group"
+                        className="absolute bottom-6 right-6 z-[1001] h-14 w-14 bg-white rounded-2xl shadow-xl flex items-center justify-center text-indigo-600 hover:scale-110 transition-all duration-300 border border-slate-100"
+                        title="Open Details"
                       >
-                        <PanelRightOpen className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                        <div className="[writing-mode:vertical-lr] rotate-180 text-[9px] font-black uppercase tracking-widest whitespace-nowrap">
-                          Details
+                        <div className="relative">
+                          <PanelRightOpen className="w-6 h-6 rotate-90" />
+                          {routeItems.length > 0 && (
+                            <span className="absolute -top-2 -right-2 h-4 w-4 bg-rose-500 rounded-full text-[9px] font-bold text-white flex items-center justify-center border border-white">
+                              {routeItems.length}
+                            </span>
+                          )}
                         </div>
                       </button>
                     )}
                   </div>
 
-                  {/* Route Planner / Detail Sidebar */}
+                  {/* Route Planner / Detail Bottom Sheet */}
                   <div
-                    className={`h-full bg-white border-l border-slate-100 transition-all duration-500 ease-in-out shadow-[-20px_0_40px_-15px_rgba(0,0,0,0.15)] z-[1003] shrink-0 fixed inset-0 md:relative md:sticky top-0 ${isRoutePlannerOpen ? 'w-full md:w-[450px]' : 'w-0 overflow-hidden opacity-0'
-                      }`}
+                    className={`fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.2)] z-[1003] transition-transform duration-500 ease-in-out ${isRoutePlannerOpen ? 'translate-y-0' : 'translate-y-[120%]'
+                      } max-h-[50vh] md:max-h-[320px] rounded-t-[2rem]`}
                   >
                     <RoutePlanner
                       routeItems={routeItems}
