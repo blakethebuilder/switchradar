@@ -50,7 +50,7 @@ export const TopNav = ({
                 {lastImportName} • {totalCount.toLocaleString()} leads
               </p>
             ) : (
-              <p className="text-[10px] md:text-xs font-semibold text-slate-400">Lead management dashboard</p>
+              <p className="text-[10px] md:text-xs font-semibold text-slate-400">Powered by Smart Integrate</p>
             )}
           </div>
         </div>
