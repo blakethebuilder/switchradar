@@ -233,6 +233,7 @@ function App() {
             {(viewMode === 'table' || viewMode === 'stats') && (
               <div className="p-4 md:p-6 lg:p-8 pb-0">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-8">
+                  {/* ... Header Content ... */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
