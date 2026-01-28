@@ -17,7 +17,8 @@ app.use(express.json());
 const seedUsers = async () => {
     const users = [
         { username: 'blake', password: 'Smart@2026!' },
-        { username: 'Sean', password: 'Smart@2026!' }
+        { username: 'Sean', password: 'Smart@2026!' },
+        { username: 'Jarred', password: 'Smart@2026!' }
     ];
     for (const u of users) {
         try {
@@ -121,6 +122,26 @@ app.post('/api/route/sync', auth, (req, res) => {
 
     transaction(routeItems);
     res.json({ message: 'Route sync successful' });
+});
+
+// Workspace Control Routes
+app.delete('/api/workspace', auth, (req, res) => {
+    const userId = req.userData.userId;
+    const deleteLeads = db.prepare('DELETE FROM leads WHERE userId = ?');
+    const deleteRoutes = db.prepare('DELETE FROM routes WHERE userId = ?');
+
+    const transaction = db.transaction(() => {
+        deleteLeads.run(userId);
+        deleteRoutes.run(userId);
+    });
+
+    try {
+        transaction();
+        res.json({ message: 'Cloud workspace cleared successfully' });
+    } catch (err) {
+        console.error('Workspace clear error:', err);
+        res.status(500).json({ message: 'Failed to clear workspace' });
+    }
 });
 
 app.listen(PORT, () => {

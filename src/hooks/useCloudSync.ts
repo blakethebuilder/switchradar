@@ -48,5 +48,20 @@ export const useCloudSync = (
         return () => clearTimeout(timer);
     }, [businesses, routeItems, isAuthenticated, token]);
 
-    return { isSyncing };
+    const clearCloudData = async () => {
+        if (!isAuthenticated || !token) return;
+        const API_URL = import.meta.env.VITE_API_URL || '';
+        try {
+            await fetch(`${API_URL}/api/workspace`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+        } catch (err) {
+            console.error('Failed to clear cloud data:', err);
+        }
+    };
+
+    return { isSyncing, clearCloudData };
 };

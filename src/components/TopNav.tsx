@@ -12,6 +12,7 @@ interface TopNavProps {
   lastImportName?: string;
   onLoginClick: () => void;
   isSyncing?: boolean;
+  onClearCloudData?: () => Promise<void>;
 }
 
 export const TopNav = ({
@@ -23,7 +24,8 @@ export const TopNav = ({
   totalCount,
   lastImportName,
   onLoginClick,
-  isSyncing
+  isSyncing,
+  onClearCloudData
 }: TopNavProps) => {
   const { user, isAuthenticated, logout } = useAuth();
   return (
@@ -102,13 +104,27 @@ export const TopNav = ({
                     <span className="text-xs font-black text-slate-900 leading-none">{user?.username}</span>
                     <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-0.5">Cloud Connected</span>
                   </div>
-                  <button
-                    onClick={() => logout()}
-                    className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all shadow-sm"
-                    title="Sign Out"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </button>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={async () => {
+                        if (window.confirm('WARNING: This will wipe all data from your Cloud Workspace. Local data will remain. Continue?')) {
+                          await onClearCloudData?.();
+                        }
+                      }}
+                      className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all shadow-sm border border-slate-100"
+                      title="Clear Cloud Data (Reset Workspace)"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => logout()}
+                      className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all shadow-sm border border-slate-100"
+                      title="Sign Out"
+                    >
+                      <LogOut className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (

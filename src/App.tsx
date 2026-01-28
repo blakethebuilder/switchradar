@@ -71,7 +71,7 @@ function App() {
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
 
   const { isAuthenticated, token } = useAuth();
-  const { isSyncing } = useCloudSync(businesses, routeItems, isAuthenticated, token);
+  const { isSyncing, clearCloudData } = useCloudSync(businesses, routeItems, isAuthenticated, token);
 
 
   // Initial Load from Cloud
@@ -237,6 +237,7 @@ function App() {
         lastImportName={lastImportName}
         isSyncing={isSyncing}
         onLoginClick={() => setIsLoginOpen(true)}
+        onClearCloudData={clearCloudData}
       />
 
       <main className={`${viewMode === 'map' ? 'h-[calc(100vh-80px)] w-full relative' : 'container mx-auto px-4 md:px-6 pt-20 md:pt-24 pb-12 relative'}`}>
