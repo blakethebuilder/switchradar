@@ -38,10 +38,10 @@ const intToRGB = (i: number) => {
 export const getProviderColor = (provider: string): string => {
   const normalized = provider.toUpperCase().trim();
 
+  if (normalized.includes('TELKMOBL')) return PROVIDER_COLORS['TELKMOBL'];
   if (normalized.includes('MTN')) return PROVIDER_COLORS['MTN'];
   if (normalized.includes('TELKOM')) return PROVIDER_COLORS['Telkom'];
   if (normalized.includes('VODACOM')) return PROVIDER_COLORS['Vodacom'];
-  if (normalized.includes('TELKMOBL')) return PROVIDER_COLORS['TELKMOBL'];
   if (normalized.includes('VOX')) return PROVIDER_COLORS['VOX'];
   if (normalized.includes('HEROGNP')) return PROVIDER_COLORS['HEROGNP'];
   if (normalized.includes('BACKSPACE')) return PROVIDER_COLORS['BACKSPACE'];
