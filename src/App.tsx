@@ -205,40 +205,12 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-50">
-        <div className="flex min-h-screen flex-col items-center justify-center px-4">
-          <div className="w-full max-w-md">
-            <div className="text-center mb-8">
-              <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-indigo-600 flex items-center justify-center shadow-2xl shadow-indigo-200">
-                <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h1 className="text-4xl font-black text-slate-900 mb-2">
-                Switch<span className="text-indigo-600">Radar</span>
-              </h1>
-              <p className="text-sm font-semibold text-slate-400">Powered by Smart Integrate</p>
-              <p className="text-xs text-slate-500 mt-4 max-w-sm mx-auto">
-                Lead Intelligence & Route Planning Platform
-              </p>
-            </div>
-            <div className="glass-card rounded-3xl shadow-2xl border border-slate-100 p-8">
-              <h2 className="text-xl font-black text-slate-900 mb-6 text-center">Sign In to Continue</h2>
-              <LoginModal isOpen={true} onClose={() => {}} onLoginSuccess={() => loadFromCloud(token)} />
-            </div>
-            <div className="mt-8 text-center">
-              <p className="text-xs text-slate-400">
-                Secure cloud-synced workspace for your business intelligence
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <LoginModal isOpen={true} onClose={() => {}} onLoginSuccess={() => loadFromCloud(token)} />
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 flex flex-col">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 flex flex-col relative overflow-hidden">
       <TopNav
         viewMode={viewMode}
         onViewModeChange={setViewMode}
@@ -253,11 +225,13 @@ function App() {
         onPushToCloud={pushToCloud}
         onRouteClick={() => setIsRoutePlannerOpen(!isRoutePlannerOpen)}
       />
-      <div className="flex flex-1 overflow-hidden">
-        <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
-          {businesses.length > 0 ? (
-            <div className="h-full">
-              {(viewMode === 'table' || viewMode === 'stats') && (
+      
+      <main className="flex-1 flex flex-col overflow-hidden relative">
+        {businesses.length > 0 ? (
+          <div className="flex-1 flex flex-col h-full relative">
+            {/* Stats Header - Only for Table/Stats */}
+            {(viewMode === 'table' || viewMode === 'stats') && (
+              <div className="p-4 md:p-6 lg:p-8 pb-0">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-8">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -286,8 +260,12 @@ function App() {
                     </div>
                   </div>
                 </div>
-              )}
-              {(viewMode === 'table' || viewMode === 'map') && (
+              </div>
+            )}
+
+            {/* Table View Content */}
+            {viewMode === 'table' && (
+              <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
                 <div className="mb-8">
                   <div className="glass-card rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden">
                     <div className="p-4 border-b border-slate-100 flex items-center justify-between">
@@ -322,8 +300,7 @@ function App() {
                     )}
                   </div>
                 </div>
-              )}
-              {viewMode === 'table' ? (
+                
                 <BusinessTable
                   businesses={filteredBusinesses}
                   onBusinessSelect={(b) => {
@@ -336,7 +313,53 @@ function App() {
                   onTogglePhoneType={handleTogglePhoneType}
                   onAddToRoute={handleAddToRoute}
                 />
-              ) : viewMode === 'map' ? (
+              </div>
+            )}
+
+            {/* Map View Content */}
+            {viewMode === 'map' && (
+              <div className="relative h-full w-full flex-1">
+                {/* Map Filters Overlay */}
+                <div className="absolute top-4 left-0 right-0 z-[1002] px-4 pointer-events-none">
+                  <div className="max-w-4xl mx-auto pointer-events-auto">
+                    <div className="glass-card rounded-[2rem] shadow-2xl border border-white/50 backdrop-blur-xl overflow-hidden">
+                      <div className="p-4 border-b border-white/20 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <SlidersHorizontal className="h-4 w-4 text-indigo-600" />
+                          <span className="text-xs font-black uppercase tracking-widest text-slate-900">Workspace Filters</span>
+                        </div>
+                        <button 
+                          onClick={() => setIsFiltersVisible(!isFiltersVisible)}
+                          className="p-1 rounded-lg hover:bg-slate-100/50"
+                        >
+                          {isFiltersVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      {isFiltersVisible && (
+                        <div className="p-6 bg-white/80">
+                          <ProviderBar
+                            availableProviders={availableProviders}
+                            visibleProviders={visibleProviders}
+                            onToggleProvider={handleToggleProvider}
+                            onSelectAll={handleSelectAllProviders}
+                            onClearAll={handleClearProviders}
+                          />
+                          <FilterPanel
+                            searchTerm={searchTerm}
+                            onSearchChange={setSearchTerm}
+                            selectedCategory={selectedCategory}
+                            onCategoryChange={setSelectedCategory}
+                            phoneType={phoneType}
+                            onPhoneTypeChange={setPhoneType}
+                            categories={categories}
+                            onClearFilters={handleClearFilters}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <BusinessMap
                   businesses={filteredBusinesses}
                   targetLocation={mapTarget?.center}
@@ -344,38 +367,55 @@ function App() {
                   fullScreen={true}
                   onBusinessSelect={handleSelectBusinessOnMap}
                 />
-              ) : viewMode === 'settings' ? (
+              </div>
+            )}
+
+            {/* Settings View */}
+            {viewMode === 'settings' && (
+              <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
                 <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
-              ) : (
+              </div>
+            )}
+
+            {/* Intel View */}
+            {viewMode === 'stats' && (
+              <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
                 <MarketIntelligence businesses={filteredBusinesses} />
-              )}
-            </div>
-          ) : (
-            <Dashboard
-              businessCount={businesses.length}
-              providerCount={providerCount}
-              onImportClick={openImportModal}
-              onViewMapClick={() => setViewMode('map')}
-            />
-          )}
-        </main>
-        <aside className={`transition-all duration-300 ease-in-out ${isRoutePlannerOpen ? 'w-96' : 'w-0'} bg-white shadow-lg border-l border-slate-100 flex-shrink-0 overflow-hidden`}>
-          {isRoutePlannerOpen && (
-            <RoutePlanner
-              routeItems={routeItems}
-              businesses={businesses}
-              selectedBusiness={selectedBusiness}
-              onAddToRoute={handleAddToRoute}
-              onRemoveFromRoute={handleRemoveFromRoute}
-              onClearRoute={handleClearRoute}
-              onSelectBusiness={setSelectedBusiness}
-              onClose={() => setIsRoutePlannerOpen(false)}
-              onTogglePhoneType={handleTogglePhoneType}
-              onUpdateBusiness={handleUpdateBusiness}
-            />
-          )}
-        </aside>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Dashboard
+            businessCount={businesses.length}
+            providerCount={providerCount}
+            onImportClick={openImportModal}
+            onViewMapClick={() => setViewMode('map')}
+          />
+        )}
+      </main>
+
+      {/* Route Planner Bottom Sheet */}
+      <div 
+        className={`fixed bottom-0 left-0 right-0 z-[1003] transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${
+          isRoutePlannerOpen ? 'translate-y-0' : 'translate-y-[110%]'
+        }`}
+      >
+        <div className="mx-auto max-w-2xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] rounded-t-[2rem] overflow-hidden">
+          <RoutePlanner
+            routeItems={routeItems}
+            businesses={businesses}
+            selectedBusiness={selectedBusiness}
+            onAddToRoute={handleAddToRoute}
+            onRemoveFromRoute={handleRemoveFromRoute}
+            onClearRoute={handleClearRoute}
+            onSelectBusiness={setSelectedBusiness}
+            onClose={() => setIsRoutePlannerOpen(false)}
+            onTogglePhoneType={handleTogglePhoneType}
+            onUpdateBusiness={handleUpdateBusiness}
+          />
+        </div>
       </div>
+
       <ImportModal isOpen={isImportOpen} isImporting={isImporting} onClose={() => setIsImportOpen(false)} onFileSelected={handleFileSelected} onLoadSample={handleImportSample} errorMessage={importError} />
       <ImportMappingModal isOpen={isMappingOpen} columns={importColumns} initialMapping={{}} onConfirm={handleConfirmMapping} onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }} />
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => loadFromCloud(token)} />
