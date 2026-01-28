@@ -166,7 +166,10 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
               position={[business.coordinates.lat, business.coordinates.lng]}
               icon={createProviderIcon(business.provider)}
               eventHandlers={{
-                click: () => onBusinessSelect?.(business),
+                click: (e) => {
+                  e.originalEvent.stopPropagation();
+                  onBusinessSelect?.(business);
+                },
               }}
             />
           ))}

@@ -15,6 +15,7 @@ interface TopNavProps {
   isSyncing?: boolean;
   onClearCloudData?: () => Promise<void>;
   onPushToCloud?: () => void;
+  onPullFromCloud?: () => void;
   onRouteClick?: () => void;
 }
 
@@ -30,6 +31,7 @@ export const TopNav = ({
   isSyncing,
   onClearCloudData,
   onPushToCloud,
+  onPullFromCloud,
   onRouteClick
 }: TopNavProps) => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -96,8 +98,11 @@ export const TopNav = ({
             <span className="hidden md:inline">Intel</span>
           </button>
           <button
-            onClick={onRouteClick}
-            className="flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold text-slate-500 hover:text-slate-700"
+            onClick={() => onViewModeChange('route')}
+            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all ${viewMode === 'route'
+              ? 'bg-white text-indigo-600 shadow-sm'
+              : 'text-slate-500 hover:text-slate-700'
+              }`}
             title="Route Planner"
           >
             <Route className="h-4 w-4" />
@@ -147,6 +152,13 @@ export const TopNav = ({
                     >
                       <CloudUpload className="h-4 w-4" />
                       <span>Push to Cloud</span>
+                     </button>
+                    <button
+                      onClick={() => { onPullFromCloud?.(); setIsUserMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors text-sm font-bold"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Pull from Cloud</span>
                     </button>
                     <div className="h-px bg-slate-100 my-1" />
                     <button
@@ -230,6 +242,22 @@ export const TopNav = ({
                   <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Cloud Connected</p>
                 </div>
                 {isSyncing && <Cloud className="h-4 w-4 text-indigo-500 animate-pulse" />}
+              </div>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <button
+                  onClick={() => { onPushToCloud?.(); setIsMenuOpen(false); }}
+                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 text-xs font-bold"
+                >
+                  <CloudUpload className="h-4 w-4" />
+                  Push
+                </button>
+                <button
+                  onClick={() => { onPullFromCloud?.(); setIsMenuOpen(false); }}
+                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 text-xs font-bold"
+                >
+                  <Download className="h-4 w-4" />
+                  Pull
+                </button>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button

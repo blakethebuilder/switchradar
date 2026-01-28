@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import * as XLSX from 'xlsx';
 import { FilterPanel } from './components/FilterPanel';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
@@ -10,7 +9,8 @@ import { ImportMappingModal } from './components/ImportMappingModal';
 import { TopNav } from './components/TopNav';
 import { LoginModal } from './components/LoginModal';
 import { ProviderBar } from './components/ProviderBar';
-import { RoutePlanner } from './components/RoutePlanner';
+import { ClientDetails } from './components/ClientDetails';
+import { RouteView } from './components/RouteView';
 import { DbSettingsPage } from './components/DbSettingsPage';
 import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
@@ -50,7 +50,6 @@ function App() {
   const [pendingFileName, setPendingFileName] = useState('');
   const [isFiltersVisible, setIsFiltersVisible] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
-  const [isRoutePlannerOpen, setIsRoutePlannerOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
 
@@ -86,21 +85,15 @@ function App() {
           setImportError('Invalid JSON file format.');
         }
       } else {
-        try {
-          const workbook = XLSX.read(data, { type: 'array' });
-          const sheetName = workbook.SheetNames[0];
-          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
-          if (!rows || rows.length === 0) {
-            setImportError('The selected file appears to be empty.');
-            return;
-          }
-          setImportRows(rows as any[]);
-          setImportColumns(Object.keys(rows[0] || {}));
-          setIsMappingOpen(true);
-          setIsImportOpen(false);
-        } catch (err) {
-          setImportError('Failed to read Excel/CSV file. Ensure it is not corrupted.');
-        }
+        import('xlsx').then(XLSX => {
+             const workbook = XLSX.read(data, { type: 'array' });
+             const sheetName = workbook.SheetNames[0];
+             const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+             setImportRows(rows as any[]);
+             setImportColumns(Object.keys(rows[0] || {}));
+             setIsMappingOpen(true);
+             setIsImportOpen(false);
+        }).catch(err => setImportError('Failed to load Excel parser'));
       }
     };
     if (file.name.endsWith('.json')) reader.readAsText(file);
@@ -175,7 +168,6 @@ function App() {
 
   const handleSelectBusinessOnMap = (b: Business) => {
     setSelectedBusiness(b);
-    setIsRoutePlannerOpen(true);
   };
   
   const handleTogglePhoneType = async (id: string, currentType: 'landline' | 'mobile') => {
@@ -184,10 +176,12 @@ function App() {
   };
 
   const handleExport = () => {
-    const worksheet = XLSX.utils.json_to_sheet(filteredBusinesses);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Businesses");
-    XLSX.writeFile(workbook, "switchradar_export.xlsx");
+    import('xlsx').then(XLSX => {
+        const worksheet = XLSX.utils.json_to_sheet(filteredBusinesses);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Businesses");
+        XLSX.writeFile(workbook, "switchradar_export.xlsx");
+    });
   };
 
   const handleClearAll = async () => {
@@ -223,17 +217,15 @@ function App() {
         onLoginClick={() => setIsLoginOpen(true)}
         onClearCloudData={clearCloudData}
         onPushToCloud={pushToCloud}
-        onRouteClick={() => setIsRoutePlannerOpen(!isRoutePlannerOpen)}
+        onPullFromCloud={() => loadFromCloud(token)}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden relative">
         {businesses.length > 0 ? (
           <div className="flex-1 flex flex-col h-full relative">
-            {/* Stats Header - Only for Table/Stats */}
             {(viewMode === 'table' || viewMode === 'stats') && (
               <div className="p-4 md:p-6 lg:p-8 pb-0">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-8">
-                  {/* ... Header Content ... */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -264,7 +256,6 @@ function App() {
               </div>
             )}
 
-            {/* Table View Content */}
             {viewMode === 'table' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
                 <div className="mb-8">
@@ -307,7 +298,6 @@ function App() {
                   onBusinessSelect={(b) => {
                     setSelectedBusiness(b);
                     setViewMode('map');
-                    setIsRoutePlannerOpen(true);
                     setMapTarget({ center: [b.coordinates.lat, b.coordinates.lng], zoom: 15 });
                   }}
                   onDelete={handleDeleteBusiness}
@@ -317,10 +307,8 @@ function App() {
               </div>
             )}
 
-            {/* Map View Content */}
             {viewMode === 'map' && (
               <div className="absolute inset-0 w-full h-full">
-                {/* Map Filters Overlay */}
                 <div className="absolute top-4 left-0 right-0 z-[1002] px-4 pointer-events-none">
                   <div className="max-w-4xl mx-auto pointer-events-auto">
                     <div className="glass-card rounded-[2rem] shadow-2xl border border-white/50 backdrop-blur-xl overflow-hidden">
@@ -371,14 +359,26 @@ function App() {
               </div>
             )}
 
-            {/* Settings View */}
+            {viewMode === 'route' && (
+                <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
+                    <RouteView 
+                        routeItems={routeItems} 
+                        businesses={businesses} 
+                        onRemoveFromRoute={handleRemoveFromRoute}
+                        onClearRoute={handleClearRoute}
+                        onSelectBusiness={(b) => {
+                            setSelectedBusiness(b);
+                        }}
+                    />
+                </div>
+            )}
+
             {viewMode === 'settings' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
                 <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
               </div>
             )}
 
-            {/* Intel View */}
             {viewMode === 'stats' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
                 <MarketIntelligence businesses={filteredBusinesses} />
@@ -395,26 +395,23 @@ function App() {
         )}
       </main>
 
-      {/* Route Planner Bottom Sheet */}
+      {/* Client Detail Sidebar */}
       <div 
-        className={`fixed bottom-0 left-0 right-0 z-[1003] transition-transform duration-500 cubic-bezier(0.32, 0.72, 0, 1) ${
-          isRoutePlannerOpen ? 'translate-y-0' : 'translate-y-[110%]'
+        className={`fixed top-0 right-0 bottom-0 z-[1003] w-full md:max-w-sm lg:max-w-md bg-white shadow-2xl transition-transform duration-300 ease-in-out border-l border-slate-100 ${
+          selectedBusiness ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <div className="mx-auto max-w-2xl shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)] rounded-t-[2rem] overflow-hidden">
-          <RoutePlanner
-            routeItems={routeItems}
-            businesses={businesses}
-            selectedBusiness={selectedBusiness}
-            onAddToRoute={handleAddToRoute}
-            onRemoveFromRoute={handleRemoveFromRoute}
-            onClearRoute={handleClearRoute}
-            onSelectBusiness={setSelectedBusiness}
-            onClose={() => setIsRoutePlannerOpen(false)}
-            onTogglePhoneType={handleTogglePhoneType}
-            onUpdateBusiness={handleUpdateBusiness}
+        {selectedBusiness && (
+          <ClientDetails
+              business={selectedBusiness}
+              isInRoute={routeItems.some(i => i.businessId === selectedBusiness.id)}
+              onAddToRoute={handleAddToRoute}
+              onRemoveFromRoute={handleRemoveFromRoute}
+              onClose={() => setSelectedBusiness(null)}
+              onTogglePhoneType={handleTogglePhoneType}
+              onUpdateBusiness={handleUpdateBusiness}
           />
-        </div>
+        )}
       </div>
 
       <ImportModal isOpen={isImportOpen} isImporting={isImporting} onClose={() => setIsImportOpen(false)} onFileSelected={handleFileSelected} onLoadSample={handleImportSample} errorMessage={importError} />
