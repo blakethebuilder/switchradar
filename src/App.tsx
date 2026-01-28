@@ -319,7 +319,7 @@ function App() {
 
             {/* Map View Content */}
             {viewMode === 'map' && (
-              <div className="relative h-full w-full flex-1">
+              <div className="absolute inset-0 w-full h-full">
                 {/* Map Filters Overlay */}
                 <div className="absolute top-4 left-0 right-0 z-[1002] px-4 pointer-events-none">
                   <div className="max-w-4xl mx-auto pointer-events-auto">
