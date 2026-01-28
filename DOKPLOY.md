@@ -20,8 +20,9 @@ This guide outlines how to deploy SwitchRadar to your Dokploy VPS.
 4. Select the branch: `main`.
 
 ### 3. Build Configuration
-1. For **Build Type**, select **"Docker"**.
-2. Dokploy will automatically find the `Dockerfile` in the root of the repository.
+1. For **Build Type**, you can choose either **"Docker"** or **"Docker Compose"**.
+2. I have provided both a `Dockerfile` and a `docker-compose.yml` in the root. 
+3. If using **Docker Compose**, Dokploy will use the `docker-compose.yml` which points to the `Dockerfile`.
 
 ### 4. Networking
 1. Go to the **"Networking"** tab in your Dokploy application.
