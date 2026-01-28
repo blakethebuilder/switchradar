@@ -70,17 +70,74 @@ function App() {
   const providerCount = availableProviders.length;
 
   const handleFileSelected = (file: File) => {
-    // ... file selection logic
+    setPendingFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = e.target?.result;
+      if (file.name.endsWith('.json')) {
+        try {
+          const json = JSON.parse(data as string);
+          const rows = Array.isArray(json) ? json : [json];
+          setImportRows(rows);
+          setImportColumns(Object.keys(rows[0] || {}));
+          setIsMappingOpen(true);
+          setIsImportOpen(false);
+        } catch (err) {
+          setImportError('Invalid JSON file format.');
+        }
+      } else {
+        try {
+          const workbook = XLSX.read(data, { type: 'array' });
+          const sheetName = workbook.SheetNames[0];
+          const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+          if (!rows || rows.length === 0) {
+            setImportError('The selected file appears to be empty.');
+            return;
+          }
+          setImportRows(rows as any[]);
+          setImportColumns(Object.keys(rows[0] || {}));
+          setIsMappingOpen(true);
+          setIsImportOpen(false);
+        } catch (err) {
+          setImportError('Failed to read Excel/CSV file. Ensure it is not corrupted.');
+        }
+      }
+    };
+    if (file.name.endsWith('.json')) reader.readAsText(file);
+    else reader.readAsArrayBuffer(file);
   };
+
   const handleConfirmMapping = async (mapping: ImportMapping) => {
-    // ... mapping logic
+    setIsMappingOpen(false);
+    setIsImporting(true);
+    setImportError('');
+    try {
+      const processed = processImportedData(importRows, mapping);
+      await applyNewBusinesses(processed, pendingFileName);
+    } catch (err) {
+      setImportError('Failed to process data. Check column mappings.');
+    } finally {
+      setIsImporting(false);
+    }
   };
+
   const applyNewBusinesses = async (items: Business[], sourceName: string) => {
-    // ... apply new businesses logic
+    const providers = Array.from(new Set(items.map(b => b.provider))).filter(Boolean);
+    await db.businesses.clear();
+    await db.businesses.bulkAdd(items);
+    setVisibleProviders(providers);
+    setLastImportName(sourceName);
   };
+
   const handleImportSample = async () => {
-    // ... import sample logic
+    setIsImporting(true);
+    setTimeout(async () => {
+      await applyNewBusinesses(sampleData, 'Global Sample Dataset');
+      setIsImporting(false);
+      setIsImportOpen(false);
+    }, 1000);
   };
+
   const handleToggleProvider = (provider: string) => {
     setVisibleProviders(prev =>
       prev.includes(provider) ? prev.filter(p => p !== provider) : [...prev, provider]
@@ -127,11 +184,18 @@ function App() {
   };
 
   const handleExport = () => {
-    // ... export logic
+    const worksheet = XLSX.utils.json_to_sheet(filteredBusinesses);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Businesses");
+    XLSX.writeFile(workbook, "switchradar_export.xlsx");
   };
 
   const handleClearAll = async () => {
-    // ... clear all logic
+    if (window.confirm('Delete ALL businesses and routes? This cannot be undone.')) {
+      await db.businesses.clear();
+      await db.route.clear();
+      setSelectedBusiness(null);
+    }
   };
 
   const openImportModal = () => {
@@ -141,7 +205,35 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <LoginModal isOpen={true} onClose={() => {}} onLoginSuccess={() => loadFromCloud(token)} />
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-slate-50">
+        <div className="flex min-h-screen flex-col items-center justify-center px-4">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <div className="mx-auto mb-6 h-20 w-20 rounded-3xl bg-indigo-600 flex items-center justify-center shadow-2xl shadow-indigo-200">
+                <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h1 className="text-4xl font-black text-slate-900 mb-2">
+                Switch<span className="text-indigo-600">Radar</span>
+              </h1>
+              <p className="text-sm font-semibold text-slate-400">Powered by Smart Integrate</p>
+              <p className="text-xs text-slate-500 mt-4 max-w-sm mx-auto">
+                Lead Intelligence & Route Planning Platform
+              </p>
+            </div>
+            <div className="glass-card rounded-3xl shadow-2xl border border-slate-100 p-8">
+              <h2 className="text-xl font-black text-slate-900 mb-6 text-center">Sign In to Continue</h2>
+              <LoginModal isOpen={true} onClose={() => {}} onLoginSuccess={() => loadFromCloud(token)} />
+            </div>
+            <div className="mt-8 text-center">
+              <p className="text-xs text-slate-400">
+                Secure cloud-synced workspace for your business intelligence
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -167,7 +259,32 @@ function App() {
             <div className="h-full">
               {(viewMode === 'table' || viewMode === 'stats') && (
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-8">
-                  {/* Stats Header */}
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Database Active</span>
+                    </div>
+                    <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
+                      {lastImportName || 'Workspace Live'}
+                    </h1>
+                  </div>
+
+                  <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100">
+                    <div className="flex flex-col items-center px-4">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Leads</span>
+                      <span className="text-xl font-black text-slate-900">{businesses.length.toLocaleString()}</span>
+                    </div>
+                    <div className="h-8 w-px bg-slate-100" />
+                    <div className="flex flex-col items-center px-4">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Providers</span>
+                      <span className="text-xl font-black text-slate-900">{providerCount}</span>
+                    </div>
+                    <div className="h-8 w-px bg-slate-100" />
+                    <div className="flex flex-col items-center px-4">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Selected</span>
+                      <span className="text-xl font-black text-emerald-600">{filteredBusinesses.length.toLocaleString()}</span>
+                    </div>
+                  </div>
                 </div>
               )}
               {(viewMode === 'table' || viewMode === 'map') && (
@@ -227,12 +344,12 @@ function App() {
                   fullScreen={true}
                   onBusinessSelect={handleSelectBusinessOnMap}
                 />
+              ) : viewMode === 'settings' ? (
+                <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
               ) : (
                 <MarketIntelligence businesses={filteredBusinesses} />
               )}
             </div>
-          ) : viewMode === 'settings' ? (
-            <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
           ) : (
             <Dashboard
               businessCount={businesses.length}
@@ -259,7 +376,9 @@ function App() {
           )}
         </aside>
       </div>
-      {/* ... Modals ... */}
+      <ImportModal isOpen={isImportOpen} isImporting={isImporting} onClose={() => setIsImportOpen(false)} onFileSelected={handleFileSelected} onLoadSample={handleImportSample} errorMessage={importError} />
+      <ImportMappingModal isOpen={isMappingOpen} columns={importColumns} initialMapping={{}} onConfirm={handleConfirmMapping} onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }} />
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => loadFromCloud(token)} />
     </div>
   );
 }
