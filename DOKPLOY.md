@@ -26,8 +26,9 @@ This guide outlines how to deploy SwitchRadar to your Dokploy VPS.
 
 ### 4. Networking
 1. Go to the **"Networking"** tab in your Dokploy application.
-2. Set the **Destination Port** to `80` (as defined in the Dockerfile/Nginx).
-3. (Optional) Set up your custom domain or use the auto-generated Dokploy domain.
+2. Set the **Container Port** (or Destination Port) to `80`.
+3. **CRITICAL**: Do NOT try to bind to Host Port 80 in the Docker Compose file (I have fixed this for you). Dokploy's proxy handles the connection from the web to your container.
+4. (Optional) Set up your custom domain or use the auto-generated Dokploy domain.
 
 ### 5. Deployment
 1. Click **"Deploy"**.
