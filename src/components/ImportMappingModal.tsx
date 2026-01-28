@@ -86,24 +86,24 @@ export const ImportMappingModal: React.FC<ImportMappingModalProps> = ({
   const isValid = missingRequired.length === 0;
 
   return createPortal(
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" />
 
-      <div className="relative w-full max-w-4xl overflow-hidden rounded-[2.5rem] bg-white shadow-2xl animate-in zoom-in-95 duration-300">
-        <div className="flex items-center justify-between border-b border-slate-100 px-8 py-6">
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100">
-              <Settings2 className="h-6 w-6" />
+      <div className="relative w-full max-w-6xl overflow-hidden rounded-[2rem] bg-white shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white z-10">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shadow-sm">
+              <Settings2 className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-2xl font-extrabold text-slate-900">Map Connections</h2>
-              <p className="text-sm font-semibold text-slate-400">Define how your spreadsheet data connects to our platform</p>
+              <h2 className="text-xl font-extrabold text-slate-900">Map Connections</h2>
+              <p className="text-xs font-semibold text-slate-400">Define column mappings</p>
             </div>
           </div>
         </div>
 
-        <div className="custom-scrollbar max-h-[70vh] overflow-y-auto bg-slate-50/30 p-8">
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="custom-scrollbar overflow-y-auto bg-slate-50/30 p-4">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {(Object.keys(FIELD_LABELS) as ImportFieldKey[]).map(field => {
               const isRequired = REQUIRED_FIELDS.includes(field);
               const isMapped = !!mapping[field];
@@ -111,29 +111,29 @@ export const ImportMappingModal: React.FC<ImportMappingModalProps> = ({
               return (
                 <div
                   key={field}
-                  className={`flex flex-col gap-3 rounded-[2rem] border-2 p-6 transition-all ${isMapped
-                    ? 'border-white bg-white shadow-md'
+                  className={`flex flex-col gap-2 rounded-xl border p-3 transition-all ${isMapped
+                    ? 'border-indigo-100 bg-white shadow-sm'
                     : isRequired
-                      ? 'border-rose-100 bg-rose-50/30'
-                      : 'border-slate-100 bg-white/50'
+                      ? 'border-rose-200 bg-rose-50/50'
+                      : 'border-slate-200 bg-white/50'
                     }`}
                 >
                   <label className="flex items-center justify-between px-1">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">
                       {FIELD_LABELS[field]}
                       {isRequired && <span className="ml-1 text-rose-500">*</span>}
                     </span>
                     {isMapped ? (
-                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                     ) : (
-                      isRequired && <AlertCircle className="h-4 w-4 text-rose-300" />
+                      isRequired && <AlertCircle className="h-3.5 w-3.5 text-rose-400" />
                     )}
                   </label>
 
                   <select
                     value={mapping[field] ?? ''}
                     onChange={(event) => handleChange(field, event.target.value)}
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm outline-none transition-all focus:border-indigo-500/30 focus:ring-4 focus:ring-indigo-500/5"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm outline-none transition-all focus:border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/10"
                   >
                     <option value="">Ignore Column</option>
                     {columns.map(column => (
@@ -148,30 +148,30 @@ export const ImportMappingModal: React.FC<ImportMappingModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-slate-100 bg-white px-8 py-6">
+        <div className="flex items-center justify-between border-t border-slate-100 bg-white px-6 py-4 z-10">
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to File
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Back
           </button>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             {!isValid && (
-              <span className="hidden text-xs font-bold text-rose-500 md:block">
-                Required mapping missing: {missingRequired.map(f => FIELD_LABELS[f]).join(', ')}
+              <span className="hidden text-[10px] font-bold text-rose-500 md:block">
+                Missing: {missingRequired.map(f => FIELD_LABELS[f]).join(', ')}
               </span>
             )}
             <button
               type="button"
               disabled={!isValid}
               onClick={() => onConfirm(mapping)}
-              className="btn-primary px-8"
+              className="btn-primary py-2 px-6 text-xs"
             >
-              FINALIZE IMPORT
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              FINALIZE
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
             </button>
           </div>
         </div>
