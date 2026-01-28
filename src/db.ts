@@ -8,7 +8,7 @@ export class SwitchRadarDB extends Dexie {
     constructor() {
         super('SwitchRadarDB');
         this.version(2).stores({
-            businesses: '++id, name, provider, town, status',
+            businesses: 'id, name, provider, town, status',
             route: '++id, businessId, order'
         });
     }

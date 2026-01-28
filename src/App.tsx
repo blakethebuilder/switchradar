@@ -255,6 +255,23 @@ function App() {
                     {lastImportName || 'Workspace Live'}
                   </h1>
                 </div>
+
+                <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100">
+                  <div className="flex flex-col items-center px-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Leads</span>
+                    <span className="text-xl font-black text-slate-900">{businesses.length.toLocaleString()}</span>
+                  </div>
+                  <div className="h-8 w-px bg-slate-100" />
+                  <div className="flex flex-col items-center px-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Providers</span>
+                    <span className="text-xl font-black text-slate-900">{providerCount}</span>
+                  </div>
+                  <div className="h-8 w-px bg-slate-100" />
+                  <div className="flex flex-col items-center px-4">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Selected</span>
+                    <span className="text-xl font-black text-emerald-600">{filteredBusinesses.length.toLocaleString()}</span>
+                  </div>
+                </div>
               </div>
             )}
 

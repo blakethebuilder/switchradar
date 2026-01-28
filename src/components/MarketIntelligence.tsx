@@ -175,10 +175,10 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                                         axisLine={false}
                                         tickLine={false}
                                         tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }}
-                                        width={150}
+                                        width={140}
                                     />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                                    <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={32}>
+                                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12}>
                                         {providerData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={getProviderColor(entry.name)} />
                                         ))}
