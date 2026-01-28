@@ -1,73 +1,83 @@
-# React + TypeScript + Vite
+# 📡 SwitchRadar
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**SwitchRadar** is a premium, high-performance lead intelligence platform designed for visual market analysis and network provider tracking. Built with React and optimized for large datasets, it transforms raw CSV/Excel leads into actionable geospatial intelligence.
 
-Currently, two official plugins are available:
+![SwitchRadar Preview](https://via.placeholder.com/1200x600?text=SwitchRadar+Geospatial+Intelligence)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Key Features
 
-## React Compiler
+- **📍 Immersive Mapping**: Full-screen interactive map with advanced clustering and "Spiderfy" animations for overlapping leads.
+- **🎨 Brand Integration**: Automatic color-coding for major South African providers (MTN, Telkom, Vodacom, VOX, etc.).
+- **⚡ High Performance**: Optimized to handle 2000+ leads with zero lag using React memoization and IndexedDB.
+- **🔄 Smart Import Engine**: Intelligent column mapping with automatic coordinate extraction from Google Maps links.
+- **💾 Local Persistence**: All data stays in your browser via IndexedDB for instant loads and offline capability.
+- **📊 Dual Mode View**: Seamlessly toggle between a dense data table and a high-level map visualization.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠 Tech Stack
 
-## Expanding the ESLint configuration
+- **Core**: React 18, TypeScript, Vite
+- **Styling**: Tailwind CSS 4
+- **Database**: IndexedDB (via Dexie.js)
+- **Mapping**: Leaflet, React-Leaflet, MarkerCluster
+- **Icons**: Lucide React
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🎯 Brand Color Guide
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+SwitchRadar automatically maps the following providers to their official brand colors:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+| Provider | Color | HEX |
+| :--- | :--- | :--- |
+| **MTN** | Yellow | `#EFCC00` |
+| **Telkom** | Blue | `#005FB8` |
+| **Vodacom** | Red | `#E60000` |
+| **TELKMOBL** | Turquoise | `#40E0D0` |
+| **VOX** | Lime Green | `#32CD32` |
+| **HEROGNP** | Orange | `#FF8C00` |
+| **BACKSPACE** | Dark Blue | `#00008B` |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/blakethebuilder/switchradar.git
+   cd switchradar
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Run in development mode:
+   ```bash
+   npm run dev
+   ```
+
+## 🐳 Docker & VPS Deployment
+
+SwitchRadar is container-ready. To deploy on your own VPS (e.g., via Dokploy):
+
+```bash
+docker build -t switchradar .
+docker run -p 80:80 switchradar
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+*See [DOKPLOY.md](./DOKPLOY.md) for detailed deployment instructions.*
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 📂 Project Structure
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- `src/components`: UI components (Map, Table, Modals, Nav).
+- `src/utils`: Data processing engine, color mapping, and coordinate sniffer.
+- `src/db.ts`: IndexedDB schema and Dexie configuration.
+- `src/types`: TypeScript definitions for project-wide safety.
+
+## 📄 License
+
+MIT Copyright (c) 2026 Blake The Builder.

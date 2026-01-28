@@ -320,7 +320,7 @@ function App() {
               </div>
             </div>
 
-            <div className={`transition-all duration-500 ${viewMode === 'map' ? 'h-screen w-full relative' : 'mt-8'}`}>
+            <div className={`transition-all duration-500 ${viewMode === 'map' ? 'h-[calc(100vh-80px)] w-full relative' : 'mt-8'}`}>
               {viewMode === 'table' ? (
                 <BusinessTable
                   businesses={filteredBusinesses}
