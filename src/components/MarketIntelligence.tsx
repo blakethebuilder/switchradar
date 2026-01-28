@@ -161,25 +161,24 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                     </div>
 
                     {!minimized['bar'] && (
-                        <div className="h-[400px] w-full mt-4">
+                        <div className="h-[500px] w-full mt-4">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={providerData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <BarChart data={providerData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                                     <XAxis
-                                        dataKey="name"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
-                                        interval={0}
-                                        tickMargin={10}
+                                        type="number"
+                                        hide
                                     />
                                     <YAxis
+                                        dataKey="name"
+                                        type="category"
                                         axisLine={false}
                                         tickLine={false}
-                                        tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
+                                        tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }}
+                                        width={150}
                                     />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                                    <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={60}>
+                                    <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={32}>
                                         {providerData.map((entry, index) => (
                                             <Cell key={`cell-${index}`} fill={getProviderColor(entry.name)} />
                                         ))}
