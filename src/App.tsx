@@ -214,7 +214,7 @@ function App() {
       <div className="flex flex-1 overflow-hidden">
         <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
           {businesses.length > 0 ? (
-            <div>
+            <div className="h-full">
               {viewMode === 'table' ? (
                 <BusinessTable
                   businesses={filteredBusinesses}
