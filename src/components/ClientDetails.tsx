@@ -290,14 +290,19 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                         <button
                             onClick={() => handleUpdateMetadata('hasIssues', true)}
                             disabled={isUpdating === 'metadata-hasIssues-true'}
-                            className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-wider transition-all transform active:scale-95 ${
+                            className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-wider transition-all transform active:scale-95 relative ${
                                 isUpdating === 'metadata-hasIssues-true'
                                     ? 'bg-red-500 text-white scale-95 animate-pulse'
                                     : business.metadata?.hasIssues === true
-                                    ? 'bg-red-600 text-white shadow-lg shadow-red-300/50 hover:shadow-red-400/60 hover:bg-red-700'
+                                    ? 'bg-red-600 text-white shadow-lg shadow-red-300/50 hover:shadow-red-400/60 hover:bg-red-700 ring-2 ring-red-200'
+                                    : business.metadata?.hasIssues === false
+                                    ? 'bg-slate-100 text-slate-400 border border-slate-200'
                                     : 'bg-white text-red-600 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 hover:shadow-md'
                             }`}
                         >
+                            {business.metadata?.hasIssues === true && (
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                            )}
                             {isUpdating === 'metadata-hasIssues-true' ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
@@ -308,14 +313,19 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                         <button
                             onClick={() => handleUpdateMetadata('hasIssues', false)}
                             disabled={isUpdating === 'metadata-hasIssues-false'}
-                            className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-wider transition-all transform active:scale-95 ${
+                            className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-wider transition-all transform active:scale-95 relative ${
                                 isUpdating === 'metadata-hasIssues-false'
                                     ? 'bg-green-500 text-white scale-95 animate-pulse'
                                     : business.metadata?.hasIssues === false
-                                    ? 'bg-green-600 text-white shadow-lg shadow-green-300/50 hover:shadow-green-400/60 hover:bg-green-700'
+                                    ? 'bg-green-600 text-white shadow-lg shadow-green-300/50 hover:shadow-green-400/60 hover:bg-green-700 ring-2 ring-green-200'
+                                    : business.metadata?.hasIssues === true
+                                    ? 'bg-slate-100 text-slate-400 border border-slate-200'
                                     : 'bg-white text-green-600 border-2 border-green-200 hover:bg-green-50 hover:border-green-300 hover:shadow-md'
                             }`}
                         >
+                            {business.metadata?.hasIssues === false && (
+                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                            )}
                             {isUpdating === 'metadata-hasIssues-false' ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
@@ -334,14 +344,19 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                 <button
                                     onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', true)}
                                     disabled={isUpdating === 'metadata-isActiveOnCurrentProvider-true'}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
                                         isUpdating === 'metadata-isActiveOnCurrentProvider-true'
                                             ? 'bg-green-500 text-white scale-95 animate-pulse'
                                             : business.metadata?.isActiveOnCurrentProvider === true
-                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
+                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700 ring-1 ring-green-300'
+                                            : business.metadata?.isActiveOnCurrentProvider === false
+                                            ? 'bg-slate-100 text-slate-400'
                                             : 'bg-slate-200 text-slate-600 hover:bg-green-100 hover:text-green-700'
                                     }`}
                                 >
+                                    {business.metadata?.isActiveOnCurrentProvider === true && (
+                                        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-white"></div>
+                                    )}
                                     {isUpdating === 'metadata-isActiveOnCurrentProvider-true' ? (
                                         <Loader2 className="h-3 w-3 animate-spin" />
                                     ) : (
@@ -351,14 +366,19 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                 <button
                                     onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', false)}
                                     disabled={isUpdating === 'metadata-isActiveOnCurrentProvider-false'}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
                                         isUpdating === 'metadata-isActiveOnCurrentProvider-false'
                                             ? 'bg-red-500 text-white scale-95 animate-pulse'
                                             : business.metadata?.isActiveOnCurrentProvider === false
-                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700'
+                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700 ring-1 ring-red-300'
+                                            : business.metadata?.isActiveOnCurrentProvider === true
+                                            ? 'bg-slate-100 text-slate-400'
                                             : 'bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-700'
                                     }`}
                                 >
+                                    {business.metadata?.isActiveOnCurrentProvider === false && (
+                                        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-400 rounded-full border border-white"></div>
+                                    )}
                                     {isUpdating === 'metadata-isActiveOnCurrentProvider-false' ? (
                                         <Loader2 className="h-3 w-3 animate-spin" />
                                     ) : (
@@ -387,14 +407,19 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                 <button
                                     onClick={() => handleUpdateMetadata('canContact', true)}
                                     disabled={isUpdating === 'metadata-canContact-true'}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
                                         isUpdating === 'metadata-canContact-true'
                                             ? 'bg-green-500 text-white scale-95 animate-pulse'
                                             : business.metadata?.canContact === true
-                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
+                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700 ring-1 ring-green-300'
+                                            : business.metadata?.canContact === false
+                                            ? 'bg-slate-100 text-slate-400'
                                             : 'bg-slate-200 text-slate-600 hover:bg-green-100 hover:text-green-700'
                                     }`}
                                 >
+                                    {business.metadata?.canContact === true && (
+                                        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-white"></div>
+                                    )}
                                     {isUpdating === 'metadata-canContact-true' ? (
                                         <Loader2 className="h-3 w-3 animate-spin" />
                                     ) : (
@@ -404,14 +429,19 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                 <button
                                     onClick={() => handleUpdateMetadata('canContact', false)}
                                     disabled={isUpdating === 'metadata-canContact-false'}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
                                         isUpdating === 'metadata-canContact-false'
                                             ? 'bg-red-500 text-white scale-95 animate-pulse'
                                             : business.metadata?.canContact === false
-                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700'
+                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700 ring-1 ring-red-300'
+                                            : business.metadata?.canContact === true
+                                            ? 'bg-slate-100 text-slate-400'
                                             : 'bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-700'
                                     }`}
                                 >
+                                    {business.metadata?.canContact === false && (
+                                        <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-400 rounded-full border border-white"></div>
+                                    )}
                                     {isUpdating === 'metadata-canContact-false' ? (
                                         <Loader2 className="h-3 w-3 animate-spin" />
                                     ) : (
@@ -435,14 +465,17 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                 key={option.value}
                                 onClick={() => handleUpdateInterest(option.value)}
                                 disabled={isUpdating === `interest-${option.value}`}
-                                className={`flex items-center justify-center gap-2 p-3 h-12 rounded-xl transition-all transform active:scale-95 ${
+                                className={`flex items-center justify-center gap-2 p-3 h-12 rounded-xl transition-all transform active:scale-95 relative ${
                                     isUpdating === `interest-${option.value}`
                                         ? `bg-slate-300 text-slate-600 scale-95 animate-pulse`
                                         : business.metadata?.interest === option.value
-                                        ? `bg-white border-2 ${option.border} ${option.color} shadow-lg shadow-slate-200/50 hover:shadow-lg`
+                                        ? `bg-white border-2 ${option.border} ${option.color} shadow-lg shadow-slate-200/50 hover:shadow-lg ring-1 ring-current`
                                         : `bg-white/50 border border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200 hover:shadow-md`
                                 }`}
                             >
+                                {business.metadata?.interest === option.value && (
+                                    <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${option.color === 'text-emerald-600' ? 'bg-emerald-500' : option.color === 'text-yellow-600' ? 'bg-yellow-500' : 'bg-rose-500'}`}></div>
+                                )}
                                 {isUpdating === `interest-${option.value}` ? (
                                     <Loader2 className="h-4 w-4 animate-spin" />
                                 ) : (
