@@ -2,12 +2,15 @@ import { useMemo, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { filterBusinesses } from '../utils/dataProcessors';
+import { useDebounce } from './useDebounce';
 
 export const useBusinessData = () => {
     const businesses = useLiveQuery(() => db.businesses.toArray()) || [];
     const routeItems = useLiveQuery(() => db.route.orderBy('order').toArray()) || [];
 
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchInput, setSearchInput] = useState('');
+    const searchTerm = useDebounce(searchInput, 300); // Debounced value for filtering
+
     const [selectedCategory, setSelectedCategory] = useState('');
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
     const [phoneType, setPhoneType] = useState<'all' | 'landline' | 'mobile'>('all');
@@ -60,7 +63,7 @@ export const useBusinessData = () => {
 
     const filteredBusinesses = useMemo(() => {
         return filterBusinesses(businesses, {
-            searchTerm,
+            searchTerm, // <-- Use debounced term for filtering
             selectedCategory,
             visibleProviders,
             phoneType,
@@ -75,8 +78,9 @@ export const useBusinessData = () => {
         filteredBusinesses,
         categories,
         availableProviders,
-        searchTerm,
-        setSearchTerm,
+        // Expose original input value and setter for UI interaction
+        searchTerm: searchInput, 
+        setSearchTerm: setSearchInput,
         selectedCategory,
         setSelectedCategory,
         visibleProviders,
