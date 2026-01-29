@@ -1,4 +1,4 @@
-import type { Business, NoteEntry } from '../types';
+import type { Business } from '../types';
 
 export interface ExportFilter {
   hasIssues?: boolean;
