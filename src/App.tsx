@@ -236,22 +236,22 @@ function App() {
                       <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Database Active</span>
                     </div>
-                    <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
+                    <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900">
                       {lastImportName || 'Workspace Live'}
                     </h1>
                   </div>
 
-                  <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100">
+                  <div className="flex flex-col md:flex-row md:items-center gap-4 bg-white px-3 py-3 rounded-2xl shadow-sm border border-slate-100 overflow-x-auto no-scrollbar">
                     <div className="flex flex-col items-center px-4">
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Businesses</span>
                       <span className="text-xl font-black text-slate-900">{businesses.length.toLocaleString()}</span>
                     </div>
-                    <div className="h-8 w-px bg-slate-100" />
+                    <div className="h-8 w-px bg-slate-100 hidden md:block" />
                     <div className="flex flex-col items-center px-4">
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Providers</span>
                       <span className="text-xl font-black text-slate-900">{providerCount}</span>
                     </div>
-                    <div className="h-8 w-px bg-slate-100" />
+                    <div className="h-8 w-px bg-slate-100 hidden md:block" />
                     <div className="flex flex-col items-center px-4">
                       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Selected</span>
                       <span className="text-xl font-black text-emerald-600">{filteredBusinesses.length.toLocaleString()}</span>
@@ -410,7 +410,7 @@ function App() {
 
             {viewMode === 'stats' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
-                <MarketIntelligence businesses={filteredBusinesses} />
+                <MarketIntelligence businesses={filteredBusinesses} droppedPin={droppedPin} radiusKm={radiusKm} />
               </div>
             )}
           </div>

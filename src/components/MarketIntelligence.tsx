@@ -2,21 +2,25 @@ import React, { useMemo, useState } from 'react';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip, Cell
 } from 'recharts';
-import { Users, Network, Smartphone, Phone, Minus, Plus, Signal, PieChart as PieChartIcon, Building2 } from 'lucide-react';
+import { Users, Network, Smartphone, Phone, Minus, Plus, Signal, PieChart as PieChartIcon, Building2, MapPin } from 'lucide-react';
 import type { Business } from '../types';
 import { getProviderColor } from '../utils/providerColors';
 import { isMobileProvider } from '../utils/phoneUtils';
 
 interface MarketIntelligenceProps {
     businesses: Business[];
+    droppedPin: { lat: number, lng: number } | null;
+    radiusKm: number;
 }
 
-export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ businesses }) => {
+export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ businesses, droppedPin, radiusKm }) => {
     const [minimized, setMinimized] = useState<Record<string, boolean>>({});
 
     const toggleMinimize = (id: string) => {
         setMinimized(prev => ({ ...prev, [id]: !prev[id] }));
     };
+
+    const isFilteredByRadius = !!droppedPin;
 
     // 1. Provider Distribution (Full List)
     const providerData = useMemo(() => {
@@ -93,13 +97,22 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
     return (
         <div className="flex-grow flex flex-col gap-8 pb-20 fade-in animate-in duration-700">
             {/* Header Stats */}
+            {isFilteredByRadius && (
+                <div className="flex items-center gap-3 p-4 md:p-6 lg:p-8 rounded-[2.5rem] bg-rose-50 border border-rose-200 text-rose-800 shadow-lg animate-in fade-in duration-500">
+                    <MapPin className="h-5 w-5 shrink-0" />
+                    <p className="text-sm font-bold">
+                        Analysis is limited to businesses within a <span className="font-black text-rose-900">{radiusKm} km</span> radius of the dropped pin. Clear the pin filter for a full data view.
+                    </p>
+                </div>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="glass-card rounded-[2.5rem] p-6 lg:p-8 flex items-center gap-5 border-white/40 shadow-xl shadow-slate-200/50">
                     <div className="h-14 w-14 lg:h-16 lg:w-16 rounded-3xl bg-indigo-50 flex items-center justify-center shrink-0">
                         <Users className="h-7 w-7 lg:h-8 lg:w-8 text-indigo-600" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Total Businesses</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Active Businesses</p>
                         <h3 className="text-2xl lg:text-3xl font-black text-slate-900 leading-none">{businesses.length.toLocaleString()}</h3>
                     </div>
                 </div>
@@ -142,8 +155,8 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-8">
-                {/* 1. Full Width Bar Chart - Provider Analysis */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* 1. Full Width Bar Chart - Provider Analysis (Left Column on Desktop) */}
                 <div className="glass-card rounded-[3rem] p-6 lg:p-10 shadow-2xl shadow-slate-200/40 border-white/60">
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-4">
@@ -189,113 +202,114 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                     )}
                 </div>
 
-                {/* 2. Network Percentage Breakdown - Grid List */}
-                <div className="glass-card rounded-[3rem] p-6 lg:p-10 shadow-xl shadow-slate-200/30 border-white/60">
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
-                                <PieChartIcon className="h-6 w-6" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-black text-slate-900">Network Share</h3>
-                                <p className="text-xs font-semibold text-slate-400">Percentage distribution across database</p>
-                            </div>
-                        </div>
-                        <button onClick={() => toggleMinimize('pct')} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 transition-colors">
-                            {minimized['pct'] ? <Plus className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
-                        </button>
-                    </div>
-
-                    {!minimized['pct'] && (
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {networkPcts.map((network) => (
-                                <div key={network.name} className="flex flex-col gap-2 p-4 rounded-3xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: getProviderColor(network.name) }} />
-                                            <span className="text-xs font-bold text-slate-700 uppercase tracking-tight truncate max-w-[80px]">{network.name}</span>
-                                        </div>
-                                        <span className="text-lg font-black text-slate-900">{network.pct}%</span>
-                                    </div>
-                                    <div className="w-full bg-slate-200/50 rounded-full h-1.5 overflow-hidden">
-                                        <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${network.pct}%`, backgroundColor: getProviderColor(network.name) }} />
-                                    </div>
-                                    <div className="text-[10px] font-medium text-slate-400 text-right">{network.value.toLocaleString()} businesses</div>
+                {/* Right Column on Desktop (Stacking Network Share and Industry) */}
+                <div className="flex flex-col gap-8">
+                    {/* 2. Network Percentage Breakdown - Grid List */}
+                    <div className="glass-card rounded-[3rem] p-6 lg:p-10 shadow-xl shadow-slate-200/30 border-white/60">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                                    <PieChartIcon className="h-6 w-6" />
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                {/* 3. Industry Breakdown */}
-                <div className="glass-card rounded-[3rem] p-6 lg:p-10 shadow-xl shadow-slate-200/30 border-white/60">
-                    <div className="flex items-center justify-between mb-8">
-                        <div className="flex items-center gap-4">
-                            <div className="h-12 w-12 rounded-2xl bg-orange-500/10 text-orange-600 flex items-center justify-center">
-                                <Building2 className="h-6 w-6" />
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900">Network Share</h3>
+                                    <p className="text-xs font-semibold text-slate-400">Percentage distribution across database</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-xl font-black text-slate-900">Industry & Sector Analysis</h3>
-                                <p className="text-xs font-semibold text-slate-400">Top business categories in this area</p>
-                            </div>
+                            <button onClick={() => toggleMinimize('pct')} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 transition-colors">
+                                {minimized['pct'] ? <Plus className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
+                            </button>
                         </div>
-                        <button onClick={() => toggleMinimize('industry')} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 transition-colors">
-                            {minimized['industry'] ? <Plus className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
-                        </button>
-                    </div>
 
-                    {!minimized['industry'] && (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            {/* Top Categories List */}
-                            <div className="grid grid-cols-2 gap-4 h-min">
-                                {industryData.slice(0, 6).map((industry, index) => (
-                                    <div key={index} className="flex flex-col p-4 rounded-3xl bg-slate-50/50 border border-slate-100">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-xs font-bold text-slate-400">#{index + 1}</span>
-                                            <span className="text-lg font-black text-slate-900">{((industry.value / (businesses.length || 1)) * 100).toFixed(1)}%</span>
+                        {!minimized['pct'] && (
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                                {networkPcts.map((network) => (
+                                    <div key={network.name} className="flex flex-col gap-2 p-4 rounded-3xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: getProviderColor(network.name) }} />
+                                                <span className="text-xs font-bold text-slate-700 uppercase tracking-tight truncate max-w-[80px]">{network.name}</span>
+                                            </div>
+                                            <span className="text-lg font-black text-slate-900">{network.pct}%</span>
                                         </div>
-                                        <div className="text-sm font-bold text-slate-800 truncate" title={industry.name}>{industry.name}</div>
-                                        <div className="text-[10px] font-medium text-slate-400">{industry.value.toLocaleString()} businesses</div>
+                                        <div className="w-full bg-slate-200/50 rounded-full h-1.5 overflow-hidden">
+                                            <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${network.pct}%`, backgroundColor: getProviderColor(network.name) }} />
+                                        </div>
+                                        <div className="text-[10px] font-medium text-slate-400 text-right">{network.value.toLocaleString()} businesses</div>
                                     </div>
                                 ))}
                             </div>
+                        )}
+                    </div>
 
-                            {/* Horizontal Bar Chart */}
-                            <div className="h-[300px] w-full">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={industryData.slice(0, 10)} layout="vertical" margin={{ left: 10, right: 30 }}>
-                                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                                        <XAxis type="number" hide />
-                                        <YAxis
-                                            dataKey="name"
-                                            type="category"
-                                            axisLine={false}
-                                            tickLine={false}
-                                            tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
-                                            width={140}
-                                        />
-                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
-                                        <Bar
-                                            dataKey="value"
-                                            className="fill-indigo-500"
-                                            radius={[0, 6, 6, 0]}
-                                            barSize={18}
-                                        >
-                                            <Cell fill="#6366f1" />
-                                            <Cell fill="#818cf8" />
-                                            <Cell fill="#a5b4fc" />
-                                            <Cell fill="#c7d2fe" />
-                                            <Cell fill="#e0e7ff" />
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
+                    {/* 3. Industry Breakdown */}
+                    <div className="glass-card rounded-[3rem] p-6 lg:p-10 shadow-xl shadow-slate-200/30 border-white/60">
+                        <div className="flex items-center justify-between mb-8">
+                            <div className="flex items-center gap-4">
+                                <div className="h-12 w-12 rounded-2xl bg-orange-500/10 text-orange-600 flex items-center justify-center">
+                                    <Building2 className="h-6 w-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-900">Industry & Sector Analysis</h3>
+                                    <p className="text-xs font-semibold text-slate-400">Top business categories in this area</p>
+                                </div>
                             </div>
+                            <button onClick={() => toggleMinimize('industry')} className="p-2 rounded-xl bg-slate-50 text-slate-400 hover:text-slate-900 transition-colors">
+                                {minimized['industry'] ? <Plus className="h-5 w-5" /> : <Minus className="h-5 w-5" />}
+                            </button>
                         </div>
-                    )}
-                </div>
 
+                        {!minimized['industry'] && (
+                            <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
+                                {/* Top Categories List */}
+                                <div className="grid grid-cols-2 gap-4 h-min">
+                                    {industryData.slice(0, 6).map((industry, index) => (
+                                        <div key={index} className="flex flex-col p-4 rounded-3xl bg-slate-50/50 border border-slate-100">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="h-8 w-8 rounded-full bg-white shadow-sm flex items-center justify-center text-xs font-bold text-slate-400">#{index + 1}</span>
+                                                <span className="text-lg font-black text-slate-900">{((industry.value / (businesses.length || 1)) * 100).toFixed(1)}%</span>
+                                            </div>
+                                            <div className="text-sm font-bold text-slate-800 truncate" title={industry.name}>{industry.name}</div>
+                                            <div className="text-[10px] font-medium text-slate-400">{industry.value.toLocaleString()} businesses</div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Horizontal Bar Chart */}
+                                <div className="h-[300px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={industryData.slice(0, 10)} layout="vertical" margin={{ left: 10, right: 30 }}>
+                                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                                            <XAxis type="number" hide />
+                                            <YAxis
+                                                dataKey="name"
+                                                type="category"
+                                                axisLine={false}
+                                                tickLine={false}
+                                                tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }}
+                                                width={140}
+                                            />
+                                            <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
+                                            <Bar
+                                                dataKey="value"
+                                                className="fill-indigo-500"
+                                                radius={[0, 6, 6, 0]}
+                                                barSize={18}
+                                            >
+                                                <Cell fill="#6366f1" />
+                                                <Cell fill="#818cf8" />
+                                                <Cell fill="#a5b4fc" />
+                                                <Cell fill="#c7d2fe" />
+                                                <Cell fill="#e0e7ff" />
+                                            </Bar>
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
 };
-

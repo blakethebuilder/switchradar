@@ -109,8 +109,8 @@ function MapController({ targetLocation, zoom, businesses, isDropMode, setIsDrop
       </div>
 
       {isDropMode && (
-        <div className="absolute top-0 left-0 right-0 bottom-0 z-[999] bg-black/5 flex items-center justify-center pointer-events-none">
-          <p className="px-4 py-2 bg-white rounded-lg text-sm font-bold text-slate-900 shadow-xl border border-slate-100 animate-in fade-in duration-300">
+        <div className="absolute top-0 left-0 right-0 z-[999] p-4 flex items-start justify-center pointer-events-none">
+          <p className="w-full max-w-sm px-4 py-2 bg-white rounded-xl text-center text-sm font-bold text-slate-900 shadow-2xl border border-slate-100 animate-in fade-in duration-300 pointer-events-auto">
             Click on the map to place the filter pin.
           </p>
         </div>
