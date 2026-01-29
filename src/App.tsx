@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FilterPanel } from './components/FilterPanel';
+import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
 import { MarketIntelligence } from './components/MarketIntelligence';
@@ -8,17 +8,16 @@ import { ImportModal } from './components/ImportModal';
 import { ImportMappingModal } from './components/ImportMappingModal';
 import { TopNav } from './components/TopNav';
 import { LoginModal } from './components/LoginModal';
-import { ProviderBar } from './components/ProviderBar';
 import { ClientDetails } from './components/ClientDetails';
 import { RouteView } from './components/RouteView';
 import { DbSettingsPage } from './components/DbSettingsPage';
 import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
 import { useCloudSync } from './hooks/useCloudSync';
+import { CloudSyncPanel } from './components/CloudSyncPanel';
 import { processImportedData, sampleData } from './utils/dataProcessors';
 import { db } from './db';
 import './App.css';
-import { ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import type { Business, ImportMapping, ViewMode } from './types';
 
 
@@ -59,7 +58,7 @@ function App() {
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
 
   const { isAuthenticated, token } = useAuth();
-  const { isSyncing, clearCloudData, pushToCloud } = useCloudSync(businesses, routeItems, isAuthenticated, token);
+  const { isSyncing, lastSyncTime, clearCloudData, pushToCloud } = useCloudSync(businesses, routeItems, isAuthenticated, token);
 
   const handleUpdateBusiness = async (id: string, updates: Partial<Business>) => {
     await db.businesses.update(id, updates);
@@ -264,38 +263,24 @@ function App() {
             {viewMode === 'table' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
                 <div className="mb-8">
-                  <div className="glass-card rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden">
-                    <div className="p-4 border-b border-slate-100 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <SlidersHorizontal className="h-4 w-4" />
-                        <span>Workspace Filters</span>
-                      </div>
-                      <button onClick={() => setIsFiltersVisible(!isFiltersVisible)}>
-                        {isFiltersVisible ? <ChevronUp /> : <ChevronDown />}
-                      </button>
-                    </div>
-                    {isFiltersVisible && (
-                      <div className="p-6">
-                        <ProviderBar
-                          availableProviders={availableProviders}
-                          visibleProviders={visibleProviders}
-                          onToggleProvider={handleToggleProvider}
-                          onSelectAll={handleSelectAllProviders}
-                          onClearAll={handleClearProviders}
-                        />
-                        <FilterPanel
-                          searchTerm={searchTerm}
-                          onSearchChange={setSearchTerm}
-                          selectedCategory={selectedCategory}
-                          onCategoryChange={setSelectedCategory}
-                          phoneType={phoneType}
-                          onPhoneTypeChange={setPhoneType}
-                          categories={categories}
-                          onClearFilters={handleClearFilters}
-                        />
-                      </div>
-                    )}
-                  </div>
+                  <WorkspaceFilters
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    selectedCategory={selectedCategory}
+                    onCategoryChange={setSelectedCategory}
+                    phoneType={phoneType}
+                    onPhoneTypeChange={setPhoneType}
+                    categories={categories}
+                    availableProviders={availableProviders}
+                    visibleProviders={visibleProviders}
+                    onToggleProvider={handleToggleProvider}
+                    onSelectAllProviders={handleSelectAllProviders}
+                    onClearProviders={handleClearProviders}
+                    onClearFilters={handleClearFilters}
+                    isVisible={isFiltersVisible}
+                    onToggleVisibility={() => setIsFiltersVisible(!isFiltersVisible)}
+                    variant="table"
+                  />
                 </div>
                 
                 <BusinessTable
@@ -314,64 +299,29 @@ function App() {
 
             {viewMode === 'map' && (
               <div className="absolute inset-0 w-full h-full">
-              <div className="absolute top-4 left-0 right-0 z-[1002] px-4 pointer-events-none md:static md:px-0">
-                <div 
-                  className={`max-w-4xl mx-auto pointer-events-auto transition-all duration-300 ease-in-out ${
-                    viewMode === 'map' && !isFiltersVisible ? 'md:translate-y-0 translate-y-[-100%]' : 'translate-y-0'
-                  }`}
-                >
-                  <div className="glass-card rounded-[2rem] shadow-2xl border border-white/50 backdrop-blur-xl overflow-hidden">
-                    <div className="p-4 border-b border-white/20 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <SlidersHorizontal className="h-4 w-4 text-indigo-600" />
-                        <span className="text-xs font-black uppercase tracking-widest text-slate-900">Workspace Filters</span>
-                      </div>
-                      <button 
-                        onClick={() => setIsFiltersVisible(!isFiltersVisible)}
-                        className="p-1 rounded-lg hover:bg-slate-100/50"
-                      >
-                        {isFiltersVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    {isFiltersVisible && (
-                      <div className="p-6 bg-white/80">
-                        <ProviderBar
-                            availableProviders={availableProviders}
-                            visibleProviders={visibleProviders}
-                            onToggleProvider={handleToggleProvider}
-                            onSelectAll={handleSelectAllProviders}
-                            onClearAll={handleClearProviders}
-                          />
-                          <FilterPanel
-                            searchTerm={searchTerm}
-                            onSearchChange={setSearchTerm}
-                            selectedCategory={selectedCategory}
-                            onCategoryChange={setSelectedCategory}
-                            phoneType={phoneType}
-                            onPhoneTypeChange={setPhoneType}
-                            categories={categories}
-                            onClearFilters={handleClearFilters}
-                          />
-                          
-                          {/* Radius Filter Control */}
-                          {droppedPin && (
-                            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
-                              <label className="text-sm font-bold text-slate-700 block">Filter Radius: {radiusKm} km</label>
-                              <input
-                                type="range"
-                                min="0.5"
-                                max="10"
-                                step="0.5"
-                                value={radiusKm}
-                                onChange={(e) => setRadiusKm(Number(e.target.value))}
-                                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer range-lg"
-                              />
-                            </div>
-                          )}
-
-                        </div>
-                      )}
-                    </div>
+                <div className="absolute top-20 left-0 right-0 z-[2000] px-4">
+                  <div className="max-w-4xl mx-auto">
+                    <WorkspaceFilters
+                      searchTerm={searchTerm}
+                      onSearchChange={setSearchTerm}
+                      selectedCategory={selectedCategory}
+                      onCategoryChange={setSelectedCategory}
+                      phoneType={phoneType}
+                      onPhoneTypeChange={setPhoneType}
+                      categories={categories}
+                      availableProviders={availableProviders}
+                      visibleProviders={visibleProviders}
+                      onToggleProvider={handleToggleProvider}
+                      onSelectAllProviders={handleSelectAllProviders}
+                      onClearProviders={handleClearProviders}
+                      onClearFilters={handleClearFilters}
+                      isVisible={isFiltersVisible}
+                      onToggleVisibility={() => setIsFiltersVisible(!isFiltersVisible)}
+                      droppedPin={droppedPin}
+                      radiusKm={radiusKm}
+                      setRadiusKm={setRadiusKm}
+                      variant="map"
+                    />
                   </div>
                 </div>
 
@@ -404,7 +354,16 @@ function App() {
 
             {viewMode === 'settings' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
-                <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
+                <div className="max-w-4xl mx-auto space-y-8">
+                  <CloudSyncPanel
+                    businesses={businesses}
+                    routeItems={routeItems}
+                    onSyncComplete={() => loadFromCloud(token)}
+                    lastSyncTime={lastSyncTime}
+                    isSyncing={isSyncing}
+                  />
+                  <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
+                </div>
               </div>
             )}
 

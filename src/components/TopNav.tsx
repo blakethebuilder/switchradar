@@ -124,10 +124,9 @@ export const TopNav = ({
           <div className="h-8 w-px bg-slate-200" />
           
           {/* Main Actions */}
-          <button onClick={onImportClick} className="btn-primary">
-            <Upload className="h-4 w-4" />
-            <span className="hidden sm:inline">Import Businesses</span>
-            <span className="sm:hidden">Import</span>
+          <button onClick={onImportClick} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-1.5 shadow-md shadow-indigo-100">
+            <Upload className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Import</span>
           </button>
 
           <div className="flex items-center">

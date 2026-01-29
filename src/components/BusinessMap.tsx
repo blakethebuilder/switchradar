@@ -74,7 +74,10 @@ function MapController({ targetLocation, zoom, businesses, isDropMode, setIsDrop
           onClick={() => {
             if (businesses.length > 0) {
               const bounds = L.latLngBounds(businesses.map(b => [b.coordinates.lat, b.coordinates.lng]));
-              map.fitBounds(bounds, { padding: [50, 50] });
+              map.fitBounds(bounds, { 
+                padding: [20, 20],
+                maxZoom: 12
+              });
             }
           }}
           className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-95"
@@ -261,10 +264,14 @@ export const BusinessMap = React.memo(({
       }`}>
       <MapContainer
         center={[-29.0000, 24.0000]}
-        zoom={5}
+        zoom={6}
         style={{ height: '100%', width: '100%', borderRadius: fullScreen ? '0' : '1.5rem' }}
         zoomControl={false}
         preferCanvas={true}
+        worldCopyJump={true}
+        maxBounds={[[-35, 16], [-22, 33]]} // Rough bounds for South Africa
+        minZoom={5}
+        maxZoom={18}
         {...mapOptions} // Apply interaction locks
       >
         <MapController 
@@ -312,17 +319,57 @@ export const BusinessMap = React.memo(({
         <MarkerClusterGroup
           chunkedLoading
           spiderfyOnMaxZoom={true}
-          showCoverageOnHover={true}
-          maxClusterRadius={30}
-          disableClusteringAtZoom={15}
+          showCoverageOnHover={false}
+          maxClusterRadius={50}
+          disableClusteringAtZoom={16}
           removeOutsideVisibleBounds={true}
-          spiderfyDistanceMultiplier={1.2}
+          spiderfyDistanceMultiplier={1.5}
+          animate={true}
+          animateAddingMarkers={true}
+          spiderfyShapePositions={(count: number, centerPt: any) => {
+            const distanceFromCenter = 35;
+            const angleStep = (2 * Math.PI) / count;
+            
+            return Array.from({ length: count }, (_, i) => {
+              const angle = angleStep * i;
+              return [
+                centerPt.x + distanceFromCenter * Math.cos(angle),
+                centerPt.y + distanceFromCenter * Math.sin(angle)
+              ];
+            });
+          }}
           polygonOptions={{
             fillColor: '#6366f1',
             color: '#6366f1',
             weight: 2,
-            opacity: 1,
-            fillOpacity: 0.1
+            opacity: 0.8,
+            fillOpacity: 0.15
+          }}
+          iconCreateFunction={(cluster: any) => {
+            const count = cluster.getChildCount();
+            let size = 'small';
+            let colorClass = 'bg-indigo-500';
+            
+            if (count >= 100) {
+              size = 'large';
+              colorClass = 'bg-rose-500';
+            } else if (count >= 50) {
+              size = 'medium';
+              colorClass = 'bg-orange-500';
+            } else if (count >= 10) {
+              size = 'medium';
+              colorClass = 'bg-amber-500';
+            }
+            
+            const sizeClass = size === 'large' ? 'w-12 h-12 text-lg' : 
+                             size === 'medium' ? 'w-10 h-10 text-base' : 'w-8 h-8 text-sm';
+            
+            return L.divIcon({
+              html: `<div class="flex items-center justify-center ${sizeClass} ${colorClass} text-white font-bold rounded-full border-2 border-white shadow-lg">${count}</div>`,
+              className: 'custom-cluster-icon',
+              iconSize: [40, 40],
+              iconAnchor: [20, 20]
+            });
           }}
         >
           {memoizedMarkers}

@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import { X, Lock, User, Loader2, Sparkles, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { environmentConfig } from '../config/environment';
 
 interface LoginModalProps {
     isOpen: boolean;
     onClose: () => void;
     onLoginSuccess: () => void;
 }
-
-const API_URL = import.meta.env.VITE_API_URL || '';
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
     const { login } = useAuth();
@@ -26,9 +25,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         setError('');
 
         const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
+        const apiUrl = environmentConfig.getApiUrl();
+
+        if (!apiUrl) {
+            throw new Error('API URL not configured. Please check your environment settings.');
+        }
 
         try {
-            const response = await fetch(`${API_URL}${endpoint}`, {
+            const response = await fetch(`${apiUrl}${endpoint}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password }),

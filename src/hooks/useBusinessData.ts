@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { filterBusinesses } from '../utils/dataProcessors';
 import { useDebounce } from './useDebounce';
+import { cloudSyncService } from '../services/cloudSync';
+import { environmentConfig } from '../config/environment';
 
 export const useBusinessData = () => {
     const businesses = useLiveQuery(() => db.businesses.toArray()) || [];
@@ -29,10 +31,58 @@ export const useBusinessData = () => {
         [businesses]
     );
 
-    // Load initial data from Cloud if available (Disabled)
-    const loadFromCloud = async (_token: string | null) => {
-        // Cloud loading disabled to prevent 404s
-        return;
+    // Initialize visibleProviders with all available providers when businesses change
+    useEffect(() => {
+        if (availableProviders.length > 0 && visibleProviders.length === 0) {
+            setVisibleProviders(availableProviders);
+        }
+    }, [availableProviders, visibleProviders.length]);
+
+    // Load initial data from Cloud if available
+    const loadFromCloud = async (token: string | null) => {
+        if (!token || !environmentConfig.isCloudSyncEnabled()) {
+            console.log('Cloud loading disabled or no token available');
+            return;
+        }
+
+        try {
+            const cloudData = await cloudSyncService.syncFromCloud(token);
+            
+            if (cloudData.businesses.length > 0) {
+                // Merge cloud businesses with local data (local takes priority)
+                const transaction = db.transaction('rw', db.businesses, async () => {
+                    for (const business of cloudData.businesses) {
+                        // Only add if not already exists locally
+                        const existing = await db.businesses.get(business.id);
+                        if (!existing) {
+                            await db.businesses.add(business);
+                        }
+                    }
+                });
+                
+                await transaction;
+                console.log(`Loaded ${cloudData.businesses.length} businesses from cloud`);
+            }
+
+            if (cloudData.routeItems.length > 0) {
+                // Merge cloud route items with local data
+                const transaction = db.transaction('rw', db.route, async () => {
+                    for (const routeItem of cloudData.routeItems) {
+                        // Only add if not already exists locally
+                        const existing = await db.route.where('businessId').equals(routeItem.businessId).first();
+                        if (!existing) {
+                            await db.route.add(routeItem);
+                        }
+                    }
+                });
+                
+                await transaction;
+                console.log(`Loaded ${cloudData.routeItems.length} route items from cloud`);
+            }
+        } catch (error) {
+            console.error('Failed to load from cloud:', error);
+            // Gracefully continue with local data only
+        }
     };
 
     const filteredBusinesses = useMemo(() => {
