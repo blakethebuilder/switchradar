@@ -11,6 +11,10 @@ export const useBusinessData = () => {
     const [selectedCategory, setSelectedCategory] = useState('');
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
     const [phoneType, setPhoneType] = useState<'all' | 'landline' | 'mobile'>('all');
+    
+    // Dropped Pin State for Filtering
+    const [droppedPin, setDroppedPin] = useState<{ lat: number, lng: number } | null>(null);
+    const [radiusKm, setRadiusKm] = useState<number>(5); // Default radius of 5km
 
     const categories = useMemo(
         () => Array.from(new Set(businesses.map(b => b.category))).filter(Boolean).sort(),
@@ -59,9 +63,11 @@ export const useBusinessData = () => {
             searchTerm,
             selectedCategory,
             visibleProviders,
-            phoneType
+            phoneType,
+            droppedPin: droppedPin ?? undefined,
+            radiusKm
         });
-    }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType]);
+    }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
 
     return {
         businesses,
@@ -77,6 +83,10 @@ export const useBusinessData = () => {
         setVisibleProviders,
         phoneType,
         setPhoneType,
+        droppedPin,
+        setDroppedPin,
+        radiusKm,
+        setRadiusKm,
         loadFromCloud
     };
 };

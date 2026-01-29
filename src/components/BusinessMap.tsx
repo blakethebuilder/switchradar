@@ -1,8 +1,8 @@
-import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
+import React, { useEffect, useState, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Plus, Minus, Target } from 'lucide-react';
+import { Plus, Minus, Target, MapPin, X } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -10,8 +10,15 @@ import type { Business } from '../types';
 import { getProviderColor } from '../utils/providerColors';
 
 // Helper component to handle center/zoom and fit bounds
-function MapController({ targetLocation, zoom, businesses }: { targetLocation?: [number, number], zoom?: number, businesses: Business[] }) {
+function MapController({ targetLocation, zoom, businesses, droppedPin, setDroppedPin }: { 
+  targetLocation?: [number, number], 
+  zoom?: number, 
+  businesses: Business[],
+  droppedPin: { lat: number, lng: number } | null,
+  setDroppedPin: (pin: { lat: number, lng: number } | null) => void 
+}) {
   const map = useMap();
+  const [isDropMode, setIsDropMode] = useState(false);
 
   useEffect(() => {
     if (targetLocation) {
@@ -19,38 +26,90 @@ function MapController({ targetLocation, zoom, businesses }: { targetLocation?: 
     }
   }, [targetLocation, zoom, map]);
 
+  const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
+    if (isDropMode) {
+      setDroppedPin({ lat: e.latlng.lat, lng: e.latlng.lng });
+      setIsDropMode(false);
+    }
+  }, [isDropMode, setDroppedPin]);
+
+  useEffect(() => {
+    if (isDropMode) {
+      map.getContainer().style.cursor = 'crosshair';
+      map.on('click', handleMapClick);
+    } else {
+      map.getContainer().style.cursor = '';
+      map.off('click', handleMapClick);
+    }
+    return () => {
+      map.off('click', handleMapClick);
+    };
+  }, [isDropMode, map, handleMapClick]);
+
+
   return (
-    <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-      <div className="flex flex-col overflow-hidden rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl">
+    <>
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl">
+          <button
+            onClick={() => map.zoomIn()}
+            className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-b border-slate-100"
+            title="Zoom In"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+          <button
+            onClick={() => map.zoomOut()}
+            className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+            title="Zoom Out"
+          >
+            <Minus className="h-5 w-5" />
+          </button>
+        </div>
+
         <button
-          onClick={() => map.zoomIn()}
-          className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-b border-slate-100"
-          title="Zoom In"
+          onClick={() => {
+            if (businesses.length > 0) {
+              const bounds = L.latLngBounds(businesses.map(b => [b.coordinates.lat, b.coordinates.lng]));
+              map.fitBounds(bounds, { padding: [50, 50] });
+            }
+          }}
+          className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-95"
+          title="Fit All Businesses"
         >
-          <Plus className="h-5 w-5" />
+          <Target className="h-5 w-5" />
         </button>
+
+        {/* Mobile/Desktop Drop Pin Button */}
         <button
-          onClick={() => map.zoomOut()}
-          className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-          title="Zoom Out"
+          onClick={() => {
+            if (isDropMode) {
+              setIsDropMode(false);
+            } else {
+              setIsDropMode(true);
+              setDroppedPin(null); // Clear previous pin when starting new drop mode
+              map.getContainer().focus();
+            }
+          }}
+          className={`flex items-center justify-center p-3 rounded-2xl border border-white/40 backdrop-blur-md shadow-xl transition-all active:scale-95 ${
+            isDropMode 
+              ? 'bg-rose-500 text-white' 
+              : 'bg-white/80 text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
+          }`}
+          title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin'}
         >
-          <Minus className="h-5 w-5" />
+          {isDropMode ? <X className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
         </button>
       </div>
 
-      <button
-        onClick={() => {
-          if (businesses.length > 0) {
-            const bounds = L.latLngBounds(businesses.map(b => [b.coordinates.lat, b.coordinates.lng]));
-            map.fitBounds(bounds, { padding: [50, 50] });
-          }
-        }}
-        className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-95"
-        title="Fit All Businesses"
-      >
-        <Target className="h-5 w-5" />
-      </button>
-    </div>
+      {isDropMode && (
+        <div className="absolute top-0 left-0 right-0 bottom-0 z-[999] bg-black/5 flex items-center justify-center pointer-events-none">
+          <p className="px-4 py-2 bg-white rounded-lg text-sm font-bold text-slate-900 shadow-xl border border-slate-100 animate-in fade-in duration-300">
+            Click on the map to place the filter pin.
+          </p>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -66,12 +125,34 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
+// Custom icon for the dropped pin
+const DroppedPinIcon = L.divIcon({
+  className: 'dropped-pin-marker',
+  html: `<div style="
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background-color: #ef4444; /* Red */
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  "><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M12 16.5c-2.761 0-5-2.239-5-5s5-11 5-11 5 8.239 5 11-2.239 5-5 5z"/><path d="M12 11.5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg></div>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+});
+
 interface BusinessMapProps {
   businesses: Business[];
   targetLocation?: [number, number];
   zoom?: number;
   fullScreen?: boolean;
   onBusinessSelect?: (business: Business) => void;
+  // New props for dropped pin filtering
+  droppedPin: { lat: number, lng: number } | null;
+  setDroppedPin: (pin: { lat: number, lng: number } | null) => void;
+  radiusKm: number;
 }
 
 const getProviderLabel = (provider: string) => {
@@ -125,6 +206,9 @@ export const BusinessMap = React.memo(({
   zoom,
   fullScreen = false,
   onBusinessSelect,
+  droppedPin,
+  setDroppedPin,
+  radiusKm
 }: BusinessMapProps) => {
   const memoizedMarkers = React.useMemo(() => businesses.map((business) => (
     <Marker
@@ -152,11 +236,45 @@ export const BusinessMap = React.memo(({
         zoomControl={false}
         preferCanvas={true}
       >
-        <MapController targetLocation={targetLocation} zoom={zoom} businesses={businesses} />
+        <MapController 
+          targetLocation={targetLocation} 
+          zoom={zoom} 
+          businesses={businesses} 
+          droppedPin={droppedPin}
+          setDroppedPin={setDroppedPin}
+        />
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         />
+
+        {droppedPin && (
+          <>
+            <Marker
+              position={[droppedPin.lat, droppedPin.lng]}
+              icon={DroppedPinIcon}
+              draggable={true}
+              eventHandlers={{
+                dragend: (e) => {
+                  const { lat, lng } = e.target.getLatLng();
+                  setDroppedPin({ lat, lng });
+                },
+              }}
+            />
+            {/* Radius is in meters for Leaflet, so radiusKm * 1000 */}
+            <Circle
+              center={[droppedPin.lat, droppedPin.lng]}
+              radius={radiusKm * 1000}
+              pathOptions={{ 
+                fillColor: '#ef4444', 
+                fillOpacity: 0.1, 
+                color: '#ef4444', 
+                weight: 2,
+                opacity: 0.5
+              }}
+            />
+          </>
+        )}
 
         <MarkerClusterGroup
           chunkedLoading

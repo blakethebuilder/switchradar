@@ -36,7 +36,11 @@ function App() {
     setVisibleProviders,
     phoneType,
     setPhoneType,
-    loadFromCloud
+    loadFromCloud,
+    droppedPin,
+    setDroppedPin,
+    radiusKm,
+    setRadiusKm
   } = useBusinessData();
 
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -343,6 +347,23 @@ function App() {
                             categories={categories}
                             onClearFilters={handleClearFilters}
                           />
+                          
+                          {/* Radius Filter Control */}
+                          {droppedPin && (
+                            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-3">
+                              <label className="text-sm font-bold text-slate-700 block">Filter Radius: {radiusKm} km</label>
+                              <input
+                                type="range"
+                                min="1"
+                                max="20"
+                                step="1"
+                                value={radiusKm}
+                                onChange={(e) => setRadiusKm(Number(e.target.value))}
+                                className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer range-lg"
+                              />
+                            </div>
+                          )}
+
                         </div>
                       )}
                     </div>
@@ -355,6 +376,9 @@ function App() {
                   zoom={mapTarget?.zoom}
                   fullScreen={true}
                   onBusinessSelect={handleSelectBusinessOnMap}
+                  droppedPin={droppedPin}
+                  setDroppedPin={setDroppedPin}
+                  radiusKm={radiusKm}
                 />
               </div>
             )}

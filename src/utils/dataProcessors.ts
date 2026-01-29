@@ -164,6 +164,27 @@ export const processImportedData = (
   });
 };
 
+
+const toRad = (value: number) => (value * Math.PI) / 180;
+const EARTH_RADIUS_KM = 6371;
+
+/**
+ * Calculates the distance between two coordinates using the Haversine formula.
+ * @returns Distance in kilometers.
+ */
+export const getDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return EARTH_RADIUS_KM * c;
+};
+
 export const filterBusinesses = (
   businesses: Business[],
   filters: {
@@ -171,9 +192,17 @@ export const filterBusinesses = (
     selectedCategory: string;
     visibleProviders: string[];
     phoneType?: 'all' | 'landline' | 'mobile';
+    droppedPin?: { lat: number, lng: number };
+    radiusKm?: number;
   }
 ): Business[] => {
+  const { droppedPin, radiusKm } = filters;
+
   return businesses.filter(biz => {
+    // Existing filters
+    // ...
+    // [rest of file]
+
     const matchesSearch = filters.searchTerm === '' ||
       biz.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
       biz.address.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
@@ -190,6 +219,15 @@ export const filterBusinesses = (
       (filters.phoneType === 'landline' && !isMobile) ||
       (filters.phoneType === 'mobile' && isMobile);
 
-    return matchesSearch && matchesCategory && matchesProvider && matchesPhoneType;
+    const matchesDistance = !droppedPin ||
+      !radiusKm ||
+      (biz.coordinates && getDistance(
+        droppedPin.lat,
+        droppedPin.lng,
+        biz.coordinates.lat,
+        biz.coordinates.lng
+      ) <= radiusKm);
+
+    return matchesSearch && matchesCategory && matchesProvider && matchesPhoneType && matchesDistance;
   });
 };
