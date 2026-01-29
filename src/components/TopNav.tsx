@@ -106,17 +106,6 @@ export const TopNav = ({
             <Route className="h-4 w-4" />
             <span className="hidden md:inline">Route</span>
           </button>
-          <button
-            onClick={() => onViewModeChange('settings')}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all ${viewMode === 'settings'
-              ? 'bg-white text-indigo-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-700'
-              }`}
-            title="Settings"
-          >
-            <Settings className="h-4 w-4" />
-            <span className="hidden md:inline">Settings</span>
-          </button>
         </nav>
 
         {/* Right: Desktop Actions */}
@@ -164,6 +153,17 @@ export const TopNav = ({
                 </button>
                 {isUserMenuOpen && (
                   <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-10 animate-in fade-in zoom-in-95">
+                    {/* Settings */}
+                    <button
+                      onClick={() => { onViewModeChange('settings'); setIsUserMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm font-bold"
+                    >
+                      <Settings className="h-4 w-4" />
+                      <span>Settings</span>
+                    </button>
+                    
+                    <div className="h-px bg-slate-100 my-2" />
+                    
                     {/* Sign Out */}
                     <button
                       onClick={() => { logout(); setIsUserMenuOpen(false); }}
