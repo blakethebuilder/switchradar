@@ -368,47 +368,6 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                             </div>
                         </div>
 
-                        {/* Changed Provider */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-bold text-slate-600">Changed Provider</span>
-                            <div className="flex gap-1">
-                                <button
-                                    onClick={() => handleUpdateMetadata('hasChangedProvider', true)}
-                                    disabled={isUpdating === 'metadata-hasChangedProvider-true'}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
-                                        isUpdating === 'metadata-hasChangedProvider-true'
-                                            ? 'bg-blue-500 text-white scale-95 animate-pulse'
-                                            : business.metadata?.hasChangedProvider === true
-                                            ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
-                                            : 'bg-slate-200 text-slate-600 hover:bg-blue-100 hover:text-blue-700'
-                                    }`}
-                                >
-                                    {isUpdating === 'metadata-hasChangedProvider-true' ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                        'Yes'
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => handleUpdateMetadata('hasChangedProvider', false)}
-                                    disabled={isUpdating === 'metadata-hasChangedProvider-false'}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
-                                        isUpdating === 'metadata-hasChangedProvider-false'
-                                            ? 'bg-slate-500 text-white scale-95 animate-pulse'
-                                            : business.metadata?.hasChangedProvider === false
-                                            ? 'bg-slate-600 text-white shadow-md hover:bg-slate-700'
-                                            : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
-                                    }`}
-                                >
-                                    {isUpdating === 'metadata-hasChangedProvider-false' ? (
-                                        <Loader2 className="h-3 w-3 animate-spin" />
-                                    ) : (
-                                        'No'
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-
                         {/* Length with Current Provider */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-600">Length with Current Provider</label>

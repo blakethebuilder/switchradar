@@ -3,7 +3,6 @@ export interface BusinessMetadata {
   // Enhanced contact status fields
   hasIssues?: boolean;
   isActiveOnCurrentProvider?: boolean;
-  hasChangedProvider?: boolean;
   lengthWithCurrentProvider?: string; // e.g., "2 years", "6 months"
   canContact?: boolean;
   [key: string]: unknown; // Allow other properties
