@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Plus, Minus, Globe, Smartphone, Landmark, MessageSquare, Phone, Smile, Frown, DollarSign, CheckCircle2, Loader2, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, Clock, User, FileText, PhoneCall, MapPin, Calendar, Lightbulb } from 'lucide-react';
-import type { Business, NoteEntry } from '../types';
+import { X, Plus, Minus, Globe, Smartphone, Landmark, MessageSquare, Phone, Smile, Frown, DollarSign, CheckCircle2, Loader2, ChevronLeft, ChevronRight, AlertTriangle, CheckCircle, FileText, PhoneCall, MapPin, Calendar, Lightbulb } from 'lucide-react';
+import type { Business, NoteEntry, BusinessMetadata } from '../types';
 import { isMobileProvider } from '../utils/phoneUtils';
 import { ProviderBadge } from './ProviderBadge';
 
@@ -97,9 +97,6 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
     const [newNoteContent, setNewNoteContent] = useState('');
     const [selectedNoteCategory, setSelectedNoteCategory] = useState<'call' | 'visit' | 'follow-up' | 'general' | 'issue' | 'opportunity'>('general');
     const [showTemplates, setShowTemplates] = useState(false);
-    
-    // Enhanced contact status state
-    const [contactStatusExpanded, setContactStatusExpanded] = useState(false);
 
     const handleSaveNotes = async () => {
         setIsSaving(true);
