@@ -29,36 +29,10 @@ export const useBusinessData = () => {
         [businesses]
     );
 
-    // Load initial data from Cloud if available
+    // Load initial data from Cloud if available (Disabled)
     const loadFromCloud = async (token: string | null) => {
-        if (!token) return;
-        try {
-            const API_URL = import.meta.env.VITE_API_URL || '';
-
-            const businessesRes = await fetch(`${API_URL}/api/businesses`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (businessesRes.ok) {
-                const cloudBusinesses = await businessesRes.json();
-                if (cloudBusinesses.length > 0) {
-                    await db.businesses.clear();
-                    await db.businesses.bulkAdd(cloudBusinesses);
-                }
-            }
-
-            const routeRes = await fetch(`${API_URL}/api/route`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (routeRes.ok) {
-                const cloudRoutes = await routeRes.json();
-                if (cloudRoutes.length > 0) {
-                    await db.route.clear();
-                    await db.route.bulkAdd(cloudRoutes);
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load data from cloud:', error);
-        }
+        // Cloud loading disabled to prevent 404s
+        return;
     };
 
     const filteredBusinesses = useMemo(() => {

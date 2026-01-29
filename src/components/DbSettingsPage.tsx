@@ -21,8 +21,8 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
             <Database className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Cloud Database Manager</h1>
-            <p className="text-sm font-medium text-slate-400">Manage your active datasets and cloud synchronization</p>
+            <h1 className="text-2xl font-black text-slate-900">Local Database Manager</h1>
+            <p className="text-sm font-medium text-slate-400">Manage your active datasets and workspace</p>
           </div>
         </div>
         <button 
@@ -108,14 +108,14 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-indigo-600 to-violet-700 rounded-[2rem] p-6 text-white shadow-xl shadow-indigo-200">
+          <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-200">
             <div className="flex items-center gap-3 mb-2">
-              <ShieldCheck className="h-6 w-6 text-indigo-200" />
-              <span className="text-xs font-black uppercase tracking-widest text-indigo-200">Cloud Sync Status</span>
+              <ShieldCheck className="h-6 w-6 text-slate-200" />
+              <span className="text-xs font-black uppercase tracking-widest text-slate-200">Local Security</span>
             </div>
-            <div className="text-lg font-bold mb-4">Your data is synchronized and secure.</div>
-            <div className="text-xs font-medium text-indigo-100 opacity-80">
-              Last synced: Just now
+            <div className="text-lg font-bold mb-4">Your data is stored locally and securely in your browser.</div>
+            <div className="text-xs font-medium text-slate-100 opacity-80">
+              Storage Mode: Offline / Private
             </div>
           </div>
         </div>

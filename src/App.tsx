@@ -53,7 +53,7 @@ function App() {
   const [importRows, setImportRows] = useState<Record<string, unknown>[]>([]);
   const [importColumns, setImportColumns] = useState<string[]>([]);
   const [pendingFileName, setPendingFileName] = useState('');
-  const [isFiltersVisible, setIsFiltersVisible] = useState(false);
+  const [isFiltersVisible, setIsFiltersVisible] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);

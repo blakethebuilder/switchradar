@@ -122,37 +122,6 @@ export const TopNav = ({
         {/* Right: Desktop Actions */}
         <div className="hidden md:flex items-center gap-3 md:gap-6">
           <div className="h-8 w-px bg-slate-200" />
-
-          <div className="flex items-center gap-2">
-            {isSyncing && (
-              <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 animate-pulse">
-                <Cloud className="h-4 w-4" />
-                SYNCING
-              </span>
-            )}
-            {isAuthenticated && (
-              <>
-                <button
-                  onClick={onPullFromCloud}
-                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
-                  title="Pull latest data from Cloud"
-                  disabled={isSyncing}
-                >
-                  <Download className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={onPushToCloud}
-                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
-                  title="Push local changes to Cloud"
-                  disabled={isSyncing}
-                >
-                  <CloudUpload className="h-5 w-5" />
-                </button>
-              </>
-            )}
-          </div>
-
-          <div className="h-8 w-px bg-slate-200" />
           
           {/* Main Actions */}
           <button onClick={onImportClick} className="btn-primary">
@@ -190,29 +159,16 @@ export const TopNav = ({
                 >
                   <div className="flex flex-col items-end">
                     <span className="text-xs font-black text-slate-900 leading-none">{user?.username}</span>
-                    <span className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mt-0.5">Cloud Connected</span>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Local Mode</span>
                   </div>
                   <UserIcon className="h-8 w-8 p-1.5 rounded-full bg-slate-100 text-slate-500" />
                 </button>
                 {isUserMenuOpen && (
                   <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-10 animate-in fade-in zoom-in-95">
-                    {/* Clear Cloud Data */}
-                    <button
-                      onClick={async () => {
-                        if (window.confirm('WARNING: This will wipe all data from your Cloud Workspace. Local data will remain. Continue?')) {
-                          await onClearCloudData?.();
-                        }
-                        setIsUserMenuOpen(false);
-                      }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors text-sm font-bold"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span>Clear Cloud Data</span>
-                    </button>
                     {/* Sign Out */}
                     <button
                       onClick={() => { logout(); setIsUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors text-sm font-bold mt-1"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors text-sm font-bold"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Sign Out</span>
@@ -226,7 +182,7 @@ export const TopNav = ({
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-50 text-slate-600 text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-slate-100"
               >
                 <UserIcon className="h-3.5 w-3.5" />
-                Connect Cloud
+                Sign In
               </button>
             )}
           </div>
