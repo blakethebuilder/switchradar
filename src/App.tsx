@@ -203,20 +203,25 @@ function App() {
     return R * c;
   }, []);
 
-  // Get businesses sorted by proximity to current business
+  // Get businesses sorted by proximity - use a stable reference point
   const businessesByProximity = useMemo(() => {
     if (!selectedBusiness) return filteredBusinesses;
     
+    // Use the currently selected business as the reference point for proximity
     const currentLat = selectedBusiness.coordinates.lat;
     const currentLng = selectedBusiness.coordinates.lng;
     
     return [...filteredBusinesses]
       .map(business => ({
         ...business,
-        distance: business.id === selectedBusiness.id ? 0 : calculateDistance(currentLat, currentLng, business.coordinates.lat, business.coordinates.lng)
+        distance: calculateDistance(currentLat, currentLng, business.coordinates.lat, business.coordinates.lng)
       }))
       .sort((a, b) => a.distance - b.distance);
   }, [selectedBusiness, filteredBusinesses, calculateDistance]);
+
+  const handleSelectBusinessOnMap = useCallback((b: Business) => {
+    setSelectedBusiness(b);
+  }, []);
 
   // Navigation logic for ClientDetails - now proximity-based
   const currentBusinessIndex = useMemo(() => {

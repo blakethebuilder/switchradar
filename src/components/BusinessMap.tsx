@@ -165,6 +165,7 @@ interface BusinessMapProps {
   zoom?: number;
   fullScreen?: boolean;
   onBusinessSelect?: (business: Business) => void;
+  selectedBusinessId?: string; // Add selected business ID for highlighting
   // Props for dropped pin filtering
   droppedPin: { lat: number, lng: number } | null;
   setDroppedPin: (pin: { lat: number, lng: number } | null) => void;
@@ -181,38 +182,49 @@ const getProviderLabel = (provider: string) => {
 
 const iconCache: Record<string, L.DivIcon> = {};
 
-const createProviderIcon = (provider: string) => {
-  if (iconCache[provider]) return iconCache[provider];
+const createProviderIcon = (provider: string, isSelected: boolean = false) => {
+  const cacheKey = `${provider}-${isSelected}`;
+  if (iconCache[cacheKey]) return iconCache[cacheKey];
 
   const color = getProviderColor(provider);
   const label = getProviderLabel(provider);
+  
   const icon = L.divIcon({
     className: 'custom-marker',
     html: `
       <div style="
         background-color: ${color};
-        width: 24px;
-        height: 24px;
-        border-radius: 8px;
-        border: 2px solid white;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+        width: ${isSelected ? '32px' : '24px'};
+        height: ${isSelected ? '32px' : '24px'};
+        border-radius: ${isSelected ? '12px' : '8px'};
+        border: ${isSelected ? '3px solid #fbbf24' : '2px solid white'};
+        box-shadow: ${isSelected ? '0 8px 25px -5px rgb(0 0 0 / 0.3), 0 4px 6px -2px rgb(0 0 0 / 0.1), 0 0 0 4px rgb(251 191 36 / 0.3)' : '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'};
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: 900;
-        font-size: 7.5px;
+        font-size: ${isSelected ? '9px' : '7.5px'};
         letter-spacing: -0.2px;
         transform: rotate(45deg);
+        ${isSelected ? 'animation: pulse 2s infinite;' : ''}
       ">
         <div style="transform: rotate(-45deg);">${label}</div>
       </div>
+      ${isSelected ? `
+        <style>
+          @keyframes pulse {
+            0%, 100% { transform: scale(1) rotate(45deg); }
+            50% { transform: scale(1.1) rotate(45deg); }
+          }
+        </style>
+      ` : ''}
     `,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    iconSize: [isSelected ? 32 : 24, isSelected ? 32 : 24],
+    iconAnchor: [isSelected ? 16 : 12, isSelected ? 16 : 12],
   });
 
-  iconCache[provider] = icon;
+  iconCache[cacheKey] = icon;
   return icon;
 };
 
@@ -222,6 +234,7 @@ export const BusinessMap = React.memo(({
   zoom,
   fullScreen = false,
   onBusinessSelect,
+  selectedBusinessId,
   droppedPin,
   setDroppedPin,
   radiusKm

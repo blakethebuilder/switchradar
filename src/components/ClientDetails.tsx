@@ -294,9 +294,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                 isUpdating === 'metadata-hasIssues-true'
                                     ? 'bg-red-500 text-white scale-95 animate-pulse'
                                     : business.metadata?.hasIssues === true
-                                    ? 'bg-red-600 text-white shadow-lg shadow-red-300/50 hover:shadow-red-400/60 hover:bg-red-700 ring-2 ring-red-200'
-                                    : business.metadata?.hasIssues === false
-                                    ? 'bg-slate-100 text-slate-400 border border-slate-200'
+                                    ? 'bg-red-600 text-white shadow-lg shadow-red-300/50 hover:shadow-red-400/60 hover:bg-red-700'
                                     : 'bg-white text-red-600 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 hover:shadow-md'
                             }`}
                         >
@@ -317,9 +315,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                 isUpdating === 'metadata-hasIssues-false'
                                     ? 'bg-green-500 text-white scale-95 animate-pulse'
                                     : business.metadata?.hasIssues === false
-                                    ? 'bg-green-600 text-white shadow-lg shadow-green-300/50 hover:shadow-green-400/60 hover:bg-green-700 ring-2 ring-green-200'
-                                    : business.metadata?.hasIssues === true
-                                    ? 'bg-slate-100 text-slate-400 border border-slate-200'
+                                    ? 'bg-green-600 text-white shadow-lg shadow-green-300/50 hover:shadow-green-400/60 hover:bg-green-700'
                                     : 'bg-white text-green-600 border-2 border-green-200 hover:bg-green-50 hover:border-green-300 hover:shadow-md'
                             }`}
                         >
@@ -348,9 +344,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                         isUpdating === 'metadata-isActiveOnCurrentProvider-true'
                                             ? 'bg-green-500 text-white scale-95 animate-pulse'
                                             : business.metadata?.isActiveOnCurrentProvider === true
-                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700 ring-1 ring-green-300'
-                                            : business.metadata?.isActiveOnCurrentProvider === false
-                                            ? 'bg-slate-100 text-slate-400'
+                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
                                             : 'bg-slate-200 text-slate-600 hover:bg-green-100 hover:text-green-700'
                                     }`}
                                 >
@@ -370,9 +364,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                         isUpdating === 'metadata-isActiveOnCurrentProvider-false'
                                             ? 'bg-red-500 text-white scale-95 animate-pulse'
                                             : business.metadata?.isActiveOnCurrentProvider === false
-                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700 ring-1 ring-red-300'
-                                            : business.metadata?.isActiveOnCurrentProvider === true
-                                            ? 'bg-slate-100 text-slate-400'
+                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700'
                                             : 'bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-700'
                                     }`}
                                 >
@@ -411,9 +403,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                         isUpdating === 'metadata-canContact-true'
                                             ? 'bg-green-500 text-white scale-95 animate-pulse'
                                             : business.metadata?.canContact === true
-                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700 ring-1 ring-green-300'
-                                            : business.metadata?.canContact === false
-                                            ? 'bg-slate-100 text-slate-400'
+                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
                                             : 'bg-slate-200 text-slate-600 hover:bg-green-100 hover:text-green-700'
                                     }`}
                                 >
@@ -433,9 +423,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                                         isUpdating === 'metadata-canContact-false'
                                             ? 'bg-red-500 text-white scale-95 animate-pulse'
                                             : business.metadata?.canContact === false
-                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700 ring-1 ring-red-300'
-                                            : business.metadata?.canContact === true
-                                            ? 'bg-slate-100 text-slate-400'
+                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700'
                                             : 'bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-700'
                                     }`}
                                 >
