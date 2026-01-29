@@ -11,7 +11,7 @@ export const useBusinessData = () => {
     const routeItems = useLiveQuery(() => db.route.orderBy('order').toArray()) || [];
 
     const [searchInput, setSearchInput] = useState('');
-    const searchTerm = useDebounce(searchInput, 300); // Debounced value for filtering
+    const searchTerm = useDebounce(searchInput, 200); // Reduced from 300ms to 200ms for snappier response
 
     const [selectedCategory, setSelectedCategory] = useState('');
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);

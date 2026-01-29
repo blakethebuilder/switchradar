@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
@@ -70,7 +70,7 @@ function App() {
     }
   }, [isAuthenticated, token, loadFromCloud]);
 
-  const providerCount = availableProviders.length;
+  const providerCount = useMemo(() => availableProviders.length, [availableProviders]);
 
   const handleFileSelected = (file: File) => {
     setPendingFileName(file.name);
@@ -135,18 +135,20 @@ function App() {
     }, 1000);
   };
 
-  const handleToggleProvider = (provider: string) => {
+  const handleToggleProvider = useCallback((provider: string) => {
     setVisibleProviders(prev =>
       prev.includes(provider) ? prev.filter(p => p !== provider) : [...prev, provider]
     );
-  };
-  const handleSelectAllProviders = () => setVisibleProviders(availableProviders);
-  const handleClearProviders = () => setVisibleProviders([]);
-  const handleClearFilters = () => {
+  }, []);
+  
+  const handleSelectAllProviders = useCallback(() => setVisibleProviders(availableProviders), [availableProviders]);
+  const handleClearProviders = useCallback(() => setVisibleProviders([]), []);
+  
+  const handleClearFilters = useCallback(() => {
     setSearchTerm('');
     setSelectedCategory('');
     setVisibleProviders(availableProviders);
-  };
+  }, [availableProviders]);
 
   const handleAddToRoute = async (businessId: string) => {
     const maxOrder = Math.max(...routeItems.map(i => i.order), 0);
@@ -170,9 +172,9 @@ function App() {
     }
   };
 
-  const handleSelectBusinessOnMap = (b: Business) => {
+  const handleSelectBusinessOnMap = useCallback((b: Business) => {
     setSelectedBusiness(b);
-  };
+  }, []);
   
   const handleTogglePhoneType = async (id: string, currentType: 'landline' | 'mobile') => {
     const newType = currentType === 'landline' ? 'mobile' : 'landline';

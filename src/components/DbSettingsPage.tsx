@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, HardDrive, ShieldCheck, Trash2, X, CheckCircle2, Cloud } from 'lucide-react';
+import { Database, ShieldCheck, X, CheckCircle2, Cloud } from 'lucide-react';
 import type { Business } from '../types';
 
 interface DbSettingsPageProps {
@@ -77,37 +77,6 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
 
         {/* Actions / Control Panel */}
         <div className="flex flex-col gap-4">
-          <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex-1">
-            <h3 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-4">Data Controls</h3>
-            
-            <div className="space-y-3">
-              <button 
-                disabled
-                className="w-full flex items-center justify-between p-4 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 cursor-default"
-              >
-                <div className="flex items-center gap-3">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="font-bold">Dataset Loaded</span>
-                </div>
-                <span className="text-xs font-black uppercase tracking-wider bg-white/50 px-2 py-1 rounded-md">Active</span>
-              </button>
-
-              <button className="w-full flex items-center justify-between p-4 rounded-xl bg-white border-2 border-slate-100 text-slate-400 hover:border-indigo-100 hover:text-indigo-600 transition-all group">
-                <div className="flex items-center gap-3">
-                  <HardDrive className="h-5 w-5" />
-                  <span className="font-bold group-hover:text-slate-900 transition-colors">Create New Backup</span>
-                </div>
-              </button>
-
-              <button className="w-full flex items-center justify-between p-4 rounded-xl bg-white border-2 border-slate-100 text-slate-400 hover:border-rose-100 hover:text-rose-600 transition-all group">
-                <div className="flex items-center gap-3">
-                  <Trash2 className="h-5 w-5" />
-                  <span className="font-bold group-hover:text-slate-900 transition-colors">Clear Workspace</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
           <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-200">
             <div className="flex items-center gap-3 mb-2">
               <ShieldCheck className="h-6 w-6 text-slate-200" />

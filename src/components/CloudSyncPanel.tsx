@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CloudUpload, CloudDownload, Database, Wifi, WifiOff, AlertCircle, CheckCircle, Clock, Users } from 'lucide-react';
+import { CloudUpload, CloudDownload, Database, Wifi, WifiOff, AlertCircle, CheckCircle, Clock, Users, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { cloudSyncService } from '../services/cloudSync';
 import type { Business, RouteItem } from '../types';
@@ -134,6 +134,43 @@ export const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({
     }, 5000);
   };
 
+  const handleClearCloud = async () => {
+    if (!isAuthenticated || !token || isSyncing) return;
+
+    const confirmed = window.confirm(
+      'Are you sure you want to clear all data from the cloud? This action cannot be undone.'
+    );
+    
+    if (!confirmed) return;
+
+    setSyncStatus('pushing');
+    setSyncMessage('Clearing cloud data...');
+
+    try {
+      // Clear cloud data by syncing empty arrays
+      const result = await cloudSyncService.syncToCloud([], [], token);
+      
+      if (result.success) {
+        setSyncStatus('success');
+        setSyncMessage('Cloud data cleared successfully');
+      } else {
+        setSyncStatus('error');
+        setSyncMessage(`Failed to clear cloud data: ${result.errors?.map(e => e.message).join(', ') || 'Unknown error'}`);
+      }
+
+      onSyncComplete();
+    } catch (error) {
+      setSyncStatus('error');
+      setSyncMessage(`Clear failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+
+    // Reset status after 5 seconds
+    setTimeout(() => {
+      setSyncStatus('idle');
+      setSyncMessage('');
+    }, 5000);
+  };
+
   if (!isAuthenticated) {
     return (
       <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200">
@@ -171,7 +208,7 @@ export const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({
       </div>
 
       {/* Sync Controls */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <button
           onClick={handlePushToCloud}
           disabled={!isOnline || syncStatus === 'pushing' || totalItems === 0}
@@ -195,6 +232,15 @@ export const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({
         >
           <CloudDownload className="h-5 w-5" />
           Pull from Cloud
+        </button>
+
+        <button
+          onClick={handleClearCloud}
+          disabled={!isOnline || syncStatus === 'pushing'}
+          className="flex items-center justify-center gap-3 p-4 rounded-xl bg-rose-600 text-white font-bold text-sm hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+        >
+          <Trash2 className="h-5 w-5" />
+          Clear Cloud
         </button>
       </div>
 

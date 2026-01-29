@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Search, X, SlidersHorizontal, Smartphone, Landmark, LayoutGrid, Layers } from 'lucide-react';
 
 interface FilterPanelProps {
@@ -11,7 +12,7 @@ interface FilterPanelProps {
   onClearFilters: () => void;
 }
 
-export const FilterPanel = ({
+const FilterPanelComponent = ({
   searchTerm,
   onSearchChange,
   selectedCategory,
@@ -46,7 +47,7 @@ export const FilterPanel = ({
           <div className="flex rounded-2xl border-2 border-slate-100 bg-white p-1.5 shadow-sm">
             <button
               onClick={() => onPhoneTypeChange('all')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all ${phoneType === 'all'
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-colors duration-150 ${phoneType === 'all'
                 ? 'bg-slate-900 text-white shadow-lg'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 }`}
@@ -57,7 +58,7 @@ export const FilterPanel = ({
             </button>
             <button
               onClick={() => onPhoneTypeChange('landline')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all ${phoneType === 'landline'
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-colors duration-150 ${phoneType === 'landline'
                 ? 'bg-emerald-500 text-white shadow-lg'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 }`}
@@ -68,7 +69,7 @@ export const FilterPanel = ({
             </button>
             <button
               onClick={() => onPhoneTypeChange('mobile')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all ${phoneType === 'mobile'
+              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-colors duration-150 ${phoneType === 'mobile'
                 ? 'bg-rose-500 text-white shadow-lg'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 }`}
@@ -114,3 +115,5 @@ export const FilterPanel = ({
     </div>
   );
 };
+
+export const FilterPanel = memo(FilterPanelComponent);

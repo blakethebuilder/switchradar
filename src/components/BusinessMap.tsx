@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
@@ -232,7 +232,7 @@ export const BusinessMap = React.memo(({
 
   // Map Interaction Locks based on isDropMode
   const mapInteractive = !isDropMode;
-  const mapOptions = {
+  const mapOptions = useMemo(() => ({
     // Disable all interaction when in drop mode
     dragging: mapInteractive,
     touchZoom: mapInteractive,
@@ -241,7 +241,7 @@ export const BusinessMap = React.memo(({
     boxZoom: mapInteractive,
     keyboard: mapInteractive,
     tap: mapInteractive,
-  };
+  }), [mapInteractive]);
 
   const memoizedMarkers = React.useMemo(() => businesses.map((business) => (
     <Marker
@@ -320,14 +320,14 @@ export const BusinessMap = React.memo(({
           chunkedLoading
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          maxClusterRadius={50}
-          disableClusteringAtZoom={16}
+          maxClusterRadius={40}
+          disableClusteringAtZoom={15}
           removeOutsideVisibleBounds={true}
-          spiderfyDistanceMultiplier={1.5}
-          animate={true}
-          animateAddingMarkers={true}
+          spiderfyDistanceMultiplier={1.2}
+          animate={false}
+          animateAddingMarkers={false}
           spiderfyShapePositions={(count: number, centerPt: any) => {
-            const distanceFromCenter = 35;
+            const distanceFromCenter = 30;
             const angleStep = (2 * Math.PI) / count;
             
             return Array.from({ length: count }, (_, i) => {

@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { Layers, CheckCircle2 } from 'lucide-react';
 import { getProviderColor } from '../utils/providerColors';
 
@@ -9,7 +10,7 @@ interface ProviderBarProps {
   onClearAll: () => void;
 }
 
-export const ProviderBar: React.FC<ProviderBarProps> = ({
+const ProviderBarComponent: React.FC<ProviderBarProps> = ({
   availableProviders,
   visibleProviders,
   onToggleProvider,
@@ -75,3 +76,5 @@ export const ProviderBar: React.FC<ProviderBarProps> = ({
     </div>
   );
 };
+
+export const ProviderBar = memo(ProviderBarComponent);
