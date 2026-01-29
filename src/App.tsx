@@ -190,11 +190,39 @@ function App() {
     setSelectedBusiness(b);
   }, []);
 
-  // Navigation logic for ClientDetails
+  // Calculate distance between two coordinates (Haversine formula)
+  const calculateDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLng/2) * Math.sin(dLng/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }, []);
+
+  // Get businesses sorted by proximity to current business
+  const businessesByProximity = useMemo(() => {
+    if (!selectedBusiness) return filteredBusinesses;
+    
+    const currentLat = selectedBusiness.coordinates.lat;
+    const currentLng = selectedBusiness.coordinates.lng;
+    
+    return [...filteredBusinesses]
+      .map(business => ({
+        ...business,
+        distance: business.id === selectedBusiness.id ? 0 : calculateDistance(currentLat, currentLng, business.coordinates.lat, business.coordinates.lng)
+      }))
+      .sort((a, b) => a.distance - b.distance);
+  }, [selectedBusiness, filteredBusinesses, calculateDistance]);
+
+  // Navigation logic for ClientDetails - now proximity-based
   const currentBusinessIndex = useMemo(() => {
     if (!selectedBusiness) return -1;
-    return filteredBusinesses.findIndex(b => b.id === selectedBusiness.id);
-  }, [selectedBusiness, filteredBusinesses]);
+    return businessesByProximity.findIndex(b => b.id === selectedBusiness.id);
+  }, [selectedBusiness, businessesByProximity]);
 
   const handleNavigateToNextBusiness = useCallback((business: Business) => {
     setSelectedBusiness(business);
@@ -428,7 +456,7 @@ function App() {
               onClose={() => setSelectedBusiness(null)}
               onTogglePhoneType={handleTogglePhoneType}
               onUpdateBusiness={handleUpdateBusiness}
-              allBusinesses={filteredBusinesses}
+              allBusinesses={businessesByProximity}
               currentIndex={currentBusinessIndex}
               onNavigateToNext={handleNavigateToNextBusiness}
           />
