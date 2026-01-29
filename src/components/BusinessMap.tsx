@@ -152,7 +152,7 @@ const DroppedPinIcon = L.divIcon({
     border-radius: 50%;
     border: 3px solid white;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-  "><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-person-standing"><circle cx="12" cy="5" r="1"/><path d="M19 21v-8l-2-1c-.7-.4-1.5-1.5-2-2.5L13 7h-2L9 9c-.5 1-1.3 2.1-2 2.5l-2 1v8"/><path d="M12 21v-4"/></svg></div>`,
+  "><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>`,
   iconSize: [32, 32],
   iconAnchor: [16, 32],
 });
