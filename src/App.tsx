@@ -354,9 +354,9 @@ function App() {
                               <label className="text-sm font-bold text-slate-700 block">Filter Radius: {radiusKm} km</label>
                               <input
                                 type="range"
-                                min="1"
-                                max="20"
-                                step="1"
+                                min="0.5"
+                                max="10"
+                                step="0.5"
                                 value={radiusKm}
                                 onChange={(e) => setRadiusKm(Number(e.target.value))}
                                 className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer range-lg"

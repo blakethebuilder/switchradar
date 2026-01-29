@@ -14,7 +14,7 @@ export const useBusinessData = () => {
     
     // Dropped Pin State for Filtering
     const [droppedPin, setDroppedPin] = useState<{ lat: number, lng: number } | null>(null);
-    const [radiusKm, setRadiusKm] = useState<number>(5); // Default radius of 5km
+    const [radiusKm, setRadiusKm] = useState<number>(0.5); // Default radius of 0.5km
 
     const categories = useMemo(
         () => Array.from(new Set(businesses.map(b => b.category))).filter(Boolean).sort(),
