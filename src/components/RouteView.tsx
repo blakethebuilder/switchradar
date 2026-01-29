@@ -17,9 +17,9 @@ export const RouteView: React.FC<RouteViewProps> = ({
   onClearRoute,
   onSelectBusiness,
 }) => {
-  const routeBusinesses = routeItems
+  const routeBusinesses = React.useMemo(() => routeItems
     .map(item => businesses.find(b => b.id === item.businessId))
-    .filter((b): b is Business => !!b);
+    .filter((b): b is Business => !!b), [routeItems, businesses]);
 
   if (routeBusinesses.length === 0) {
     return (

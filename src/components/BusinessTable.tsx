@@ -1,3 +1,4 @@
+import React from 'react';
 import { Building2, Mail, Map, Trash2, Landmark, Smartphone, Route } from 'lucide-react';
 import type { Business } from '../types';
 import { ProviderBadge } from './ProviderBadge';
@@ -11,13 +12,13 @@ interface BusinessTableProps {
   onAddToRoute?: (id: string) => void;
 }
 
-export const BusinessTable: React.FC<BusinessTableProps> = ({
+export const BusinessTable = React.memo(({
   businesses,
   onBusinessSelect,
   onDelete,
   onTogglePhoneType,
   onAddToRoute
-}) => {
+}: BusinessTableProps) => {
   if (businesses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -151,4 +152,4 @@ export const BusinessTable: React.FC<BusinessTableProps> = ({
       </div>
     </div>
   );
-};
+});

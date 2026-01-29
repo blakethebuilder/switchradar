@@ -1,7 +1,7 @@
+import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { useEffect } from 'react';
 import { Plus, Minus, Target } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
@@ -119,13 +119,27 @@ const createProviderIcon = (provider: string) => {
   return icon;
 };
 
-export const BusinessMap: React.FC<BusinessMapProps> = ({
+export const BusinessMap = React.memo(({
   businesses,
   targetLocation,
   zoom,
   fullScreen = false,
   onBusinessSelect,
-}) => {
+}: BusinessMapProps) => {
+  const memoizedMarkers = React.useMemo(() => businesses.map((business) => (
+    <Marker
+      key={business.id}
+      position={[business.coordinates.lat, business.coordinates.lng]}
+      icon={createProviderIcon(business.provider)}
+      eventHandlers={{
+        click: (e) => {
+          e.originalEvent.stopPropagation();
+          onBusinessSelect?.(business);
+        },
+      }}
+    />
+  )), [businesses, onBusinessSelect]);
+
   return (
     <div className={`relative group transition-all duration-700 ${fullScreen
       ? 'h-full w-full bg-slate-100'
@@ -160,19 +174,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
             fillOpacity: 0.1
           }}
         >
-          {businesses.map((business) => (
-            <Marker
-              key={business.id}
-              position={[business.coordinates.lat, business.coordinates.lng]}
-              icon={createProviderIcon(business.provider)}
-              eventHandlers={{
-                click: (e) => {
-                  e.originalEvent.stopPropagation();
-                  onBusinessSelect?.(business);
-                },
-              }}
-            />
-          ))}
+          {memoizedMarkers}
         </MarkerClusterGroup>
       </MapContainer>
 
@@ -185,4 +187,4 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
       </div>
     </div>
   );
-};
+});
