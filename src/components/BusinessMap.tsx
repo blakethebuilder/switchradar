@@ -253,8 +253,8 @@ export const BusinessMap = React.memo(({
       : 'rounded-[2.5rem] border-[12px] border-white bg-white shadow-2xl shadow-indigo-100 overflow-hidden min-h-[600px] h-[700px]'
       }`}>
       <MapContainer
-        center={[-26.8521, 26.6667]}
-        zoom={13}
+        center={[-29.0000, 24.0000]}
+        zoom={5}
         style={{ height: '100%', width: '100%', borderRadius: fullScreen ? '0' : '1.5rem' }}
         zoomControl={false}
         preferCanvas={true}
