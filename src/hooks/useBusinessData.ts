@@ -30,7 +30,7 @@ export const useBusinessData = () => {
     );
 
     // Load initial data from Cloud if available (Disabled)
-    const loadFromCloud = async (token: string | null) => {
+    const loadFromCloud = async (_token: string | null) => {
         // Cloud loading disabled to prevent 404s
         return;
     };
