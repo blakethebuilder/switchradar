@@ -323,11 +323,11 @@ export const BusinessMap = React.memo(({
           maxClusterRadius={40}
           disableClusteringAtZoom={15}
           removeOutsideVisibleBounds={true}
-          spiderfyDistanceMultiplier={1.2}
+          spiderfyDistanceMultiplier={2.0}
           animate={false}
           animateAddingMarkers={false}
           spiderfyShapePositions={(count: number, centerPt: any) => {
-            const distanceFromCenter = 30;
+            const distanceFromCenter = 60; // Increased from 30 to 60 for better spacing
             const angleStep = (2 * Math.PI) / count;
             
             return Array.from({ length: count }, (_, i) => {
