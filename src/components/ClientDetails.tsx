@@ -108,17 +108,6 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
     // Loading states for better feedback
     const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
-    const handleUpdateSimpleStatus = async (key: keyof Business, value: string) => {
-        setIsUpdating(`status-${value}`);
-        try {
-            await onUpdateBusiness(business.id, { [key]: value });
-            // Brief success feedback
-            setTimeout(() => setIsUpdating(null), 300);
-        } catch (error) {
-            setIsUpdating(null);
-        }
-    };
-
     const handleUpdateInterest = async (interest: string) => {
         setIsUpdating(`interest-${interest}`);
         try {
@@ -334,29 +323,6 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                             )}
                             No Issues
                         </button>
-                    </div>
-
-                    {/* Traditional Status Buttons */}
-                    <div className="grid grid-cols-1 gap-2">
-                        {['active', 'contacted', 'converted', 'inactive'].map(status => (
-                            <button
-                                key={status}
-                                onClick={() => handleUpdateSimpleStatus('status', status)}
-                                disabled={isUpdating === `status-${status}`}
-                                className={`flex items-center justify-center h-9 rounded-xl text-xs font-black uppercase tracking-wider transition-all transform active:scale-95 ${
-                                    isUpdating === `status-${status}`
-                                        ? 'bg-indigo-500 text-white scale-95 animate-pulse'
-                                        : business.status === status
-                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-300/50 hover:shadow-indigo-400/60 hover:bg-indigo-700'
-                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 hover:shadow-md'
-                                }`}
-                            >
-                                {isUpdating === `status-${status}` ? (
-                                    <Loader2 className="h-3 w-3 animate-spin mr-2" />
-                                ) : null}
-                                {status.charAt(0).toUpperCase() + status.slice(1)}
-                            </button>
-                        ))}
                     </div>
 
                     {/* Enhanced Contact Fields */}
