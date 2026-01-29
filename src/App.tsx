@@ -205,25 +205,39 @@ function App() {
     return R * c;
   }, []);
 
-  // Get businesses sorted by proximity - use a stable reference point
+  // Get businesses sorted by proximity - use a stable reference point for navigation
+  const [navigationReferencePoint, setNavigationReferencePoint] = useState<{lat: number, lng: number} | null>(null);
+  
+  // Set reference point when business is first selected (not from navigation)
+  useEffect(() => {
+    if (selectedBusiness && !navigationReferencePoint) {
+      setNavigationReferencePoint({
+        lat: selectedBusiness.coordinates.lat,
+        lng: selectedBusiness.coordinates.lng
+      });
+    }
+  }, [selectedBusiness, navigationReferencePoint]);
+
+  // Reset reference point when filters change or new area is selected
+  useEffect(() => {
+    setNavigationReferencePoint(null);
+  }, [searchTerm, selectedCategory, visibleProviders, droppedPin]);
+
   const businessesByProximity = useMemo(() => {
-    if (!selectedBusiness) return filteredBusinesses;
-    
-    // Use the currently selected business as the reference point for proximity
-    const currentLat = selectedBusiness.coordinates.lat;
-    const currentLng = selectedBusiness.coordinates.lng;
+    if (!navigationReferencePoint) return filteredBusinesses;
     
     return [...filteredBusinesses]
       .map(business => ({
         ...business,
-        distance: calculateDistance(currentLat, currentLng, business.coordinates.lat, business.coordinates.lng)
+        distance: calculateDistance(
+          navigationReferencePoint.lat, 
+          navigationReferencePoint.lng, 
+          business.coordinates.lat, 
+          business.coordinates.lng
+        )
       }))
       .sort((a, b) => a.distance - b.distance);
-  }, [selectedBusiness, filteredBusinesses, calculateDistance]);
-
-  const handleSelectBusinessOnMap = useCallback((b: Business) => {
-    setSelectedBusiness(b);
-  }, []);
+  }, [navigationReferencePoint, filteredBusinesses, calculateDistance]);
 
   const handleMultiSelect = useCallback((businesses: Business[]) => {
     setSelectedBusinessIds(businesses.map(b => b.id));
@@ -520,7 +534,7 @@ function App() {
 
       {/* Client Detail Sidebar */}
       <div 
-        className={`fixed top-0 right-0 bottom-0 z-[1003] w-full md:max-w-xs lg:max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-in-out border-l border-slate-100 ${
+        className={`fixed top-0 right-0 bottom-0 z-[1003] w-full sm:max-w-md md:max-w-xs lg:max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-in-out border-l border-slate-100 ${
           selectedBusiness ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

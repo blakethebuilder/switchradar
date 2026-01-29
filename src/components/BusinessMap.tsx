@@ -20,6 +20,7 @@ function MapController({
   setDroppedPin, 
   droppedPin,
   onMultiSelect,
+  // @ts-ignore - selectedBusinessIds is used in memoizedMarkers
   selectedBusinessIds = []
 }: { 
   targetLocation?: [number, number], 
@@ -93,7 +94,7 @@ function MapController({
     }
   }, [isDragSelecting, dragStart, selectionBox, map]);
 
-  const handleMouseUp = useCallback((e: L.LeafletMouseEvent) => {
+  const handleMouseUp = useCallback((_e: L.LeafletMouseEvent) => {
     if (isDragSelecting && dragStart && dragEnd && onMultiSelect) {
       // Calculate bounds of selection
       const startLatLng = map.containerPointToLatLng([dragStart.x, dragStart.y]);
