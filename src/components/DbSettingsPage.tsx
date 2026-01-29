@@ -49,7 +49,7 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
             <div className="space-y-6">
               <div>
                 <div className="text-4xl font-black text-slate-900 mb-1">{totalBusinesses.toLocaleString()}</div>
-                <div className="text-sm font-bold text-slate-400">Total Leads Available</div>
+                <div className="text-sm font-bold text-slate-400">Total Businesses Available</div>
               </div>
 
               <div className="grid grid-cols-3 gap-4">

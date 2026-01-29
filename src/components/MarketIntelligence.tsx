@@ -82,7 +82,7 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                     <p className="text-white font-bold text-xs mb-1 uppercase tracking-widest">{data.name}</p>
                     <div className="flex items-center gap-2">
                         <div className="h-2 w-2 rounded-full" style={{ backgroundColor: getProviderColor(data.name) }} />
-                        <p className="text-indigo-400 font-black text-sm">{data.value.toLocaleString()} <span className="text-slate-500 text-[10px] ml-1">leads</span></p>
+                        <p className="text-indigo-400 font-black text-sm">{data.value.toLocaleString()} <span className="text-slate-500 text-[10px] ml-1">businesses</span></p>
                     </div>
                 </div>
             );
@@ -99,7 +99,7 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                         <Users className="h-7 w-7 lg:h-8 lg:w-8 text-indigo-600" />
                     </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Total Leads</p>
+                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-1">Total Businesses</p>
                         <h3 className="text-2xl lg:text-3xl font-black text-slate-900 leading-none">{businesses.length.toLocaleString()}</h3>
                     </div>
                 </div>
@@ -220,7 +220,7 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                                     <div className="w-full bg-slate-200/50 rounded-full h-1.5 overflow-hidden">
                                         <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${network.pct}%`, backgroundColor: getProviderColor(network.name) }} />
                                     </div>
-                                    <div className="text-[10px] font-medium text-slate-400 text-right">{network.value.toLocaleString()} leads</div>
+                                    <div className="text-[10px] font-medium text-slate-400 text-right">{network.value.toLocaleString()} businesses</div>
                                 </div>
                             ))}
                         </div>

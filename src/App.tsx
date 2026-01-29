@@ -238,7 +238,7 @@ function App() {
 
                   <div className="flex items-center gap-4 bg-white px-6 py-3 rounded-2xl shadow-sm border border-slate-100">
                     <div className="flex flex-col items-center px-4">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Leads</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Businesses</span>
                       <span className="text-xl font-black text-slate-900">{businesses.length.toLocaleString()}</span>
                     </div>
                     <div className="h-8 w-px bg-slate-100" />

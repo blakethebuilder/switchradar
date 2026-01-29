@@ -52,7 +52,7 @@ export const TopNav = ({
             {lastImportName ? (
               <p className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-500">
                 <Database className="h-3 w-3" />
-                {lastImportName} • {totalCount.toLocaleString()} leads
+                {lastImportName} • {totalCount.toLocaleString()} businesses
               </p>
             ) : (
               <p className="text-[10px] md:text-xs font-semibold text-slate-400">Powered by Smart Integrate</p>
@@ -195,7 +195,7 @@ export const TopNav = ({
 
             <button onClick={onImportClick} className="btn-primary">
               <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">Import Leads</span>
+              <span className="hidden sm:inline">Import Businesses</span>
               <span className="sm:hidden">Import</span>
             </button>
 
@@ -292,7 +292,7 @@ export const TopNav = ({
               className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-100"
             >
               <Upload className="h-4 w-4" />
-              Import New Leads
+              Import New Businesses
             </button>
 
             <div className="grid grid-cols-2 gap-2">

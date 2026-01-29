@@ -16,13 +16,13 @@ export const useCloudSync = (
             const API_URL = import.meta.env.VITE_API_URL || '';
 
             // Sync Businesses
-            await fetch(`${API_URL}/api/leads/sync`, {
+            await fetch(`${API_URL}/api/businesses/sync`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ leads: businesses }),
+                body: JSON.stringify({ businesses: businesses }),
             });
 
             // Sync Routes

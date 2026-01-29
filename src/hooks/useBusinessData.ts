@@ -28,14 +28,14 @@ export const useBusinessData = () => {
         try {
             const API_URL = import.meta.env.VITE_API_URL || '';
 
-            const leadsRes = await fetch(`${API_URL}/api/leads`, {
+            const businessesRes = await fetch(`${API_URL}/api/businesses`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-            if (leadsRes.ok) {
-                const cloudLeads = await leadsRes.json();
-                if (cloudLeads.length > 0) {
+            if (businessesRes.ok) {
+                const cloudBusinesses = await businessesRes.json();
+                if (cloudBusinesses.length > 0) {
                     await db.businesses.clear();
-                    await db.businesses.bulkAdd(cloudLeads);
+                    await db.businesses.bulkAdd(cloudBusinesses);
                 }
             }
 

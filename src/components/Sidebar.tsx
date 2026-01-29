@@ -102,7 +102,7 @@ export const Sidebar = ({
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Quick import</p>
               <p className="mt-2 text-sm font-bold text-slate-700">CSV / XLSX / JSON</p>
-              <p className="text-xs text-slate-500">Use the import button above to load new leads.</p>
+              <p className="text-xs text-slate-500">Use the import button above to load new businesses.</p>
               <button
                 type="button"
                 onClick={onImportClick}
