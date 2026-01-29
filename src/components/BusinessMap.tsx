@@ -10,7 +10,7 @@ import type { Business } from '../types';
 import { getProviderColor } from '../utils/providerColors';
 
 // Helper component to handle center/zoom and fit bounds
-function MapController({ targetLocation, zoom, businesses, droppedPin, setDroppedPin }: { 
+function MapController({ targetLocation, zoom, businesses, droppedPin: _droppedPin, setDroppedPin }: { 
   targetLocation?: [number, number], 
   zoom?: number, 
   businesses: Business[],
@@ -19,6 +19,10 @@ function MapController({ targetLocation, zoom, businesses, droppedPin, setDroppe
 }) {
   const map = useMap();
   const [isDropMode, setIsDropMode] = useState(false);
+
+  // Use droppedPin prop here to satisfy TS/ESLint (though it's implicitly used by passing to hook)
+  const isPinActive = !!_droppedPin;
+
 
   useEffect(() => {
     if (targetLocation) {
@@ -100,6 +104,16 @@ function MapController({ targetLocation, zoom, businesses, droppedPin, setDroppe
         >
           {isDropMode ? <X className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
         </button>
+
+        {isPinActive && (
+          <button
+            onClick={() => setDroppedPin(null)}
+            className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-rose-600 hover:bg-rose-50 transition-all active:scale-95"
+            title="Clear Filter Pin"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {isDropMode && (
