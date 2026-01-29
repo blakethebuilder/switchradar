@@ -27,12 +27,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
         const apiUrl = environmentConfig.getApiUrl();
 
-        if (!apiUrl) {
-            throw new Error('API URL not configured. Please check your environment settings.');
-        }
+        // In production, use relative paths if no API URL is configured
+        const fullUrl = apiUrl ? `${apiUrl}${endpoint}` : endpoint;
 
         try {
-            const response = await fetch(`${apiUrl}${endpoint}`, {
+            const response = await fetch(fullUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, password }),

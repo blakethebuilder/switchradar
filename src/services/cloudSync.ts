@@ -75,7 +75,10 @@ class CloudSyncService {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      const response = await fetch(`${environmentConfig.getApiUrl()}/api/auth/ping`, {
+      const apiUrl = environmentConfig.getApiUrl();
+      const pingUrl = apiUrl ? `${apiUrl}/api/auth/ping` : '/api/auth/ping';
+      
+      const response = await fetch(pingUrl, {
         method: 'GET',
         signal: controller.signal
       });
@@ -157,7 +160,17 @@ class CloudSyncService {
 
   private async syncBusinessesToCloud(businesses: Business[], token: string): Promise<SyncResult> {
     try {
-      const response = await fetch(`${environmentConfig.getApiUrl()}/api/businesses/sync`, {
+      const apiUrl = environmentConfig.getApiUrl();
+      const fullUrl = apiUrl ? `${apiUrl}/api/businesses/sync` : '/api/businesses/sync';
+      
+      console.log('📤 Syncing businesses to cloud:', { 
+        count: businesses.length, 
+        apiUrl: apiUrl || 'relative',
+        fullUrl,
+        hasToken: !!token
+      });
+
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +179,15 @@ class CloudSyncService {
         body: JSON.stringify({ businesses })
       });
 
+      console.log('📤 Business sync response:', { 
+        status: response.status, 
+        statusText: response.statusText,
+        ok: response.ok
+      });
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('📤 Business sync error response:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
@@ -195,7 +216,10 @@ class CloudSyncService {
 
   private async syncRoutesToCloud(routeItems: RouteItem[], token: string): Promise<SyncResult> {
     try {
-      const response = await fetch(`${environmentConfig.getApiUrl()}/api/route/sync`, {
+      const apiUrl = environmentConfig.getApiUrl();
+      const fullUrl = apiUrl ? `${apiUrl}/api/route/sync` : '/api/route/sync';
+      
+      const response = await fetch(fullUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -233,26 +257,51 @@ class CloudSyncService {
 
   public async syncFromCloud(token: string): Promise<{ businesses: Business[]; routeItems: RouteItem[] }> {
     if (!this.isOnline()) {
+      console.log('⬇️ Sync from cloud skipped - offline');
       return { businesses: [], routeItems: [] };
     }
 
     try {
+      const apiUrl = environmentConfig.getApiUrl();
+      console.log('⬇️ Syncing from cloud:', { apiUrl: apiUrl || 'relative', hasToken: !!token });
+
       // Fetch businesses from cloud
-      const businessResponse = await fetch(`${environmentConfig.getApiUrl()}/api/businesses`, {
+      const businessUrl = apiUrl ? `${apiUrl}/api/businesses` : '/api/businesses';
+      console.log('⬇️ Fetching businesses from:', businessUrl);
+      
+      const businessResponse = await fetch(businessUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
+      console.log('⬇️ Business fetch response:', { 
+        status: businessResponse.status, 
+        ok: businessResponse.ok 
+      });
+
       // Fetch routes from cloud
-      const routeResponse = await fetch(`${environmentConfig.getApiUrl()}/api/route`, {
+      const routeUrl = apiUrl ? `${apiUrl}/api/route` : '/api/route';
+      console.log('⬇️ Fetching routes from:', routeUrl);
+      
+      const routeResponse = await fetch(routeUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
+      });
+
+      console.log('⬇️ Route fetch response:', { 
+        status: routeResponse.status, 
+        ok: routeResponse.ok 
       });
 
       const cloudBusinesses = businessResponse.ok ? await businessResponse.json() : [];
       const cloudRouteItems = routeResponse.ok ? await routeResponse.json() : [];
+
+      console.log('⬇️ Cloud data received:', { 
+        businessCount: cloudBusinesses.length, 
+        routeCount: cloudRouteItems.length 
+      });
 
       // Apply conflict resolution - local data takes priority
       const resolvedData = this.resolveConflicts(cloudBusinesses, cloudRouteItems);

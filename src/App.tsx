@@ -175,6 +175,20 @@ function App() {
   const handleSelectBusinessOnMap = useCallback((b: Business) => {
     setSelectedBusiness(b);
   }, []);
+
+  // Navigation logic for ClientDetails
+  const currentBusinessIndex = useMemo(() => {
+    if (!selectedBusiness) return -1;
+    return filteredBusinesses.findIndex(b => b.id === selectedBusiness.id);
+  }, [selectedBusiness, filteredBusinesses]);
+
+  const handleNavigateToNextBusiness = useCallback((business: Business) => {
+    setSelectedBusiness(business);
+    // If we're on map view, also update the map target
+    if (viewMode === 'map') {
+      setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
+    }
+  }, [viewMode]);
   
   const handleTogglePhoneType = async (id: string, currentType: 'landline' | 'mobile') => {
     const newType = currentType === 'landline' ? 'mobile' : 'landline';
@@ -400,6 +414,9 @@ function App() {
               onClose={() => setSelectedBusiness(null)}
               onTogglePhoneType={handleTogglePhoneType}
               onUpdateBusiness={handleUpdateBusiness}
+              allBusinesses={filteredBusinesses}
+              currentIndex={currentBusinessIndex}
+              onNavigateToNext={handleNavigateToNextBusiness}
           />
         )}
       </div>

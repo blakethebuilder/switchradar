@@ -34,8 +34,9 @@ class EnvironmentConfigManager {
   private validateConfig(): void {
     const errors: string[] = [];
 
-    if (!this.config.apiUrl && !this.config.isDevelopment) {
-      errors.push('VITE_API_URL is required for production builds');
+    // Only require API URL in development - production uses relative paths
+    if (this.config.isDevelopment && !this.config.apiUrl) {
+      errors.push('VITE_API_URL is required for development');
     }
 
     if (this.config.syncIntervalMs < 1000) {
@@ -48,8 +49,8 @@ class EnvironmentConfigManager {
 
     if (errors.length > 0) {
       console.warn('Environment configuration warnings:', errors);
-      // Don't throw in production - gracefully degrade
-      if (this.config.isDevelopment) {
+      // Only throw in development for critical errors
+      if (this.config.isDevelopment && errors.some(e => e.includes('required'))) {
         throw new Error(`Environment configuration errors: ${errors.join(', ')}`);
       }
     }
@@ -60,8 +61,8 @@ class EnvironmentConfigManager {
   }
 
   public isCloudSyncEnabled(): boolean {
-    // In production with empty apiUrl, we use relative paths which work with Nginx proxy
-    return this.config.isDevelopment ? !!this.config.apiUrl : true;
+    // Always enable cloud sync - production uses relative paths, development uses full URLs
+    return true;
   }
 
   public getApiUrl(): string {
@@ -71,12 +72,9 @@ class EnvironmentConfigManager {
   public validateStartup(): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
     
-    if (!this.config.apiUrl) {
-      errors.push('API URL not configured');
-    }
-
-    if (!this.config.isDevelopment && !this.config.apiUrl) {
-      errors.push('Production build requires VITE_API_URL');
+    // Only validate API URL in development
+    if (this.config.isDevelopment && !this.config.apiUrl) {
+      errors.push('API URL not configured for development');
     }
 
     return {

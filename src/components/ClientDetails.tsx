@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Plus, Minus, Globe, Smartphone, Landmark, MessageSquare, Phone, Smile, Frown, DollarSign, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, Plus, Minus, Globe, Smartphone, Landmark, MessageSquare, Phone, Smile, Frown, DollarSign, CheckCircle2, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Business } from '../types';
 import { isMobileProvider } from '../utils/phoneUtils';
 import { ProviderBadge } from './ProviderBadge';
@@ -12,6 +12,10 @@ interface ClientDetailsProps {
     onClose: () => void;
     onTogglePhoneType?: (id: string, currentType: 'landline' | 'mobile') => void;
     onUpdateBusiness: (id: string, updates: Partial<Business>) => void;
+    // Navigation props
+    allBusinesses?: Business[];
+    currentIndex?: number;
+    onNavigateToNext?: (business: Business) => void;
 }
 
 const INTEREST_OPTIONS = [
@@ -27,7 +31,10 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
     onRemoveFromRoute,
     onClose,
     onTogglePhoneType,
-    onUpdateBusiness
+    onUpdateBusiness,
+    allBusinesses = [],
+    currentIndex = 0,
+    onNavigateToNext
 }) => {
     const isMobile = business.phoneTypeOverride
         ? business.phoneTypeOverride === 'mobile'
@@ -52,10 +59,55 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
         await onUpdateBusiness(business.id, { metadata: { ...business.metadata, interest } });
     };
 
+    // Navigation functions
+    const canNavigatePrev = allBusinesses.length > 1 && currentIndex > 0;
+    const canNavigateNext = allBusinesses.length > 1 && currentIndex < allBusinesses.length - 1;
+
+    const handleNavigatePrev = () => {
+        if (canNavigatePrev && onNavigateToNext) {
+            const prevBusiness = allBusinesses[currentIndex - 1];
+            onNavigateToNext(prevBusiness);
+        }
+    };
+
+    const handleNavigateNext = () => {
+        if (canNavigateNext && onNavigateToNext) {
+            const nextBusiness = allBusinesses[currentIndex + 1];
+            onNavigateToNext(nextBusiness);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full bg-white relative">
             <div className="p-6 pb-4 border-b border-slate-100 shrink-0">
-                <div className="flex justify-end">
+                <div className="flex justify-between items-center mb-4">
+                    {/* Navigation buttons */}
+                    <div className="flex items-center gap-2">
+                        {allBusinesses.length > 1 && (
+                            <>
+                                <button
+                                    onClick={handleNavigatePrev}
+                                    disabled={!canNavigatePrev}
+                                    className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Previous client"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <span className="text-xs font-bold text-slate-400 px-2">
+                                    {currentIndex + 1} of {allBusinesses.length}
+                                </span>
+                                <button
+                                    onClick={handleNavigateNext}
+                                    disabled={!canNavigateNext}
+                                    className="h-8 w-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    title="Next client"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                            </>
+                        )}
+                    </div>
+
                     <button 
                         onClick={onClose} 
                         className="h-8 w-8 rounded-full bg-slate-100 text-slate-400 hover:bg-slate-200 hover:text-slate-900 flex items-center justify-center transition-colors"
@@ -64,7 +116,8 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                     </button>
                 </div>
                 
-                <div className="flex gap-4 items-start pr-8">
+                
+                <div className="flex gap-4 items-start">
                     <div className="h-14 w-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 shadow-sm border border-indigo-100">
                         <Landmark className="h-7 w-7" />
                     </div>

@@ -34,6 +34,14 @@ export const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({
   const handlePushToCloud = async () => {
     if (!isAuthenticated || !token || isSyncing) return;
 
+    console.log('🚀 Starting push to cloud...', { 
+      totalItems, 
+      businessCount: businesses.length, 
+      routeCount: routeItems.length,
+      token: token ? 'Present' : 'Missing',
+      apiUrl: cloudSyncService.isOnline() ? 'Online' : 'Offline'
+    });
+
     setSyncStatus('pushing');
     setSyncMessage('Preparing to sync to cloud...');
     setSyncProgress({ current: 0, total: totalItems });
@@ -108,6 +116,11 @@ export const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({
   const handlePullFromCloud = async () => {
     if (!isAuthenticated || !token || isSyncing) return;
 
+    console.log('⬇️ Starting pull from cloud...', { 
+      token: token ? 'Present' : 'Missing',
+      isOnline: cloudSyncService.isOnline()
+    });
+
     setSyncStatus('pulling');
     setSyncMessage('Downloading from cloud...');
 
@@ -136,6 +149,11 @@ export const CloudSyncPanel: React.FC<CloudSyncPanelProps> = ({
 
   const handleClearCloud = async () => {
     if (!isAuthenticated || !token || isSyncing) return;
+
+    console.log('🗑️ Starting clear cloud...', { 
+      token: token ? 'Present' : 'Missing',
+      isOnline: cloudSyncService.isOnline()
+    });
 
     const confirmed = window.confirm(
       'Are you sure you want to clear all data from the cloud? This action cannot be undone.'
