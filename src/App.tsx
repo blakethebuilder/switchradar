@@ -301,7 +301,7 @@ function App() {
 
             {viewMode === 'map' && (
               <div className="absolute inset-0 w-full h-full">
-                <div className="absolute top-20 left-0 right-0 z-[2000] px-4">
+                <div className="absolute top-4 left-0 right-0 z-[2000] px-4">
                   <div className="max-w-4xl mx-auto">
                     <WorkspaceFilters
                       searchTerm={searchTerm}
