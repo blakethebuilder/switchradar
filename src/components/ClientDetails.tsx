@@ -105,35 +105,63 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
         setIsSaving(false);
     };
 
+    // Loading states for better feedback
+    const [isUpdating, setIsUpdating] = useState<string | null>(null);
+
     const handleUpdateSimpleStatus = async (key: keyof Business, value: string) => {
-        await onUpdateBusiness(business.id, { [key]: value });
+        setIsUpdating(`status-${value}`);
+        try {
+            await onUpdateBusiness(business.id, { [key]: value });
+            // Brief success feedback
+            setTimeout(() => setIsUpdating(null), 300);
+        } catch (error) {
+            setIsUpdating(null);
+        }
     };
 
     const handleUpdateInterest = async (interest: string) => {
-        await onUpdateBusiness(business.id, { metadata: { ...business.metadata, interest } });
+        setIsUpdating(`interest-${interest}`);
+        try {
+            await onUpdateBusiness(business.id, { metadata: { ...business.metadata, interest } });
+            setTimeout(() => setIsUpdating(null), 300);
+        } catch (error) {
+            setIsUpdating(null);
+        }
     };
 
     const handleUpdateMetadata = async (key: keyof BusinessMetadata, value: any) => {
-        await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
+        setIsUpdating(`metadata-${key}-${value}`);
+        try {
+            await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
+            setTimeout(() => setIsUpdating(null), 300);
+        } catch (error) {
+            setIsUpdating(null);
+        }
     };
 
     const handleAddRichNote = async () => {
         if (!newNoteContent.trim()) return;
         
-        const newNote: NoteEntry = {
-            id: Date.now().toString(),
-            content: newNoteContent.trim(),
-            category: selectedNoteCategory,
-            timestamp: new Date()
-        };
-        
-        const currentRichNotes = business.richNotes || [];
-        await onUpdateBusiness(business.id, { 
-            richNotes: [...currentRichNotes, newNote] 
-        });
-        
-        setNewNoteContent('');
-        setShowTemplates(false);
+        setIsUpdating('add-note');
+        try {
+            const newNote: NoteEntry = {
+                id: Date.now().toString(),
+                content: newNoteContent.trim(),
+                category: selectedNoteCategory,
+                timestamp: new Date()
+            };
+            
+            const currentRichNotes = business.richNotes || [];
+            await onUpdateBusiness(business.id, { 
+                richNotes: [...currentRichNotes, newNote] 
+            });
+            
+            setNewNoteContent('');
+            setShowTemplates(false);
+            setTimeout(() => setIsUpdating(null), 300);
+        } catch (error) {
+            setIsUpdating(null);
+        }
     };
 
     const handleUseTemplate = (template: string) => {
@@ -272,24 +300,38 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         <button
                             onClick={() => handleUpdateMetadata('hasIssues', true)}
-                            className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-wider transition-all ${
-                                business.metadata?.hasIssues === true
-                                    ? 'bg-red-600 text-white shadow-lg shadow-red-300/50'
-                                    : 'bg-white text-red-600 border-2 border-red-200 hover:bg-red-50'
+                            disabled={isUpdating === 'metadata-hasIssues-true'}
+                            className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-wider transition-all transform active:scale-95 ${
+                                isUpdating === 'metadata-hasIssues-true'
+                                    ? 'bg-red-500 text-white scale-95 animate-pulse'
+                                    : business.metadata?.hasIssues === true
+                                    ? 'bg-red-600 text-white shadow-lg shadow-red-300/50 hover:shadow-red-400/60 hover:bg-red-700'
+                                    : 'bg-white text-red-600 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 hover:shadow-md'
                             }`}
                         >
-                            <AlertTriangle className="h-4 w-4" />
+                            {isUpdating === 'metadata-hasIssues-true' ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <AlertTriangle className="h-4 w-4" />
+                            )}
                             Issues
                         </button>
                         <button
                             onClick={() => handleUpdateMetadata('hasIssues', false)}
-                            className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-wider transition-all ${
-                                business.metadata?.hasIssues === false
-                                    ? 'bg-green-600 text-white shadow-lg shadow-green-300/50'
-                                    : 'bg-white text-green-600 border-2 border-green-200 hover:bg-green-50'
+                            disabled={isUpdating === 'metadata-hasIssues-false'}
+                            className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-black uppercase tracking-wider transition-all transform active:scale-95 ${
+                                isUpdating === 'metadata-hasIssues-false'
+                                    ? 'bg-green-500 text-white scale-95 animate-pulse'
+                                    : business.metadata?.hasIssues === false
+                                    ? 'bg-green-600 text-white shadow-lg shadow-green-300/50 hover:shadow-green-400/60 hover:bg-green-700'
+                                    : 'bg-white text-green-600 border-2 border-green-200 hover:bg-green-50 hover:border-green-300 hover:shadow-md'
                             }`}
                         >
-                            <CheckCircle className="h-4 w-4" />
+                            {isUpdating === 'metadata-hasIssues-false' ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                <CheckCircle className="h-4 w-4" />
+                            )}
                             No Issues
                         </button>
                     </div>
@@ -300,12 +342,18 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                             <button
                                 key={status}
                                 onClick={() => handleUpdateSimpleStatus('status', status)}
-                                className={`flex items-center justify-center h-9 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                                    business.status === status
-                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-300/50'
-                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                                disabled={isUpdating === `status-${status}`}
+                                className={`flex items-center justify-center h-9 rounded-xl text-xs font-black uppercase tracking-wider transition-all transform active:scale-95 ${
+                                    isUpdating === `status-${status}`
+                                        ? 'bg-indigo-500 text-white scale-95 animate-pulse'
+                                        : business.status === status
+                                        ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-300/50 hover:shadow-indigo-400/60 hover:bg-indigo-700'
+                                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 hover:shadow-md'
                                 }`}
                             >
+                                {isUpdating === `status-${status}` ? (
+                                    <Loader2 className="h-3 w-3 animate-spin mr-2" />
+                                ) : null}
                                 {status.charAt(0).toUpperCase() + status.slice(1)}
                             </button>
                         ))}
@@ -319,23 +367,37 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                             <div className="flex gap-1">
                                 <button
                                     onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', true)}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                                        business.metadata?.isActiveOnCurrentProvider === true
-                                            ? 'bg-green-600 text-white'
-                                            : 'bg-slate-200 text-slate-600 hover:bg-green-100'
+                                    disabled={isUpdating === 'metadata-isActiveOnCurrentProvider-true'}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                        isUpdating === 'metadata-isActiveOnCurrentProvider-true'
+                                            ? 'bg-green-500 text-white scale-95 animate-pulse'
+                                            : business.metadata?.isActiveOnCurrentProvider === true
+                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
+                                            : 'bg-slate-200 text-slate-600 hover:bg-green-100 hover:text-green-700'
                                     }`}
                                 >
-                                    Yes
+                                    {isUpdating === 'metadata-isActiveOnCurrentProvider-true' ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        'Yes'
+                                    )}
                                 </button>
                                 <button
                                     onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', false)}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                                        business.metadata?.isActiveOnCurrentProvider === false
-                                            ? 'bg-red-600 text-white'
-                                            : 'bg-slate-200 text-slate-600 hover:bg-red-100'
+                                    disabled={isUpdating === 'metadata-isActiveOnCurrentProvider-false'}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                        isUpdating === 'metadata-isActiveOnCurrentProvider-false'
+                                            ? 'bg-red-500 text-white scale-95 animate-pulse'
+                                            : business.metadata?.isActiveOnCurrentProvider === false
+                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700'
+                                            : 'bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-700'
                                     }`}
                                 >
-                                    No
+                                    {isUpdating === 'metadata-isActiveOnCurrentProvider-false' ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        'No'
+                                    )}
                                 </button>
                             </div>
                         </div>
@@ -346,23 +408,37 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                             <div className="flex gap-1">
                                 <button
                                     onClick={() => handleUpdateMetadata('hasChangedProvider', true)}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                                        business.metadata?.hasChangedProvider === true
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-slate-200 text-slate-600 hover:bg-blue-100'
+                                    disabled={isUpdating === 'metadata-hasChangedProvider-true'}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                        isUpdating === 'metadata-hasChangedProvider-true'
+                                            ? 'bg-blue-500 text-white scale-95 animate-pulse'
+                                            : business.metadata?.hasChangedProvider === true
+                                            ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
+                                            : 'bg-slate-200 text-slate-600 hover:bg-blue-100 hover:text-blue-700'
                                     }`}
                                 >
-                                    Yes
+                                    {isUpdating === 'metadata-hasChangedProvider-true' ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        'Yes'
+                                    )}
                                 </button>
                                 <button
                                     onClick={() => handleUpdateMetadata('hasChangedProvider', false)}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                                        business.metadata?.hasChangedProvider === false
-                                            ? 'bg-slate-600 text-white'
+                                    disabled={isUpdating === 'metadata-hasChangedProvider-false'}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                        isUpdating === 'metadata-hasChangedProvider-false'
+                                            ? 'bg-slate-500 text-white scale-95 animate-pulse'
+                                            : business.metadata?.hasChangedProvider === false
+                                            ? 'bg-slate-600 text-white shadow-md hover:bg-slate-700'
                                             : 'bg-slate-200 text-slate-600 hover:bg-slate-300'
                                     }`}
                                 >
-                                    No
+                                    {isUpdating === 'metadata-hasChangedProvider-false' ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        'No'
+                                    )}
                                 </button>
                             </div>
                         </div>
@@ -385,23 +461,37 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                             <div className="flex gap-1">
                                 <button
                                     onClick={() => handleUpdateMetadata('canContact', true)}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                                        business.metadata?.canContact === true
-                                            ? 'bg-green-600 text-white'
-                                            : 'bg-slate-200 text-slate-600 hover:bg-green-100'
+                                    disabled={isUpdating === 'metadata-canContact-true'}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                        isUpdating === 'metadata-canContact-true'
+                                            ? 'bg-green-500 text-white scale-95 animate-pulse'
+                                            : business.metadata?.canContact === true
+                                            ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
+                                            : 'bg-slate-200 text-slate-600 hover:bg-green-100 hover:text-green-700'
                                     }`}
                                 >
-                                    Yes
+                                    {isUpdating === 'metadata-canContact-true' ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        'Yes'
+                                    )}
                                 </button>
                                 <button
                                     onClick={() => handleUpdateMetadata('canContact', false)}
-                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                                        business.metadata?.canContact === false
-                                            ? 'bg-red-600 text-white'
-                                            : 'bg-slate-200 text-slate-600 hover:bg-red-100'
+                                    disabled={isUpdating === 'metadata-canContact-false'}
+                                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                        isUpdating === 'metadata-canContact-false'
+                                            ? 'bg-red-500 text-white scale-95 animate-pulse'
+                                            : business.metadata?.canContact === false
+                                            ? 'bg-red-600 text-white shadow-md hover:bg-red-700'
+                                            : 'bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-700'
                                     }`}
                                 >
-                                    No
+                                    {isUpdating === 'metadata-canContact-false' ? (
+                                        <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                        'No'
+                                    )}
                                 </button>
                             </div>
                         </div>
@@ -419,13 +509,20 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                             <button
                                 key={option.value}
                                 onClick={() => handleUpdateInterest(option.value)}
-                                className={`flex items-center justify-center gap-2 p-3 h-12 rounded-xl transition-all ${
-                                    business.metadata?.interest === option.value
-                                        ? `bg-white border-2 ${option.border} ${option.color} shadow-lg shadow-slate-200/50`
-                                        : `bg-white/50 border border-slate-100 text-slate-400 hover:bg-white`
+                                disabled={isUpdating === `interest-${option.value}`}
+                                className={`flex items-center justify-center gap-2 p-3 h-12 rounded-xl transition-all transform active:scale-95 ${
+                                    isUpdating === `interest-${option.value}`
+                                        ? `bg-slate-300 text-slate-600 scale-95 animate-pulse`
+                                        : business.metadata?.interest === option.value
+                                        ? `bg-white border-2 ${option.border} ${option.color} shadow-lg shadow-slate-200/50 hover:shadow-lg`
+                                        : `bg-white/50 border border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200 hover:shadow-md`
                                 }`}
                             >
-                                <option.icon className={`h-4 w-4 ${business.metadata?.interest === option.value ? option.color : 'text-slate-400'}`} />
+                                {isUpdating === `interest-${option.value}` ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <option.icon className={`h-4 w-4 ${business.metadata?.interest === option.value ? option.color : 'text-slate-400'}`} />
+                                )}
                                 <span className={`text-xs font-black uppercase tracking-widest ${business.metadata?.interest === option.value ? option.color : 'text-slate-600'}`}>{option.label}</span>
                             </button>
                         ))}
@@ -501,11 +598,19 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                             </button>
                             <button
                                 onClick={handleAddRichNote}
-                                disabled={!newNoteContent.trim()}
-                                className="flex items-center gap-2 px-3 py-1 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                disabled={!newNoteContent.trim() || isUpdating === 'add-note'}
+                                className={`flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                                    isUpdating === 'add-note'
+                                        ? 'bg-indigo-500 text-white scale-95 animate-pulse'
+                                        : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md'
+                                } disabled:opacity-50 disabled:cursor-not-allowed`}
                             >
-                                <Plus className="h-3 w-3" />
-                                Add Note
+                                {isUpdating === 'add-note' ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                    <Plus className="h-3 w-3" />
+                                )}
+                                {isUpdating === 'add-note' ? 'Adding...' : 'Add Note'}
                             </button>
                         </div>
 
