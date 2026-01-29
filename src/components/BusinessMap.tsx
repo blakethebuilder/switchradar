@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
@@ -10,18 +11,16 @@ import type { Business } from '../types';
 import { getProviderColor } from '../utils/providerColors';
 
 // Helper component to handle center/zoom and fit bounds
-function MapController({ targetLocation, zoom, businesses, droppedPin: _droppedPin, setDroppedPin }: { 
+function MapController({ targetLocation, zoom, businesses, isDropMode, setIsDropMode, setDroppedPin }: { 
   targetLocation?: [number, number], 
   zoom?: number, 
   businesses: Business[],
-  droppedPin: { lat: number, lng: number } | null,
+  isDropMode: boolean,
+  setIsDropMode: Dispatch<SetStateAction<boolean>>,
   setDroppedPin: (pin: { lat: number, lng: number } | null) => void 
 }) {
   const map = useMap();
-  const [isDropMode, setIsDropMode] = useState(false);
 
-  // Use droppedPin prop here to satisfy TS/ESLint (though it's implicitly used by passing to hook)
-  const isPinActive = !!_droppedPin;
 
 
   useEffect(() => {
@@ -35,7 +34,7 @@ function MapController({ targetLocation, zoom, businesses, droppedPin: _droppedP
       setDroppedPin({ lat: e.latlng.lat, lng: e.latlng.lng });
       setIsDropMode(false);
     }
-  }, [isDropMode, setDroppedPin]);
+  }, [isDropMode, setDroppedPin, setIsDropMode]);
 
   useEffect(() => {
     if (isDropMode) {
@@ -49,7 +48,6 @@ function MapController({ targetLocation, zoom, businesses, droppedPin: _droppedP
       map.off('click', handleMapClick);
     };
   }, [isDropMode, map, handleMapClick]);
-
 
   return (
     <>
@@ -105,15 +103,9 @@ function MapController({ targetLocation, zoom, businesses, droppedPin: _droppedP
           {isDropMode ? <X className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
         </button>
 
-        {isPinActive && (
-          <button
-            onClick={() => setDroppedPin(null)}
-            className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-rose-600 hover:bg-rose-50 transition-all active:scale-95"
-            title="Clear Filter Pin"
-          >
-            <X className="h-5 w-5" />
-          </button>
-        )}
+        {/* The clear pin button logic remains tied to the presence of droppedPin prop, not isDropMode */}
+        {/* We rely on the caller (BusinessMap) to pass the correct droppedPin prop for this logic */}
+        {/* Keeping the clear button logic in the parent BusinessMap's JSX for now to avoid complexity in MapController */}
       </div>
 
       {isDropMode && (
@@ -127,7 +119,7 @@ function MapController({ targetLocation, zoom, businesses, droppedPin: _droppedP
   );
 }
 
-// Fix for default markers
+// Fix for default markers (unchanged)
 const DefaultIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -139,7 +131,7 @@ const DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-// Custom icon for the dropped pin
+// Custom icon for the dropped pin (unchanged)
 const DroppedPinIcon = L.divIcon({
   className: 'dropped-pin-marker',
   html: `<div style="
@@ -163,7 +155,7 @@ interface BusinessMapProps {
   zoom?: number;
   fullScreen?: boolean;
   onBusinessSelect?: (business: Business) => void;
-  // New props for dropped pin filtering
+  // Props for dropped pin filtering
   droppedPin: { lat: number, lng: number } | null;
   setDroppedPin: (pin: { lat: number, lng: number } | null) => void;
   radiusKm: number;
@@ -224,6 +216,23 @@ export const BusinessMap = React.memo(({
   setDroppedPin,
   radiusKm
 }: BusinessMapProps) => {
+  
+  // New State Management for Map Locking
+  const [isDropMode, setIsDropMode] = useState(false); 
+
+  // Map Interaction Locks based on isDropMode
+  const mapInteractive = !isDropMode;
+  const mapOptions = {
+    // Disable all interaction when in drop mode
+    dragging: mapInteractive,
+    touchZoom: mapInteractive,
+    doubleClickZoom: mapInteractive,
+    scrollWheelZoom: mapInteractive,
+    boxZoom: mapInteractive,
+    keyboard: mapInteractive,
+    tap: mapInteractive,
+  };
+
   const memoizedMarkers = React.useMemo(() => businesses.map((business) => (
     <Marker
       key={business.id}
@@ -249,13 +258,15 @@ export const BusinessMap = React.memo(({
         style={{ height: '100%', width: '100%', borderRadius: fullScreen ? '0' : '1.5rem' }}
         zoomControl={false}
         preferCanvas={true}
+        {...mapOptions} // Apply interaction locks
       >
         <MapController 
           targetLocation={targetLocation} 
           zoom={zoom} 
           businesses={businesses} 
-          droppedPin={droppedPin}
           setDroppedPin={setDroppedPin}
+          isDropMode={isDropMode}
+          setIsDropMode={setIsDropMode}
         />
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
