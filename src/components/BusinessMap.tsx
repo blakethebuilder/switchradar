@@ -343,14 +343,33 @@ export const BusinessMap = React.memo(({
           chunkedLoading
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          maxClusterRadius={40}
-          disableClusteringAtZoom={15}
+          maxClusterRadius={50}
+          disableClusteringAtZoom={16}
           removeOutsideVisibleBounds={true}
           spiderfyDistanceMultiplier={2.0}
           animate={false}
           animateAddingMarkers={false}
           spiderfyShapePositions={(count: number, centerPt: any) => {
-            const distanceFromCenter = 60; // Increased from 30 to 60 for better spacing
+            // Dynamic radius calculation based on count
+            let distanceFromCenter;
+            
+            if (count <= 5) {
+              // Small clusters: keep them close
+              distanceFromCenter = 40;
+            } else if (count <= 10) {
+              // Medium-small clusters: moderate spacing
+              distanceFromCenter = 50;
+            } else if (count <= 20) {
+              // Medium clusters: good spacing
+              distanceFromCenter = 60;
+            } else if (count <= 40) {
+              // Large clusters: increase radius to avoid overlap
+              distanceFromCenter = 70;
+            } else {
+              // Very large clusters: maximum radius but not too far
+              distanceFromCenter = 80;
+            }
+            
             const angleStep = (2 * Math.PI) / count;
             
             return Array.from({ length: count }, (_, i) => {
