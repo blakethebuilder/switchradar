@@ -401,7 +401,7 @@ function App() {
 
       {/* Client Detail Sidebar */}
       <div 
-        className={`fixed top-0 right-0 bottom-0 z-[1003] w-full md:max-w-sm lg:max-w-md bg-white shadow-2xl transition-transform duration-300 ease-in-out border-l border-slate-100 ${
+        className={`fixed top-0 right-0 bottom-0 z-[1003] w-full md:max-w-xs lg:max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-in-out border-l border-slate-100 ${
           selectedBusiness ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

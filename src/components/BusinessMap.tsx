@@ -253,6 +253,29 @@ export const BusinessMap = React.memo(({
           e.originalEvent.stopPropagation();
           onBusinessSelect?.(business);
         },
+        mouseover: (e) => {
+          // Add hover effect - scale up the marker
+          const marker = e.target;
+          const icon = marker.getIcon();
+          if (icon && icon.options && icon.options.html) {
+            const newHtml = icon.options.html.replace(
+              'width: 24px; height: 24px;',
+              'width: 32px; height: 32px; z-index: 1000; transform: scale(1.2);'
+            );
+            const hoverIcon = L.divIcon({
+              ...icon.options,
+              html: newHtml,
+              iconSize: [32, 32],
+              iconAnchor: [16, 16],
+            });
+            marker.setIcon(hoverIcon);
+          }
+        },
+        mouseout: (e) => {
+          // Reset to original size
+          const marker = e.target;
+          marker.setIcon(createProviderIcon(business.provider));
+        },
       }}
     />
   )), [businesses, onBusinessSelect]);

@@ -185,12 +185,12 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                         <Phone className="h-3 w-3" />
                         CONTACT STATUS
                     </h3>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-2">
                         {['active', 'contacted', 'converted', 'inactive'].map(status => (
                             <button
                                 key={status}
                                 onClick={() => handleUpdateSimpleStatus('status', status)}
-                                className={`flex items-center justify-center h-10 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                                className={`flex items-center justify-center h-9 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                                     business.status === status
                                         ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-300/50'
                                         : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
@@ -208,19 +208,19 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                         <DollarSign className="h-3 w-3" />
                         PROSPECT INTEREST
                     </h3>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 gap-2">
                         {INTEREST_OPTIONS.map(option => (
                             <button
                                 key={option.value}
                                 onClick={() => handleUpdateInterest(option.value)}
-                                className={`flex flex-col items-center justify-center p-2 h-16 rounded-xl transition-all ${
+                                className={`flex items-center justify-center gap-2 p-3 h-12 rounded-xl transition-all ${
                                     business.metadata?.interest === option.value
                                         ? `bg-white border-2 ${option.border} ${option.color} shadow-lg shadow-slate-200/50`
                                         : `bg-white/50 border border-slate-100 text-slate-400 hover:bg-white`
                                 }`}
                             >
-                                <option.icon className={`h-5 w-5 mb-1 ${business.metadata?.interest === option.value ? option.color : 'text-slate-400'}`} />
-                                <span className={`text-[10px] font-black uppercase tracking-widest ${business.metadata?.interest === option.value ? option.color : 'text-slate-600'}`}>{option.label}</span>
+                                <option.icon className={`h-4 w-4 ${business.metadata?.interest === option.value ? option.color : 'text-slate-400'}`} />
+                                <span className={`text-xs font-black uppercase tracking-widest ${business.metadata?.interest === option.value ? option.color : 'text-slate-600'}`}>{option.label}</span>
                             </button>
                         ))}
                     </div>
