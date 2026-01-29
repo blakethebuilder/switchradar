@@ -21,6 +21,7 @@ import './App.css';
 import { ChevronDown, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import type { Business, ImportMapping, ViewMode } from './types';
 
+
 function App() {
   const {
     businesses,
@@ -52,7 +53,7 @@ function App() {
   const [importRows, setImportRows] = useState<Record<string, unknown>[]>([]);
   const [importColumns, setImportColumns] = useState<string[]>([]);
   const [pendingFileName, setPendingFileName] = useState('');
-  const [isFiltersVisible, setIsFiltersVisible] = useState(true);
+  const [isFiltersVisible, setIsFiltersVisible] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
@@ -313,24 +314,28 @@ function App() {
 
             {viewMode === 'map' && (
               <div className="absolute inset-0 w-full h-full">
-                <div className="absolute top-4 left-0 right-0 z-[1002] px-4 pointer-events-none">
-                  <div className="max-w-4xl mx-auto pointer-events-auto">
-                    <div className="glass-card rounded-[2rem] shadow-2xl border border-white/50 backdrop-blur-xl overflow-hidden">
-                      <div className="p-4 border-b border-white/20 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <SlidersHorizontal className="h-4 w-4 text-indigo-600" />
-                          <span className="text-xs font-black uppercase tracking-widest text-slate-900">Workspace Filters</span>
-                        </div>
-                        <button 
-                          onClick={() => setIsFiltersVisible(!isFiltersVisible)}
-                          className="p-1 rounded-lg hover:bg-slate-100/50"
-                        >
-                          {isFiltersVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                        </button>
+              <div className="absolute top-4 left-0 right-0 z-[1002] px-4 pointer-events-none md:static md:px-0">
+                <div 
+                  className={`max-w-4xl mx-auto pointer-events-auto transition-all duration-300 ease-in-out ${
+                    viewMode === 'map' && !isFiltersVisible ? 'md:translate-y-0 translate-y-[-100%]' : 'translate-y-0'
+                  }`}
+                >
+                  <div className="glass-card rounded-[2rem] shadow-2xl border border-white/50 backdrop-blur-xl overflow-hidden">
+                    <div className="p-4 border-b border-white/20 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <SlidersHorizontal className="h-4 w-4 text-indigo-600" />
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-900">Workspace Filters</span>
                       </div>
-                      {isFiltersVisible && (
-                        <div className="p-6 bg-white/80">
-                          <ProviderBar
+                      <button 
+                        onClick={() => setIsFiltersVisible(!isFiltersVisible)}
+                        className="p-1 rounded-lg hover:bg-slate-100/50"
+                      >
+                        {isFiltersVisible ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {isFiltersVisible && (
+                      <div className="p-6 bg-white/80">
+                        <ProviderBar
                             availableProviders={availableProviders}
                             visibleProviders={visibleProviders}
                             onToggleProvider={handleToggleProvider}
