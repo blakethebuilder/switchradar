@@ -11,16 +11,32 @@ import type { Business } from '../types';
 import { getProviderColor } from '../utils/providerColors';
 
 // Helper component to handle center/zoom and fit bounds
-function MapController({ targetLocation, zoom, businesses, isDropMode, setIsDropMode, setDroppedPin, droppedPin }: { 
+function MapController({ 
+  targetLocation, 
+  zoom, 
+  businesses, 
+  isDropMode, 
+  setIsDropMode, 
+  setDroppedPin, 
+  droppedPin,
+  onMultiSelect,
+  selectedBusinessIds = []
+}: { 
   targetLocation?: [number, number], 
   zoom?: number, 
   businesses: Business[],
   isDropMode: boolean,
   setIsDropMode: Dispatch<SetStateAction<boolean>>,
   setDroppedPin: (pin: { lat: number, lng: number } | null) => void,
-  droppedPin: { lat: number, lng: number } | null
+  droppedPin: { lat: number, lng: number } | null,
+  onMultiSelect?: (businesses: Business[]) => void,
+  selectedBusinessIds?: string[]
 }) {
   const map = useMap();
+  const [isDragSelecting, setIsDragSelecting] = useState(false);
+  const [dragStart, setDragStart] = useState<{x: number, y: number} | null>(null);
+  const [dragEnd, setDragEnd] = useState<{x: number, y: number} | null>(null);
+  const [selectionBox, setSelectionBox] = useState<HTMLDivElement | null>(null);
 
 
 
@@ -37,6 +53,75 @@ function MapController({ targetLocation, zoom, businesses, isDropMode, setIsDrop
     }
   }, [isDropMode, setDroppedPin, setIsDropMode]);
 
+  // Drag selection handlers
+  const handleMouseDown = useCallback((e: L.LeafletMouseEvent) => {
+    if (e.originalEvent.shiftKey && !isDropMode) {
+      setIsDragSelecting(true);
+      const containerPoint = map.mouseEventToContainerPoint(e.originalEvent as MouseEvent);
+      setDragStart({ x: containerPoint.x, y: containerPoint.y });
+      setDragEnd({ x: containerPoint.x, y: containerPoint.y });
+      
+      // Create selection box
+      const box = document.createElement('div');
+      box.style.position = 'absolute';
+      box.style.border = '2px dashed #3b82f6';
+      box.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+      box.style.pointerEvents = 'none';
+      box.style.zIndex = '1000';
+      map.getContainer().appendChild(box);
+      setSelectionBox(box);
+      
+      e.originalEvent.preventDefault();
+    }
+  }, [map, isDropMode]);
+
+  const handleMouseMove = useCallback((e: L.LeafletMouseEvent) => {
+    if (isDragSelecting && dragStart && selectionBox) {
+      const containerPoint = map.mouseEventToContainerPoint(e.originalEvent as MouseEvent);
+      setDragEnd({ x: containerPoint.x, y: containerPoint.y });
+      
+      // Update selection box
+      const left = Math.min(dragStart.x, containerPoint.x);
+      const top = Math.min(dragStart.y, containerPoint.y);
+      const width = Math.abs(containerPoint.x - dragStart.x);
+      const height = Math.abs(containerPoint.y - dragStart.y);
+      
+      selectionBox.style.left = `${left}px`;
+      selectionBox.style.top = `${top}px`;
+      selectionBox.style.width = `${width}px`;
+      selectionBox.style.height = `${height}px`;
+    }
+  }, [isDragSelecting, dragStart, selectionBox, map]);
+
+  const handleMouseUp = useCallback((e: L.LeafletMouseEvent) => {
+    if (isDragSelecting && dragStart && dragEnd && onMultiSelect) {
+      // Calculate bounds of selection
+      const startLatLng = map.containerPointToLatLng([dragStart.x, dragStart.y]);
+      const endLatLng = map.containerPointToLatLng([dragEnd.x, dragEnd.y]);
+      
+      const bounds = L.latLngBounds([
+        [Math.min(startLatLng.lat, endLatLng.lat), Math.min(startLatLng.lng, endLatLng.lng)],
+        [Math.max(startLatLng.lat, endLatLng.lat), Math.max(startLatLng.lng, endLatLng.lng)]
+      ]);
+      
+      // Find businesses within selection
+      const selectedBusinesses = businesses.filter(business => 
+        bounds.contains([business.coordinates.lat, business.coordinates.lng])
+      );
+      
+      onMultiSelect(selectedBusinesses);
+      
+      // Clean up
+      if (selectionBox) {
+        selectionBox.remove();
+        setSelectionBox(null);
+      }
+      setIsDragSelecting(false);
+      setDragStart(null);
+      setDragEnd(null);
+    }
+  }, [isDragSelecting, dragStart, dragEnd, map, businesses, onMultiSelect, selectionBox]);
+
   useEffect(() => {
     if (isDropMode) {
       map.getContainer().style.cursor = 'crosshair';
@@ -45,9 +130,19 @@ function MapController({ targetLocation, zoom, businesses, isDropMode, setIsDrop
       map.getContainer().style.cursor = '';
       map.off('click', handleMapClick);
     }
+    
+    // Add drag selection listeners
+    map.on('mousedown', handleMouseDown);
+    map.on('mousemove', handleMouseMove);
+    map.on('mouseup', handleMouseUp);
+    
     return () => {
       map.off('click', handleMapClick);
+      map.off('mousedown', handleMouseDown);
+      map.off('mousemove', handleMouseMove);
+      map.off('mouseup', handleMouseUp);
     };
+  }, [isDropMode, handleMapClick, handleMouseDown, handleMouseMove, handleMouseUp, map]);
   }, [isDropMode, map, handleMapClick]);
 
   return (
@@ -165,7 +260,9 @@ interface BusinessMapProps {
   zoom?: number;
   fullScreen?: boolean;
   onBusinessSelect?: (business: Business) => void;
-  selectedBusinessId?: string; // Add selected business ID for highlighting
+  onMultiSelect?: (businesses: Business[]) => void; // New prop for multi-select
+  selectedBusinessId?: string;
+  selectedBusinessIds?: string[]; // New prop for multi-select
   // Props for dropped pin filtering
   droppedPin: { lat: number, lng: number } | null;
   setDroppedPin: (pin: { lat: number, lng: number } | null) => void;
@@ -234,7 +331,9 @@ export const BusinessMap = React.memo(({
   zoom,
   fullScreen = false,
   onBusinessSelect,
+  onMultiSelect,
   selectedBusinessId,
+  selectedBusinessIds = [],
   droppedPin,
   setDroppedPin,
   radiusKm
@@ -256,42 +355,49 @@ export const BusinessMap = React.memo(({
     tap: mapInteractive,
   }), [mapInteractive]);
 
-  const memoizedMarkers = React.useMemo(() => businesses.map((business) => (
-    <Marker
-      key={business.id}
-      position={[business.coordinates.lat, business.coordinates.lng]}
-      icon={createProviderIcon(business.provider)}
-      eventHandlers={{
-        click: (e) => {
-          e.originalEvent.stopPropagation();
-          onBusinessSelect?.(business);
-        },
-        mouseover: (e) => {
-          // Add hover effect - scale up the marker
-          const marker = e.target;
-          const icon = marker.getIcon();
-          if (icon && icon.options && icon.options.html) {
-            const newHtml = icon.options.html.replace(
-              'width: 24px; height: 24px;',
-              'width: 32px; height: 32px; z-index: 1000; transform: scale(1.2);'
-            );
-            const hoverIcon = L.divIcon({
-              ...icon.options,
-              html: newHtml,
-              iconSize: [32, 32],
-              iconAnchor: [16, 16],
-            });
-            marker.setIcon(hoverIcon);
-          }
-        },
-        mouseout: (e) => {
-          // Reset to original size
-          const marker = e.target;
-          marker.setIcon(createProviderIcon(business.provider));
-        },
-      }}
-    />
-  )), [businesses, onBusinessSelect]);
+  const memoizedMarkers = React.useMemo(() => businesses.map((business) => {
+    const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
+    return (
+      <Marker
+        key={business.id}
+        position={[business.coordinates.lat, business.coordinates.lng]}
+        icon={createProviderIcon(business.provider, isSelected)}
+        eventHandlers={{
+          click: (e) => {
+            e.originalEvent.stopPropagation();
+            onBusinessSelect?.(business);
+          },
+          mouseover: (e) => {
+            // Add hover effect - scale up the marker (only if not selected)
+            if (!isSelected) {
+              const marker = e.target;
+              const icon = marker.getIcon();
+              if (icon && icon.options && icon.options.html) {
+                const newHtml = icon.options.html.replace(
+                  'width: 24px; height: 24px;',
+                  'width: 32px; height: 32px; z-index: 1000; transform: scale(1.2);'
+                );
+                const hoverIcon = L.divIcon({
+                  ...icon.options,
+                  html: newHtml,
+                  iconSize: [32, 32],
+                  iconAnchor: [16, 16],
+                });
+                marker.setIcon(hoverIcon);
+              }
+            }
+          },
+          mouseout: (e) => {
+            // Reset to original size (only if not selected)
+            if (!isSelected) {
+              const marker = e.target;
+              marker.setIcon(createProviderIcon(business.provider, false));
+            }
+          },
+        }}
+      />
+    );
+  }), [businesses, onBusinessSelect, selectedBusinessId, selectedBusinessIds]);
 
   return (
     <div className={`relative group transition-all duration-700 ${fullScreen
@@ -318,6 +424,8 @@ export const BusinessMap = React.memo(({
           setDroppedPin={setDroppedPin}
           isDropMode={isDropMode}
           setIsDropMode={setIsDropMode}
+          onMultiSelect={onMultiSelect}
+          selectedBusinessIds={selectedBusinessIds}
         />
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"

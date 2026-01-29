@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, X, Target } from 'lucide-react';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
@@ -54,6 +55,7 @@ function App() {
   const [pendingFileName, setPendingFileName] = useState('');
   const [isFiltersVisible, setIsFiltersVisible] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
+  const [selectedBusinessIds, setSelectedBusinessIds] = useState<string[]>([]);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
   
@@ -223,6 +225,22 @@ function App() {
     setSelectedBusiness(b);
   }, []);
 
+  const handleMultiSelect = useCallback((businesses: Business[]) => {
+    setSelectedBusinessIds(businesses.map(b => b.id));
+  }, []);
+
+  const handleAddSelectedToRoute = useCallback(async () => {
+    for (const businessId of selectedBusinessIds) {
+      const maxOrder = Math.max(...routeItems.map(i => i.order), 0);
+      await db.route.add({ businessId, order: maxOrder + 1, addedAt: new Date() });
+    }
+    setSelectedBusinessIds([]);
+  }, [selectedBusinessIds, routeItems]);
+
+  const handleClearSelection = useCallback(() => {
+    setSelectedBusinessIds([]);
+  }, []);
+
   // Navigation logic for ClientDetails - now proximity-based
   const currentBusinessIndex = useMemo(() => {
     if (!selectedBusiness) return -1;
@@ -388,12 +406,66 @@ function App() {
                   </div>
                 </div>
 
+                {/* Multi-Select Panel */}
+                {selectedBusinessIds.length > 0 && (
+                  <div className="absolute bottom-4 left-4 right-4 z-[2000]">
+                    <div className="max-w-md mx-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/40 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
+                          <span className="text-sm font-bold text-slate-900">
+                            {selectedBusinessIds.length} businesses selected
+                          </span>
+                        </div>
+                        <button
+                          onClick={handleClearSelection}
+                          className="text-slate-400 hover:text-slate-600 transition-colors"
+                          title="Clear selection"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleAddSelectedToRoute}
+                          className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all active:scale-95"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add to Route
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Navigate through selected businesses
+                            if (selectedBusinessIds.length > 0) {
+                              const firstSelected = businesses.find(b => b.id === selectedBusinessIds[0]);
+                              if (firstSelected) {
+                                setSelectedBusiness(firstSelected);
+                                setMapTarget({ center: [firstSelected.coordinates.lat, firstSelected.coordinates.lng], zoom: 15 });
+                              }
+                            }
+                          }}
+                          className="flex items-center justify-center gap-2 py-2 px-4 bg-slate-600 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-all active:scale-95"
+                          title="Navigate through selected"
+                        >
+                          <Target className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="mt-2 text-xs text-slate-500 text-center">
+                        Hold Shift + drag to select multiple businesses
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <BusinessMap
                   businesses={filteredBusinesses}
                   targetLocation={mapTarget?.center}
                   zoom={mapTarget?.zoom}
                   fullScreen={true}
                   onBusinessSelect={handleSelectBusinessOnMap}
+                  onMultiSelect={handleMultiSelect}
+                  selectedBusinessId={selectedBusiness?.id}
+                  selectedBusinessIds={selectedBusinessIds}
                   droppedPin={droppedPin}
                   setDroppedPin={setDroppedPin}
                   radiusKm={radiusKm}
