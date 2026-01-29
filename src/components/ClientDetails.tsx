@@ -427,7 +427,7 @@ export const ClientDetails: React.FC<ClientDetailsProps> = ({
                 <div className="space-y-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                     <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
                         <DollarSign className="h-3 w-3" />
-                        PROSPECT INTEREST
+                        BUSINESS INTEREST
                     </h3>
                     <div className="grid grid-cols-1 gap-2">
                         {INTEREST_OPTIONS.map(option => (
