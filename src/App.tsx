@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, Database, Cloud, Search, Filter } from 'lucide-react';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
@@ -60,26 +59,16 @@ function App() {
   
   // Enhanced loading states
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [isDataOperationLoading, setIsDataOperationLoading] = useState(false);
-  const [loadingMessage, setLoadingMessage] = useState('Loading workspace...');
 
   const { isAuthenticated, token } = useAuth();
   const { isSyncing, lastSyncTime, clearCloudData, pushToCloud } = useCloudSync(businesses, routeItems, isAuthenticated, token);
 
   const handleUpdateBusiness = async (id: string, updates: Partial<Business>) => {
-    setIsDataOperationLoading(true);
-    setLoadingMessage('Updating business...');
-    try {
-      await db.businesses.update(id, updates);
-      setTimeout(() => setIsDataOperationLoading(false), 300);
-    } catch (error) {
-      setIsDataOperationLoading(false);
-    }
+    await db.businesses.update(id, updates);
   };
   
   useEffect(() => {
     if (isAuthenticated && token) {
-      setLoadingMessage('Syncing from cloud...');
       loadFromCloud(token).finally(() => {
         setTimeout(() => setIsInitialLoading(false), 500);
       });
@@ -133,10 +122,8 @@ function App() {
     setIsMappingOpen(false);
     setIsImporting(true);
     setImportError('');
-    setLoadingMessage('Processing import data...');
     try {
       const processed = processImportedData(importRows, mapping);
-      setLoadingMessage('Saving to database...');
       await applyNewBusinesses(processed, pendingFileName);
     } catch (error) {
       setImportError('Failed to process data. Check column mappings.');
@@ -146,19 +133,15 @@ function App() {
   };
 
   const applyNewBusinesses = async (items: Business[], sourceName: string) => {
-    setIsDataOperationLoading(true);
-    setLoadingMessage(`Importing ${items.length} businesses...`);
     const providers = Array.from(new Set(items.map(b => b.provider))).filter(Boolean);
     await db.businesses.clear();
     await db.businesses.bulkAdd(items);
     setVisibleProviders(providers);
     setLastImportName(sourceName);
-    setTimeout(() => setIsDataOperationLoading(false), 500);
   };
 
   const handleImportSample = async () => {
     setIsImporting(true);
-    setLoadingMessage('Loading sample data...');
     setTimeout(async () => {
       await applyNewBusinesses(sampleData, 'Global Sample Dataset');
       setIsImporting(false);
@@ -182,36 +165,24 @@ function App() {
   }, [availableProviders]);
 
   const handleAddToRoute = async (businessId: string) => {
-    setIsDataOperationLoading(true);
-    setLoadingMessage('Adding to route...');
     const maxOrder = Math.max(...routeItems.map(i => i.order), 0);
     await db.route.add({ businessId, order: maxOrder + 1, addedAt: new Date() });
-    setTimeout(() => setIsDataOperationLoading(false), 300);
   };
 
   const handleRemoveFromRoute = async (businessId: string) => {
-    setIsDataOperationLoading(true);
-    setLoadingMessage('Removing from route...');
     await db.route.where('businessId').equals(businessId).delete();
-    setTimeout(() => setIsDataOperationLoading(false), 300);
   };
   
   const handleClearRoute = async () => {
-    setIsDataOperationLoading(true);
-    setLoadingMessage('Clearing route...');
     await db.route.clear();
     setSelectedBusiness(null);
-    setTimeout(() => setIsDataOperationLoading(false), 500);
   };
 
   const handleDeleteBusiness = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this business?')) {
-      setIsDataOperationLoading(true);
-      setLoadingMessage('Deleting business...');
       await db.businesses.delete(id);
       await db.route.where('businessId').equals(id).delete();
       if (selectedBusiness?.id === id) setSelectedBusiness(null);
-      setTimeout(() => setIsDataOperationLoading(false), 300);
     }
   };
 
@@ -249,12 +220,9 @@ function App() {
 
   const handleClearAll = async () => {
     if (window.confirm('Delete ALL businesses and routes? This cannot be undone.')) {
-      setIsDataOperationLoading(true);
-      setLoadingMessage('Clearing all data...');
       await db.businesses.clear();
       await db.route.clear();
       setSelectedBusiness(null);
-      setTimeout(() => setIsDataOperationLoading(false), 500);
     }
   };
 
