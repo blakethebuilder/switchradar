@@ -11,13 +11,14 @@ import type { Business } from '../types';
 import { getProviderColor } from '../utils/providerColors';
 
 // Helper component to handle center/zoom and fit bounds
-function MapController({ targetLocation, zoom, businesses, isDropMode, setIsDropMode, setDroppedPin }: { 
+function MapController({ targetLocation, zoom, businesses, isDropMode, setIsDropMode, setDroppedPin, droppedPin }: { 
   targetLocation?: [number, number], 
   zoom?: number, 
   businesses: Business[],
   isDropMode: boolean,
   setIsDropMode: Dispatch<SetStateAction<boolean>>,
-  setDroppedPin: (pin: { lat: number, lng: number } | null) => void 
+  setDroppedPin: (pin: { lat: number, lng: number } | null) => void,
+  droppedPin: { lat: number, lng: number } | null
 }) {
   const map = useMap();
 
@@ -103,9 +104,15 @@ function MapController({ targetLocation, zoom, businesses, isDropMode, setIsDrop
           {isDropMode ? <X className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
         </button>
 
-        {/* The clear pin button logic remains tied to the presence of droppedPin prop, not isDropMode */}
-        {/* We rely on the caller (BusinessMap) to pass the correct droppedPin prop for this logic */}
-        {/* Keeping the clear button logic in the parent BusinessMap's JSX for now to avoid complexity in MapController */}
+        {droppedPin && (
+          <button
+            onClick={() => setDroppedPin(null)}
+            className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-rose-600 hover:bg-rose-50 transition-all active:scale-95"
+            title="Clear Filter Pin"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {isDropMode && (
@@ -264,6 +271,7 @@ export const BusinessMap = React.memo(({
           targetLocation={targetLocation} 
           zoom={zoom} 
           businesses={businesses} 
+          droppedPin={droppedPin}
           setDroppedPin={setDroppedPin}
           isDropMode={isDropMode}
           setIsDropMode={setIsDropMode}
