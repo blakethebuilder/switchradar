@@ -143,7 +143,6 @@ function MapController({
       map.off('mouseup', handleMouseUp);
     };
   }, [isDropMode, handleMapClick, handleMouseDown, handleMouseMove, handleMouseUp, map]);
-  }, [isDropMode, map, handleMapClick]);
 
   return (
     <>
