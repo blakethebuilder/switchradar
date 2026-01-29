@@ -124,8 +124,66 @@ export const TopNav = ({
           <div className="h-8 w-px bg-slate-200" />
 
           <div className="flex items-center gap-2">
+            {isSyncing && (
+              <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-indigo-600 animate-pulse">
+                <Cloud className="h-4 w-4" />
+                SYNCING
+              </span>
+            )}
+            {isAuthenticated && (
+              <>
+                <button
+                  onClick={onPullFromCloud}
+                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
+                  title="Pull latest data from Cloud"
+                  disabled={isSyncing}
+                >
+                  <Download className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={onPushToCloud}
+                  className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-indigo-600 transition-colors"
+                  title="Push local changes to Cloud"
+                  disabled={isSyncing}
+                >
+                  <CloudUpload className="h-5 w-5" />
+                </button>
+              </>
+            )}
+          </div>
+
+          <div className="h-8 w-px bg-slate-200" />
+          
+          {/* Main Actions */}
+          <button onClick={onImportClick} className="btn-primary">
+            <Upload className="h-4 w-4" />
+            <span className="hidden sm:inline">Import Businesses</span>
+            <span className="sm:hidden">Import</span>
+          </button>
+
+          <div className="flex items-center">
+            <button
+              disabled={totalCount === 0}
+              onClick={onExportClick}
+              className="btn-secondary rounded-r-none border-r-0"
+              title="Export to CSV"
+            >
+              <Download className="h-4 w-4" />
+            </button>
+            <button
+              disabled={totalCount === 0}
+              onClick={onClearData}
+              className="btn-secondary rounded-l-none border-l border-slate-200 text-slate-400 hover:text-rose-600"
+              title="Clear all local data"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* User/Login Menu */}
+          <div className="relative">
             {isAuthenticated ? (
-              <div className="relative">
+              <>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center gap-3 pl-2 group"
@@ -138,27 +196,7 @@ export const TopNav = ({
                 </button>
                 {isUserMenuOpen && (
                   <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-10 animate-in fade-in zoom-in-95">
-                    {isSyncing && (
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 mb-2">
-                        <Cloud className="h-3.5 w-3.5 animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest">Syncing...</span>
-                      </div>
-                    )}
-                    <button
-                      onClick={() => { onPushToCloud?.(); setIsUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors text-sm font-bold"
-                    >
-                      <CloudUpload className="h-4 w-4" />
-                      <span>Push to Cloud</span>
-                     </button>
-                    <button
-                      onClick={() => { onPullFromCloud?.(); setIsUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors text-sm font-bold"
-                    >
-                      <Download className="h-4 w-4" />
-                      <span>Pull from Cloud</span>
-                    </button>
-                    <div className="h-px bg-slate-100 my-1" />
+                    {/* Clear Cloud Data */}
                     <button
                       onClick={async () => {
                         if (window.confirm('WARNING: This will wipe all data from your Cloud Workspace. Local data will remain. Continue?')) {
@@ -171,16 +209,17 @@ export const TopNav = ({
                       <Trash2 className="h-4 w-4" />
                       <span>Clear Cloud Data</span>
                     </button>
+                    {/* Sign Out */}
                     <button
                       onClick={() => { logout(); setIsUserMenuOpen(false); }}
-                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors text-sm font-bold"
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-rose-50 hover:text-rose-600 transition-colors text-sm font-bold mt-1"
                     >
                       <LogOut className="h-4 w-4" />
                       <span>Sign Out</span>
                     </button>
                   </div>
                 )}
-              </div>
+              </>
             ) : (
               <button
                 onClick={onLoginClick}
@@ -190,33 +229,6 @@ export const TopNav = ({
                 Connect Cloud
               </button>
             )}
-
-            <div className="h-8 w-px bg-slate-200" />
-
-            <button onClick={onImportClick} className="btn-primary">
-              <Upload className="h-4 w-4" />
-              <span className="hidden sm:inline">Import Businesses</span>
-              <span className="sm:hidden">Import</span>
-            </button>
-
-            <div className="flex items-center">
-              <button
-                disabled={totalCount === 0}
-                onClick={onExportClick}
-                className="btn-secondary rounded-r-none border-r-0"
-                title="Export to CSV"
-              >
-                <Download className="h-4 w-4" />
-              </button>
-              <button
-                disabled={totalCount === 0}
-                onClick={onClearData}
-                className="btn-secondary rounded-l-none border-l border-slate-200 text-slate-400 hover:text-rose-600"
-                title="Clear all data"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
           </div>
         </div>
 
