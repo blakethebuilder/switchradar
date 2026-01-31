@@ -102,11 +102,13 @@ function App() {
     console.log('Mobile import - File selected:', file.name, file.size, file.type);
     setPendingFileName(file.name);
     setImportError(''); // Clear any previous errors
+    setIsImporting(true); // Start loading immediately after file selection
     
     const reader = new FileReader();
     reader.onerror = (error) => {
       console.error('Mobile import - FileReader error:', error);
       setImportError('Failed to read file. Please try again.');
+      setIsImporting(false);
     };
     
     reader.onload = (e) => {
@@ -122,16 +124,19 @@ function App() {
             
             if (rows.length === 0) {
               setImportError('JSON file is empty or invalid.');
+              setIsImporting(false);
               return;
             }
             
             setImportRows(rows);
             setImportColumns(Object.keys(rows[0] || {}));
+            setIsImporting(false); // Stop loading before opening mapping modal
             setIsMappingOpen(true);
             setIsImportOpen(false);
           } catch (error) {
             console.error('Mobile import - JSON parse error:', error);
             setImportError('Invalid JSON file format.');
+            setIsImporting(false);
           }
         } else {
           // Excel/CSV files
@@ -147,6 +152,7 @@ function App() {
               const sheetName = workbook.SheetNames[0];
               if (!sheetName) {
                 setImportError('No sheets found in the file.');
+                setIsImporting(false);
                 return;
               }
               
@@ -155,25 +161,30 @@ function App() {
               
               if (rows.length === 0) {
                 setImportError('The spreadsheet appears to be empty.');
+                setIsImporting(false);
                 return;
               }
               
               setImportRows(rows as any[]);
               setImportColumns(Object.keys(rows[0] || {}));
+              setIsImporting(false); // Stop loading before opening mapping modal
               setIsMappingOpen(true);
               setIsImportOpen(false);
             } catch (error) {
               console.error('Mobile import - XLSX processing error:', error);
               setImportError('Failed to process spreadsheet. Please check the file format.');
+              setIsImporting(false);
             }
           }).catch((error) => {
             console.error('Mobile import - XLSX library load error:', error);
             setImportError('Failed to load Excel parser. Please try refreshing the page.');
+            setIsImporting(false);
           });
         }
       } catch (error) {
         console.error('Mobile import - General file processing error:', error);
         setImportError('Failed to process file. Please try again.');
+        setIsImporting(false);
       }
     };
     
@@ -187,6 +198,7 @@ function App() {
     } catch (error) {
       console.error('Mobile import - File read initiation error:', error);
       setImportError('Failed to start reading file. Please try again.');
+      setIsImporting(false);
     }
   };
 

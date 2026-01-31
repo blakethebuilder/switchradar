@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Building2, Mail, Map, Trash2, Landmark, Smartphone, Route, CheckSquare, Square } from 'lucide-react';
 import type { Business } from '../types';
 import { ProviderBadge } from './ProviderBadge';
@@ -37,6 +37,8 @@ export const BusinessTable = React.memo(({
 }: BusinessTableProps) => {
   const [selectedBusinessIds, setSelectedBusinessIds] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(600);
 
   // Detect mobile screen size
   useEffect(() => {
@@ -47,6 +49,44 @@ export const BusinessTable = React.memo(({
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Virtual scrolling parameters
+  const ITEM_HEIGHT = 60; // Height of each table row
+  const BUFFER_SIZE = 5; // Extra items to render outside viewport
+
+  // Calculate visible range for virtualization
+  const visibleRange = useMemo(() => {
+    const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER_SIZE);
+    const endIndex = Math.min(
+      businesses.length,
+      Math.ceil((scrollTop + containerHeight) / ITEM_HEIGHT) + BUFFER_SIZE
+    );
+    return { startIndex, endIndex };
+  }, [scrollTop, containerHeight, businesses.length]);
+
+  // Get visible businesses for rendering
+  const visibleBusinesses = useMemo(() => {
+    return businesses.slice(visibleRange.startIndex, visibleRange.endIndex);
+  }, [businesses, visibleRange]);
+
+  // Handle scroll for virtualization
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
+  };
+
+  // Update container height on resize
+  useEffect(() => {
+    const updateHeight = () => {
+      const container = document.getElementById('business-table-container');
+      if (container) {
+        setContainerHeight(container.clientHeight);
+      }
+    };
+    
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
   }, []);
 
   const handleSelectBusiness = (businessId: string, isSelected: boolean) => {
@@ -119,45 +159,61 @@ export const BusinessTable = React.memo(({
           onSelectBusiness={handleSelectBusiness}
         />
       ) : (
-        /* Desktop Table */
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 transition-all">
-          <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
-            <thead>
-              <tr className="bg-slate-50/50 border-b border-slate-100">
-                <th className="w-[5%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  <button
-                    onClick={selectedBusinessIds.length === businesses.length ? handleClearSelection : handleSelectAll}
-                    className="flex items-center justify-center"
-                  >
-                    {selectedBusinessIds.length === businesses.length ? (
-                      <CheckSquare className="h-4 w-4 text-indigo-600" />
-                    ) : (
-                      <Square className="h-4 w-4 text-slate-400" />
-                    )}
-                  </button>
-                </th>
-                <th className="w-[30%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Business Details</th>
-                <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</th>
-                <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Location</th>
-                <th className="w-[15%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Network</th>
-                <th className="w-[10%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-right pr-12">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {businesses.slice(0, 500).map((business) => {
-                const isMobile = business.phoneTypeOverride
-                  ? business.phoneTypeOverride === 'mobile'
-                  : isMobileProvider(business.provider);
-                const isSelected = selectedBusinessIds.includes(business.id);
+        /* Desktop Table with Virtualization */
+        <div 
+          id="business-table-container"
+          className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 transition-all"
+          style={{ height: '600px' }}
+        >
+          <div 
+            className="overflow-auto custom-scrollbar h-full"
+            onScroll={handleScroll}
+          >
+            <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
+              <thead className="sticky top-0 z-10">
+                <tr className="bg-slate-50/50 border-b border-slate-100">
+                  <th className="w-[5%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                    <button
+                      onClick={selectedBusinessIds.length === businesses.length ? handleClearSelection : handleSelectAll}
+                      className="flex items-center justify-center"
+                    >
+                      {selectedBusinessIds.length === businesses.length ? (
+                        <CheckSquare className="h-4 w-4 text-indigo-600" />
+                      ) : (
+                        <Square className="h-4 w-4 text-slate-400" />
+                      )}
+                    </button>
+                  </th>
+                  <th className="w-[30%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Business Details</th>
+                  <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</th>
+                  <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Location</th>
+                  <th className="w-[15%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Network</th>
+                  <th className="w-[10%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-right pr-12">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* Virtual spacer for items before visible range */}
+                {visibleRange.startIndex > 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ height: visibleRange.startIndex * ITEM_HEIGHT }} />
+                  </tr>
+                )}
                 
-                return (
-                  <tr
-                    key={business.id}
-                    className={`group cursor-pointer transition-colors ${
-                      isSelected ? 'bg-indigo-50/50' : 'hover:bg-indigo-50/30'
-                    }`}
-                  >
+                {/* Render visible businesses */}
+                {visibleBusinesses.map((business) => {
+                  const isMobile = business.phoneTypeOverride
+                    ? business.phoneTypeOverride === 'mobile'
+                    : isMobileProvider(business.provider);
+                  const isSelected = selectedBusinessIds.includes(business.id);
+                  
+                  return (
+                    <tr
+                      key={business.id}
+                      className={`group cursor-pointer transition-colors ${
+                        isSelected ? 'bg-indigo-50/50' : 'hover:bg-indigo-50/30'
+                      }`}
+                      style={{ height: ITEM_HEIGHT }}
+                    >
                     <td className="px-6 py-3">
                       <button
                         onClick={(e) => {
@@ -259,16 +315,18 @@ export const BusinessTable = React.memo(({
                 </tr>
               );
             })}
+            
+            {/* Virtual spacer for items after visible range */}
+            {visibleRange.endIndex < businesses.length && (
+              <tr>
+                <td colSpan={6} style={{ height: (businesses.length - visibleRange.endIndex) * ITEM_HEIGHT }} />
+              </tr>
+            )}
           </tbody>
-          <tfoot>
+          <tfoot className="sticky bottom-0 z-10">
             <tr className="bg-slate-50/50 border-t border-slate-100">
               <td colSpan={6} className="px-6 py-3 text-center text-xs font-bold text-slate-500">
-                Displaying {Math.min(businesses.length, 500)} of {businesses.length} businesses
-                {businesses.length > 500 && (
-                  <span className="block text-[10px] font-medium text-amber-600 mt-1">
-                    Use filters to narrow results for better performance
-                  </span>
-                )}
+                Displaying all {businesses.length} businesses
               </td>
             </tr>
           </tfoot>

@@ -23,7 +23,7 @@ export const MobileBusinessList: React.FC<MobileBusinessListProps> = ({
   selectedBusinessIds,
   onSelectBusiness
 }) => {
-  const [visibleCount, setVisibleCount] = useState(20);
+  const [visibleCount, setVisibleCount] = useState(50); // Increased initial load
   
   // Only render visible items for performance
   const visibleBusinesses = useMemo(() => 
@@ -32,7 +32,7 @@ export const MobileBusinessList: React.FC<MobileBusinessListProps> = ({
   );
 
   const loadMore = () => {
-    setVisibleCount(prev => Math.min(prev + 20, businesses.length));
+    setVisibleCount(prev => Math.min(prev + 50, businesses.length)); // Increased batch size
   };
 
   if (businesses.length === 0) {

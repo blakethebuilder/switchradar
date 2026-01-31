@@ -399,11 +399,8 @@ export const BusinessMap = React.memo(({
   }), [mapInteractive]);
 
   const memoizedMarkers = React.useMemo(() => {
-    // Aggressive limiting for performance with large datasets
-    const maxMarkers = window.innerWidth < 768 ? 300 : 1000;
-    const markersToRender = businesses.slice(0, maxMarkers);
-    
-    return markersToRender.map((business) => {
+    // No artificial limits - render all businesses with proper clustering
+    return businesses.map((business) => {
       const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
       return (
         <Marker
@@ -417,7 +414,7 @@ export const BusinessMap = React.memo(({
           },
           mouseover: (e) => {
             // Disable hover effects for performance with large datasets
-            if (!isSelected && markersToRender.length < 500) {
+            if (!isSelected && businesses.length < 1000) {
               const marker = e.target;
               const icon = marker.getIcon();
               if (icon && icon.options && icon.options.html) {
@@ -437,7 +434,7 @@ export const BusinessMap = React.memo(({
           },
           mouseout: (e) => {
             // Reset to original size (only if not selected and not too many markers)
-            if (!isSelected && markersToRender.length < 500) {
+            if (!isSelected && businesses.length < 1000) {
               const marker = e.target;
               marker.setIcon(createProviderIcon(business.provider, false));
             }
@@ -517,17 +514,55 @@ export const BusinessMap = React.memo(({
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
           maxClusterRadius={(zoom: number) => {
-            // Dynamic clustering based on zoom level
-            if (zoom <= 10) return 80;  // Country/province level - cluster heavily
-            if (zoom <= 12) return 60;  // City level - moderate clustering
-            if (zoom <= 14) return 40;  // Suburb level - light clustering
-            return 25;                  // Street level - minimal clustering
+            // More aggressive clustering for better performance with large datasets
+            if (zoom <= 8) return 120;   // Country level - heavy clustering
+            if (zoom <= 10) return 100;  // Province level - heavy clustering
+            if (zoom <= 12) return 80;   // City level - moderate clustering
+            if (zoom <= 14) return 60;   // Suburb level - light clustering
+            if (zoom <= 16) return 40;   // Street level - minimal clustering
+            return 20;                   // Very close - very minimal clustering
           }}
-          disableClusteringAtZoom={16}
+          disableClusteringAtZoom={18} // Only disable at very high zoom
           removeOutsideVisibleBounds={true}
           spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.8 : 2.2}
           animate={window.innerWidth >= 768}
-          animateAddingMarkers={window.innerWidth >= 768}
+          animateAddingMarkers={false} // Disable for better performance
+          // Only cluster when 10 or more markers are close together
+          options={{
+            maxClusterRadius: (zoom: number) => {
+              if (zoom <= 8) return 120;
+              if (zoom <= 10) return 100;
+              if (zoom <= 12) return 80;
+              if (zoom <= 14) return 60;
+              if (zoom <= 16) return 40;
+              return 20;
+            },
+            // Custom cluster creation function
+            iconCreateFunction: (cluster: any) => {
+              const count = cluster.getChildCount();
+              
+              let className = 'marker-cluster marker-cluster-';
+              if (count < 50) {
+                className += 'small';
+              } else if (count < 100) {
+                className += 'medium';
+              } else {
+                className += 'large';
+              }
+              
+              return L.divIcon({
+                html: `<div><span>${count}</span></div>`,
+                className: className,
+                iconSize: [40, 40]
+              });
+            },
+            // Minimum cluster size - only cluster if 10+ markers
+            minimumClusterSize: 10,
+            // Performance optimizations
+            chunkedLoading: true,
+            chunkInterval: 50, // Process markers in chunks
+            chunkDelay: 10     // Small delay between chunks
+          }}
           iconCreateFunction={(cluster: any) => {
             const count = cluster.getChildCount();
             
@@ -660,11 +695,6 @@ export const BusinessMap = React.memo(({
           <span className="text-sm font-black text-slate-900 leading-none">
             {Math.min(businesses.length, window.innerWidth < 768 ? 300 : 1000)} of {businesses.length} Visible
           </span>
-          {businesses.length > (window.innerWidth < 768 ? 300 : 1000) && (
-            <span className="text-[9px] font-medium text-amber-600 mt-1">
-              Showing top {window.innerWidth < 768 ? 300 : 1000} for performance
-            </span>
-          )}
         </div>
       </div>
 
