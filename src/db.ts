@@ -7,15 +7,29 @@ export class SwitchRadarDB extends Dexie {
 
     constructor() {
         super('SwitchRadarDB');
-        this.version(3).stores({
+        
+        // Version 1: Original schema
+        this.version(1).stores({
+            businesses: 'id, name, provider, town, status, category',
+            route: '++id, businessId, order'
+        });
+        
+        // Version 2: Add compound indexes
+        this.version(2).stores({
             businesses: 'id, name, provider, town, status, category, [provider+category], [town+provider]',
             route: '++id, businessId, order'
         });
         
-        // Add performance optimizations
-        this.version(3).upgrade(trans => {
-            // Add compound indexes for common filter combinations
-            return trans.table('businesses').toCollection().modify(() => {});
+        // Version 3: Performance optimizations (no schema changes)
+        this.version(3).upgrade(() => {
+            // Just ensure indexes are properly created
+            return Promise.resolve();
+        });
+        
+        // Version 4: Enhanced schema for manual sync
+        this.version(4).stores({
+            businesses: 'id, name, provider, town, status, category, [provider+category], [town+provider], importedAt',
+            route: '++id, businessId, order, addedAt'
         });
     }
 }

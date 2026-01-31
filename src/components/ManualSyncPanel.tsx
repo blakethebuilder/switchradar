@@ -48,10 +48,8 @@ export const ManualSyncPanel: React.FC = () => {
   };
 
   useEffect(() => {
-    if (user && token) {
-      fetchCloudStats();
-    }
-  }, [user, token]);
+    // Only fetch stats when user explicitly requests it - no automatic calls
+  }, []);
 
   // Upload local data to cloud
   const uploadToCloud = async () => {
@@ -306,7 +304,16 @@ export const ManualSyncPanel: React.FC = () => {
           <p className="text-sm text-gray-600">{localRoutes.length} routes</p>
         </div>
         <div className="bg-gray-50 p-4 rounded-md">
-          <h4 className="font-medium text-gray-900">Cloud Data</h4>
+          <div className="flex items-center justify-between mb-2">
+            <h4 className="font-medium text-gray-900">Cloud Data</h4>
+            <button
+              onClick={fetchCloudStats}
+              disabled={syncStatus.type === 'loading'}
+              className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 disabled:opacity-50"
+            >
+              Refresh
+            </button>
+          </div>
           {cloudStats ? (
             <>
               <p className="text-sm text-gray-600">{cloudStats.totalBusinesses} businesses</p>
@@ -316,7 +323,7 @@ export const ManualSyncPanel: React.FC = () => {
               <p className="text-sm text-gray-600">{cloudStats.storageUsed.toFixed(2)} MB used</p>
             </>
           ) : (
-            <p className="text-sm text-gray-600">Loading...</p>
+            <p className="text-sm text-gray-600">Click refresh to load cloud stats</p>
           )}
         </div>
       </div>
