@@ -9,47 +9,52 @@ export const useBusinessData = () => {
     const [dbError, setDbError] = useState<string | null>(null);
     const [isDbReady, setIsDbReady] = useState(false);
 
-    // Wait for database to be ready
+    // Wait for database to be ready - only check once
     useEffect(() => {
+        let mounted = true;
+        
         const checkDb = async () => {
             try {
-                if (db) {
+                if (db && mounted) {
                     await db.businesses.limit(1).toArray();
-                    setIsDbReady(true);
-                    setDbError(null);
+                    if (mounted) {
+                        setIsDbReady(true);
+                        setDbError(null);
+                    }
                 }
             } catch (error) {
                 console.error('Database not ready:', error);
-                setDbError('Database initialization failed');
+                if (mounted) {
+                    setDbError('Database initialization failed');
+                    setIsDbReady(false);
+                }
             }
         };
         
-        // Check immediately and then periodically
         checkDb();
-        const interval = setInterval(checkDb, 1000);
         
-        return () => clearInterval(interval);
-    }, []);
+        return () => {
+            mounted = false;
+        };
+    }, []); // Only run once on mount
 
     const businesses = useLiveQuery(() => {
-        if (!isDbReady) return [];
         try {
-            return db.businesses.toArray();
+            return db?.businesses?.toArray() || [];
         } catch (error) {
             console.error('Error fetching businesses:', error);
             return [];
         }
-    }, [isDbReady]) || [];
+    }) || [];
 
     const routeItems = useLiveQuery(() => {
-        if (!isDbReady) return [];
         try {
-            return db.route.orderBy('order').toArray();
+            return db?.route?.orderBy('order').toArray() || [];
         } catch (error) {
             console.error('Error fetching routes:', error);
             return [];
         }
-    }, [isDbReady]) || [];
+    }) || [];
 
     const [searchInput, setSearchInput] = useState('');
     const searchTerm = useDebounce(searchInput, 300);
@@ -86,7 +91,8 @@ export const useBusinessData = () => {
     }, [availableProviders, visibleProviders.length, hasUserInteracted]);
 
     const filteredBusinesses = useMemo(() => {
-        if (!isDbReady) return [];
+        if (!businesses.length) return [];
+        
         return PerformanceMonitor.measure('filterBusinesses', () => {
             return filterBusinesses(businesses, {
                 searchTerm,
@@ -97,7 +103,7 @@ export const useBusinessData = () => {
                 radiusKm
             });
         });
-    }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm, isDbReady]);
+    }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
 
     // Database reset function
     const handleDatabaseReset = async () => {
@@ -134,7 +140,7 @@ export const useBusinessData = () => {
         filteredCount: filteredBusinesses.length,
         isLargeDataset: businesses.length > 1000,
         // Database status
-        isDbReady,
+        isDbReady: isDbReady && !dbError,
         dbError,
         handleDatabaseReset
     };

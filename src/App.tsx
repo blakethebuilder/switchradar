@@ -41,7 +41,6 @@ function App() {
     setDroppedPin,
     radiusKm,
     setRadiusKm,
-    isDbReady,
     dbError,
     handleDatabaseReset
   } = useBusinessData();
@@ -68,7 +67,7 @@ function App() {
   };
 
   // Show database error if there's an issue
-  if (dbError && !isDbReady) {
+  if (dbError) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full mx-4">
@@ -92,18 +91,6 @@ function App() {
               This will clear your local data. You can re-import or sync from cloud after reset.
             </p>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading while database initializes
-  if (!isDbReady) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Initializing database...</p>
         </div>
       </div>
     );
