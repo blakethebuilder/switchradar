@@ -516,8 +516,8 @@ export const BusinessMap = React.memo(({
           chunkedLoading
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          maxClusterRadius={window.innerWidth < 768 ? 80 : 60}
-          disableClusteringAtZoom={window.innerWidth < 768 ? 14 : 16}
+          maxClusterRadius={window.innerWidth < 768 ? 40 : 30}
+          disableClusteringAtZoom={window.innerWidth < 768 ? 16 : 18}
           removeOutsideVisibleBounds={true}
           spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.8 : 2.2}
           animate={window.innerWidth >= 768}

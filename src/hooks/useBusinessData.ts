@@ -15,6 +15,7 @@ export const useBusinessData = () => {
 
     const [selectedCategory, setSelectedCategory] = useState('');
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
+    const [hasUserInteracted, setHasUserInteracted] = useState(false);
     const [phoneType, setPhoneType] = useState<'all' | 'landline' | 'mobile'>('all');
     
     // Dropped Pin State for Filtering
