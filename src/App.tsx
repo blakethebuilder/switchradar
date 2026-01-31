@@ -121,25 +121,50 @@ function App() {
   };
 
   const handleConfirmMapping = async (mapping: ImportMapping) => {
+    console.log('handleConfirmMapping called with:', mapping);
     setIsMappingOpen(false);
     setIsImporting(true);
     setImportError('');
+    
+    // Add a small delay to ensure UI updates
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     try {
+      console.log('Processing import with mapping:', mapping);
+      console.log('Import rows:', importRows);
+      
+      if (!importRows || importRows.length === 0) {
+        throw new Error('No data to import');
+      }
+      
       const processed = processImportedData(importRows, mapping);
+      console.log('Processed businesses:', processed);
+      
+      if (processed.length === 0) {
+        throw new Error('No businesses were processed from the data');
+      }
+      
       await applyNewBusinesses(processed, pendingFileName);
+      console.log('Import completed successfully');
     } catch (error) {
-      setImportError('Failed to process data. Check column mappings.');
+      console.error('Import error:', error);
+      setImportError(`Failed to process data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsImporting(false);
     }
   };
 
   const applyNewBusinesses = async (items: Business[], sourceName: string) => {
+    console.log('Applying new businesses:', items.length, 'items');
     const providers = Array.from(new Set(items.map(b => b.provider))).filter(Boolean);
+    console.log('Providers found:', providers);
+    
     await db.businesses.clear();
     await db.businesses.bulkAdd(items);
+    
     setVisibleProviders(providers);
     setLastImportName(sourceName);
+    console.log('Import applied successfully');
   };
 
   const handleImportSample = async () => {
@@ -388,6 +413,38 @@ function App() {
                   onDelete={handleDeleteBusiness}
                   onTogglePhoneType={handleTogglePhoneType}
                   onAddToRoute={handleAddToRoute}
+                  onBulkDelete={async (ids) => {
+                    if (window.confirm(`Delete ${ids.length} selected businesses? This cannot be undone.`)) {
+                      for (const id of ids) {
+                        await db.businesses.delete(id);
+                        await db.route.where('businessId').equals(id).delete();
+                      }
+                      if (selectedBusiness && ids.includes(selectedBusiness.id)) {
+                        setSelectedBusiness(null);
+                      }
+                    }
+                  }}
+                  onDeleteNonSelectedProviders={async () => {
+                    if (window.confirm('Delete all businesses from non-selected providers? This cannot be undone.')) {
+                      const businessesToDelete = businesses.filter(b => !visibleProviders.includes(b.provider));
+                      for (const business of businessesToDelete) {
+                        await db.businesses.delete(business.id);
+                        await db.route.where('businessId').equals(business.id).delete();
+                      }
+                      if (selectedBusiness && businessesToDelete.some(b => b.id === selectedBusiness.id)) {
+                        setSelectedBusiness(null);
+                      }
+                    }
+                  }}
+                  availableProviders={availableProviders}
+                  categories={categories}
+                  onProviderSearch={(provider) => {
+                    setSearchTerm(provider);
+                  }}
+                  onCategorySearch={(category) => {
+                    setSearchTerm(category);
+                  }}
+                  currentSearchTerm={searchTerm}
                 />
               </div>
             )}

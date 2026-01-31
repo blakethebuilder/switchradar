@@ -1,7 +1,9 @@
-import React from 'react';
-import { Building2, Mail, Map, Trash2, Landmark, Smartphone, Route } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Building2, Mail, Map, Trash2, Landmark, Smartphone, Route, CheckSquare, Square } from 'lucide-react';
 import type { Business } from '../types';
 import { ProviderBadge } from './ProviderBadge';
+import { BulkActions } from './BulkActions';
+import { MobileBusinessList } from './MobileBusinessList';
 import { isMobileProvider } from '../utils/phoneUtils';
 
 interface BusinessTableProps {
@@ -10,6 +12,13 @@ interface BusinessTableProps {
   onDelete?: (id: string) => void;
   onTogglePhoneType?: (id: string, currentType: 'landline' | 'mobile') => void;
   onAddToRoute?: (id: string) => void;
+  onBulkDelete?: (ids: string[]) => void;
+  onDeleteNonSelectedProviders?: () => void;
+  availableProviders?: string[];
+  categories?: string[];
+  onProviderSearch?: (provider: string) => void;
+  onCategorySearch?: (category: string) => void;
+  currentSearchTerm?: string;
 }
 
 export const BusinessTable = React.memo(({
@@ -17,8 +26,58 @@ export const BusinessTable = React.memo(({
   onBusinessSelect,
   onDelete,
   onTogglePhoneType,
-  onAddToRoute
+  onAddToRoute,
+  onBulkDelete,
+  onDeleteNonSelectedProviders,
+  availableProviders = [],
+  categories = [],
+  onProviderSearch,
+  onCategorySearch,
+  currentSearchTerm = ''
 }: BusinessTableProps) => {
+  const [selectedBusinessIds, setSelectedBusinessIds] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleSelectBusiness = (businessId: string, isSelected: boolean) => {
+    if (isSelected) {
+      setSelectedBusinessIds(prev => [...prev, businessId]);
+    } else {
+      setSelectedBusinessIds(prev => prev.filter(id => id !== businessId));
+    }
+  };
+
+  const handleSelectAll = () => {
+    setSelectedBusinessIds(businesses.map(b => b.id));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedBusinessIds([]);
+  };
+
+  const handleBulkDelete = (ids: string[]) => {
+    if (onBulkDelete) {
+      onBulkDelete(ids);
+      setSelectedBusinessIds([]);
+    }
+  };
+
+  const handleDeleteNonSelectedProviders = () => {
+    if (onDeleteNonSelectedProviders) {
+      onDeleteNonSelectedProviders();
+      setSelectedBusinessIds([]);
+    }
+  };
   if (businesses.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -32,28 +91,88 @@ export const BusinessTable = React.memo(({
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 transition-all">
-      <div className="overflow-x-auto custom-scrollbar">
-        <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
-          <thead>
-            <tr className="bg-slate-50/50 border-b border-slate-100">
-              <th className="w-[30%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Business Details</th>
-              <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</th>
-              <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Location</th>
-              <th className="w-[15%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Network</th>
-              <th className="w-[15%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-right pr-12">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {businesses.slice(0, 300).map((business) => {
-              const isMobile = business.phoneTypeOverride
-                ? business.phoneTypeOverride === 'mobile'
-                : isMobileProvider(business.provider);
-              return (
-                <tr
-                  key={business.id}
-                  className="group hover:bg-indigo-50/30 cursor-pointer transition-colors"
-                >
+    <div className="space-y-4">
+      {/* Bulk Actions */}
+      <BulkActions
+        businesses={businesses}
+        selectedBusinessIds={selectedBusinessIds}
+        onSelectAll={handleSelectAll}
+        onClearSelection={handleClearSelection}
+        onDeleteNonSelectedProviders={handleDeleteNonSelectedProviders}
+        onBulkDelete={handleBulkDelete}
+        availableProviders={availableProviders}
+        categories={categories}
+        onProviderSearch={onProviderSearch || (() => {})}
+        onCategorySearch={onCategorySearch || (() => {})}
+        currentSearchTerm={currentSearchTerm}
+      />
+
+      {/* Mobile List or Desktop Table */}
+      {isMobile ? (
+        <MobileBusinessList
+          businesses={businesses}
+          onBusinessSelect={onBusinessSelect}
+          onDelete={onDelete}
+          onTogglePhoneType={onTogglePhoneType}
+          onAddToRoute={onAddToRoute}
+          selectedBusinessIds={selectedBusinessIds}
+          onSelectBusiness={handleSelectBusiness}
+        />
+      ) : (
+        /* Desktop Table */
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 transition-all">
+        <div className="overflow-x-auto custom-scrollbar">
+          <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
+            <thead>
+              <tr className="bg-slate-50/50 border-b border-slate-100">
+                <th className="w-[5%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <button
+                    onClick={selectedBusinessIds.length === businesses.length ? handleClearSelection : handleSelectAll}
+                    className="flex items-center justify-center"
+                  >
+                    {selectedBusinessIds.length === businesses.length ? (
+                      <CheckSquare className="h-4 w-4 text-indigo-600" />
+                    ) : (
+                      <Square className="h-4 w-4 text-slate-400" />
+                    )}
+                  </button>
+                </th>
+                <th className="w-[30%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Business Details</th>
+                <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</th>
+                <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Location</th>
+                <th className="w-[15%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Network</th>
+                <th className="w-[10%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-right pr-12">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {businesses.slice(0, 300).map((business) => {
+                const isMobile = business.phoneTypeOverride
+                  ? business.phoneTypeOverride === 'mobile'
+                  : isMobileProvider(business.provider);
+                const isSelected = selectedBusinessIds.includes(business.id);
+                
+                return (
+                  <tr
+                    key={business.id}
+                    className={`group cursor-pointer transition-colors ${
+                      isSelected ? 'bg-indigo-50/50' : 'hover:bg-indigo-50/30'
+                    }`}
+                  >
+                    <td className="px-6 py-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectBusiness(business.id, !isSelected);
+                        }}
+                        className="flex items-center justify-center"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="h-4 w-4 text-indigo-600" />
+                        ) : (
+                          <Square className="h-4 w-4 text-slate-400 group-hover:text-slate-600" />
+                        )}
+                      </button>
+                    </td>
                   <td className="px-6 py-3" onClick={() => onBusinessSelect?.(business)}>
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-400 font-bold text-sm group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
@@ -143,13 +262,14 @@ export const BusinessTable = React.memo(({
           </tbody>
           <tfoot>
             <tr className="bg-slate-50/50 border-t border-slate-100">
-              <td colSpan={5} className="px-6 py-3 text-center text-xs font-bold text-slate-500">
+              <td colSpan={6} className="px-6 py-3 text-center text-xs font-bold text-slate-500">
                 Displaying {businesses.length} businesses
               </td>
             </tr>
           </tfoot>
         </table>
       </div>
+      )}
     </div>
   );
 });

@@ -286,27 +286,37 @@ const createProviderIcon = (provider: string, isSelected: boolean = false) => {
   const color = getProviderColor(provider);
   const label = getProviderLabel(provider);
   
+  const size = isSelected ? 36 : 28;
+  const borderWidth = isSelected ? 4 : 3;
+  const fontSize = isSelected ? '10px' : '8px';
+  const borderRadius = isSelected ? '14px' : '10px';
+  
   const icon = L.divIcon({
     className: 'custom-marker',
     html: `
       <div style="
-        background-color: ${color};
-        width: ${isSelected ? '32px' : '24px'};
-        height: ${isSelected ? '32px' : '24px'};
-        border-radius: ${isSelected ? '12px' : '8px'};
-        border: ${isSelected ? '3px solid #fbbf24' : '2px solid white'};
-        box-shadow: ${isSelected ? '0 8px 25px -5px rgb(0 0 0 / 0.3), 0 4px 6px -2px rgb(0 0 0 / 0.1), 0 0 0 4px rgb(251 191 36 / 0.3)' : '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'};
+        background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: ${borderRadius};
+        border: ${borderWidth}px solid ${isSelected ? '#fbbf24' : 'white'};
+        box-shadow: ${isSelected ? 
+          '0 8px 25px -5px rgb(0 0 0 / 0.3), 0 4px 6px -2px rgb(0 0 0 / 0.1), 0 0 0 4px rgb(251 191 36 / 0.3)' : 
+          '0 6px 20px -5px rgb(0 0 0 / 0.2), 0 4px 6px -2px rgb(0 0 0 / 0.1)'
+        };
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: 900;
-        font-size: ${isSelected ? '9px' : '7.5px'};
+        font-size: ${fontSize};
         letter-spacing: -0.2px;
         transform: rotate(45deg);
+        transition: all 0.2s ease;
+        cursor: pointer;
         ${isSelected ? 'animation: pulse 2s infinite;' : ''}
       ">
-        <div style="transform: rotate(-45deg);">${label}</div>
+        <div style="transform: rotate(-45deg); text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${label}</div>
       </div>
       ${isSelected ? `
         <style>
@@ -317,8 +327,8 @@ const createProviderIcon = (provider: string, isSelected: boolean = false) => {
         </style>
       ` : ''}
     `,
-    iconSize: [isSelected ? 32 : 24, isSelected ? 32 : 24],
-    iconAnchor: [isSelected ? 16 : 12, isSelected ? 16 : 12],
+    iconSize: [size, size],
+    iconAnchor: [size/2, size/2],
   });
 
   iconCache[cacheKey] = icon;
@@ -355,14 +365,19 @@ export const BusinessMap = React.memo(({
     tap: mapInteractive,
   }), [mapInteractive]);
 
-  const memoizedMarkers = React.useMemo(() => businesses.map((business) => {
-    const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
-    return (
-      <Marker
-        key={business.id}
-        position={[business.coordinates.lat, business.coordinates.lng]}
-        icon={createProviderIcon(business.provider, isSelected)}
-        eventHandlers={{
+  const memoizedMarkers = React.useMemo(() => {
+    // Limit markers on mobile for performance
+    const maxMarkers = window.innerWidth < 768 ? 200 : businesses.length;
+    const markersToRender = businesses.slice(0, maxMarkers);
+    
+    return markersToRender.map((business) => {
+      const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
+      return (
+        <Marker
+          key={business.id}
+          position={[business.coordinates.lat, business.coordinates.lng]}
+          icon={createProviderIcon(business.provider, isSelected)}
+          eventHandlers={{
           click: (e) => {
             e.originalEvent.stopPropagation();
             onBusinessSelect?.(business);
@@ -374,14 +389,14 @@ export const BusinessMap = React.memo(({
               const icon = marker.getIcon();
               if (icon && icon.options && icon.options.html) {
                 const newHtml = icon.options.html.replace(
-                  'width: 24px; height: 24px;',
-                  'width: 32px; height: 32px; z-index: 1000; transform: scale(1.2);'
+                  /width: (\d+)px; height: (\d+)px;/,
+                  'width: 36px; height: 36px; transform: scale(1.15) rotate(45deg);'
                 );
                 const hoverIcon = L.divIcon({
                   ...icon.options,
                   html: newHtml,
-                  iconSize: [32, 32],
-                  iconAnchor: [16, 16],
+                  iconSize: [36, 36],
+                  iconAnchor: [18, 18],
                 });
                 marker.setIcon(hoverIcon);
               }
@@ -397,7 +412,8 @@ export const BusinessMap = React.memo(({
         }}
       />
     );
-  }), [businesses, onBusinessSelect, selectedBusinessId, selectedBusinessIds]);
+    });
+  }, [businesses, onBusinessSelect, selectedBusinessId, selectedBusinessIds]);
 
   return (
     <div className={`relative group transition-all duration-700 ${fullScreen
@@ -413,7 +429,10 @@ export const BusinessMap = React.memo(({
         worldCopyJump={true}
         maxBounds={[[-35, 16], [-22, 33]]} // Rough bounds for South Africa
         minZoom={5}
-        maxZoom={18}
+        maxZoom={19}
+        zoomSnap={0.5}
+        zoomDelta={0.5}
+        wheelPxPerZoomLevel={120}
         {...mapOptions} // Apply interaction locks
       >
         <MapController 
@@ -464,40 +483,49 @@ export const BusinessMap = React.memo(({
           chunkedLoading
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          maxClusterRadius={50}
-          disableClusteringAtZoom={15}
+          maxClusterRadius={window.innerWidth < 768 ? 80 : 60}
+          disableClusteringAtZoom={window.innerWidth < 768 ? 14 : 16}
           removeOutsideVisibleBounds={true}
-          spiderfyDistanceMultiplier={2.0}
-          animate={false}
-          animateAddingMarkers={false}
+          spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.2 : 1.5}
+          animate={window.innerWidth >= 768}
+          animateAddingMarkers={window.innerWidth >= 768}
           spiderfyShapePositions={(count: number, centerPt: any) => {
-            // Dynamic radius calculation based on count
+            // Enhanced spiral algorithm for better distribution
             let distanceFromCenter;
+            let spiralTurns = 1;
             
-            if (count <= 5) {
-              // Small clusters: keep them close
-              distanceFromCenter = 40;
-            } else if (count <= 10) {
-              // Medium-small clusters: moderate spacing
-              distanceFromCenter = 50;
-            } else if (count <= 20) {
-              // Medium clusters: good spacing
-              distanceFromCenter = 60;
-            } else if (count <= 40) {
-              // Large clusters: increase radius to avoid overlap
-              distanceFromCenter = 70;
+            if (count <= 3) {
+              // Very small clusters: tight circle
+              distanceFromCenter = 35;
+            } else if (count <= 8) {
+              // Small clusters: single ring
+              distanceFromCenter = 45;
+            } else if (count <= 15) {
+              // Medium clusters: wider ring
+              distanceFromCenter = 55;
+              spiralTurns = 1.2;
+            } else if (count <= 30) {
+              // Large clusters: spiral pattern
+              distanceFromCenter = 65;
+              spiralTurns = 1.5;
+            } else if (count <= 50) {
+              // Very large clusters: extended spiral
+              distanceFromCenter = 75;
+              spiralTurns = 2;
             } else {
-              // Very large clusters: maximum radius but not too far
-              distanceFromCenter = 80;
+              // Massive clusters: full spiral
+              distanceFromCenter = 85;
+              spiralTurns = 2.5;
             }
             
-            const angleStep = (2 * Math.PI) / count;
-            
             return Array.from({ length: count }, (_, i) => {
-              const angle = angleStep * i;
+              // Create spiral pattern
+              const angle = (i / count) * (2 * Math.PI * spiralTurns);
+              const radius = distanceFromCenter * (0.3 + 0.7 * (i / count));
+              
               return [
-                centerPt.x + distanceFromCenter * Math.cos(angle),
-                centerPt.y + distanceFromCenter * Math.sin(angle)
+                centerPt.x + radius * Math.cos(angle),
+                centerPt.y + radius * Math.sin(angle)
               ];
             });
           }}
@@ -512,26 +540,39 @@ export const BusinessMap = React.memo(({
             const count = cluster.getChildCount();
             let size = 'small';
             let colorClass = 'bg-indigo-500';
+            let iconSize = [36, 36];
+            let textSize = 'text-sm';
             
             if (count >= 100) {
               size = 'large';
               colorClass = 'bg-rose-500';
+              iconSize = [48, 48];
+              textSize = 'text-lg';
             } else if (count >= 50) {
               size = 'medium';
               colorClass = 'bg-orange-500';
-            } else if (count >= 10) {
+              iconSize = [42, 42];
+              textSize = 'text-base';
+            } else if (count >= 20) {
               size = 'medium';
               colorClass = 'bg-amber-500';
+              iconSize = [40, 40];
+              textSize = 'text-base';
+            } else if (count >= 10) {
+              size = 'small';
+              colorClass = 'bg-emerald-500';
+              iconSize = [38, 38];
+              textSize = 'text-sm';
             }
             
-            const sizeClass = size === 'large' ? 'w-12 h-12 text-lg' : 
-                             size === 'medium' ? 'w-10 h-10 text-base' : 'w-8 h-8 text-sm';
+            const sizeClass = size === 'large' ? 'w-12 h-12' : 
+                             size === 'medium' ? 'w-10 h-10' : 'w-9 h-9';
             
             return L.divIcon({
-              html: `<div class="flex items-center justify-center ${sizeClass} ${colorClass} text-white font-bold rounded-full border-2 border-white shadow-lg">${count}</div>`,
+              html: `<div class="flex items-center justify-center ${sizeClass} ${colorClass} text-white font-bold rounded-full border-3 border-white shadow-xl hover:scale-110 transition-transform cursor-pointer ${textSize}">${count}</div>`,
               className: 'custom-cluster-icon',
-              iconSize: [40, 40],
-              iconAnchor: [20, 20]
+              iconSize: iconSize as [number, number],
+              iconAnchor: [iconSize[0]/2, iconSize[1]/2] as [number, number]
             });
           }}
         >
