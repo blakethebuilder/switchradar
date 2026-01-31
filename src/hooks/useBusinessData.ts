@@ -33,11 +33,12 @@ export const useBusinessData = () => {
     );
 
     // Initialize visibleProviders with all available providers when businesses change
+    // But only if user hasn't interacted yet (to avoid overriding user's "none" selection)
     useEffect(() => {
-        if (availableProviders.length > 0 && visibleProviders.length === 0) {
+        if (availableProviders.length > 0 && visibleProviders.length === 0 && !hasUserInteracted) {
             setVisibleProviders(availableProviders);
         }
-    }, [availableProviders, visibleProviders.length]);
+    }, [availableProviders, visibleProviders.length, hasUserInteracted]);
 
     // Load initial data from Cloud if available
     const loadFromCloud = async (token: string | null) => {
@@ -110,6 +111,7 @@ export const useBusinessData = () => {
         setSelectedCategory,
         visibleProviders,
         setVisibleProviders,
+        setHasUserInteracted,
         phoneType,
         setPhoneType,
         droppedPin,

@@ -117,12 +117,12 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
           ? 'max-h-[600px] opacity-100' 
           : 'max-h-0 opacity-0 overflow-hidden'
       }`}>
-        <div className={`${isMapView ? 'max-h-[500px] overflow-y-auto custom-scrollbar' : ''} ${
+        <div className={`${
           isMapView ? 'bg-white/90' : 'bg-white'
         }`}>
           <div className="p-6">
-            {/* Provider Bar */}
-            <div className="mb-6">
+            {/* Provider Bar - Scrollable only on map view */}
+            <div className={`mb-6 ${isMapView ? 'max-h-[300px] overflow-y-auto custom-scrollbar' : ''}`}>
               <ProviderBar
                 availableProviders={availableProviders}
                 visibleProviders={visibleProviders}
@@ -132,17 +132,19 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
               />
             </div>
 
-            {/* Filter Panel */}
-            <FilterPanel
-              searchTerm={searchTerm}
-              onSearchChange={onSearchChange}
-              selectedCategory={selectedCategory}
-              onCategoryChange={onCategoryChange}
-              phoneType={phoneType}
-              onPhoneTypeChange={onPhoneTypeChange}
-              categories={categories}
-              onClearFilters={onClearFilters}
-            />
+            {/* Filter Panel - Fixed height */}
+            <div className="mb-6">
+              <FilterPanel
+                searchTerm={searchTerm}
+                onSearchChange={onSearchChange}
+                selectedCategory={selectedCategory}
+                onCategoryChange={onCategoryChange}
+                phoneType={phoneType}
+                onPhoneTypeChange={onPhoneTypeChange}
+                categories={categories}
+                onClearFilters={onClearFilters}
+              />
+            </div>
             
             {/* Radius Filter Control (Map View Only) */}
             {isMapView && droppedPin && radiusKm !== undefined && setRadiusKm && (

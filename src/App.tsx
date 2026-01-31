@@ -35,6 +35,7 @@ function App() {
     setSelectedCategory,
     visibleProviders,
     setVisibleProviders,
+    setHasUserInteracted,
     phoneType,
     setPhoneType,
     loadFromCloud,
@@ -287,22 +288,29 @@ function App() {
   };
 
   const handleToggleProvider = useCallback((provider: string) => {
+    setHasUserInteracted(true);
     setVisibleProviders(prev =>
       prev.includes(provider) ? prev.filter(p => p !== provider) : [...prev, provider]
     );
-  }, []);
+  }, [setHasUserInteracted]);
   
-  const handleSelectAllProviders = useCallback(() => setVisibleProviders(availableProviders), [availableProviders]);
+  const handleSelectAllProviders = useCallback(() => {
+    setHasUserInteracted(true);
+    setVisibleProviders(availableProviders);
+  }, [availableProviders, setHasUserInteracted]);
+  
   const handleClearProviders = useCallback(() => {
+    setHasUserInteracted(true);
     setVisibleProviders([]);
-  }, []);
+  }, [setHasUserInteracted]);
   
   const handleClearFilters = useCallback(() => {
+    setHasUserInteracted(true);
     setSearchTerm('');
     setSelectedCategory('');
     setPhoneType('all');
     setVisibleProviders(availableProviders);
-  }, [availableProviders]);
+  }, [availableProviders, setHasUserInteracted]);
 
   const handleAddToRoute = async (businessId: string) => {
     const maxOrder = Math.max(...routeItems.map(i => i.order), 0);
