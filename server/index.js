@@ -68,15 +68,76 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ token, userId: user.id, username: user.username });
 });
 
-// Lead Routes
+// Lead Routes with pagination and filtering
 app.get('/api/leads', auth, (req, res) => {
-    const leads = db.prepare('SELECT * FROM leads WHERE userId = ?').all(req.userData.userId);
-    res.json(leads.map(lead => ({
-        ...lead,
-        coordinates: { lat: lead.lat, lng: lead.lng },
-        notes: JSON.parse(lead.notes || '[]'),
-        metadata: JSON.parse(lead.metadata || '{}')
-    })));
+    const { 
+        page = 1, 
+        limit = 1000, 
+        search = '', 
+        category = '', 
+        provider = '', 
+        town = '',
+        status = '',
+        phoneType = 'all'
+    } = req.query;
+    
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Build dynamic query
+    let whereClause = 'WHERE userId = ?';
+    let params = [req.userData.userId];
+    
+    if (search) {
+        whereClause += ' AND (name LIKE ? OR address LIKE ? OR phone LIKE ?)';
+        const searchTerm = `%${search}%`;
+        params.push(searchTerm, searchTerm, searchTerm);
+    }
+    
+    if (category) {
+        whereClause += ' AND category = ?';
+        params.push(category);
+    }
+    
+    if (provider) {
+        whereClause += ' AND provider = ?';
+        params.push(provider);
+    }
+    
+    if (town) {
+        whereClause += ' AND town = ?';
+        params.push(town);
+    }
+    
+    if (status) {
+        whereClause += ' AND status = ?';
+        params.push(status);
+    }
+    
+    // Get total count for pagination
+    const countQuery = `SELECT COUNT(*) as total FROM leads ${whereClause}`;
+    const totalResult = db.prepare(countQuery).get(...params);
+    const total = totalResult.total;
+    
+    // Get paginated results
+    const dataQuery = `SELECT * FROM leads ${whereClause} ORDER BY name LIMIT ? OFFSET ?`;
+    const leads = db.prepare(dataQuery).all(...params, parseInt(limit), offset);
+    
+    res.json({
+        data: leads.map(lead => ({
+            ...lead,
+            coordinates: { lat: lead.lat, lng: lead.lng },
+            notes: JSON.parse(lead.notes || '[]'),
+            metadata: JSON.parse(lead.metadata || '{}')
+        })),
+        pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            totalPages: Math.ceil(total / parseInt(limit)),
+            hasNext: offset + parseInt(limit) < total,
+            hasPrev: parseInt(page) > 1
+        }
+    });
 });
 
 app.post('/api/leads/sync', auth, (req, res) => {
@@ -152,20 +213,106 @@ app.delete('/api/workspace', auth, (req, res) => {
     }
 });
 
-// Business Routes (alias for leads to match frontend expectations)
+// Business Routes with enhanced filtering and pagination
 app.get('/api/businesses', auth, (req, res) => {
-    const businesses = db.prepare('SELECT * FROM leads WHERE userId = ?').all(req.userData.userId);
-    res.json(businesses.map(business => ({
-        ...business,
-        coordinates: { lat: business.lat, lng: business.lng },
-        notes: JSON.parse(business.notes || '[]'),
-        metadata: JSON.parse(business.metadata || '{}')
-    })));
+    const { 
+        page = 1, 
+        limit = 1000, 
+        search = '', 
+        category = '', 
+        provider = '', 
+        town = '',
+        status = '',
+        phoneType = 'all',
+        lat,
+        lng,
+        radius
+    } = req.query;
+    
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Build dynamic query
+    let whereClause = 'WHERE userId = ?';
+    let params = [req.userData.userId];
+    
+    if (search) {
+        whereClause += ' AND (name LIKE ? OR address LIKE ? OR phone LIKE ?)';
+        const searchTerm = `%${search}%`;
+        params.push(searchTerm, searchTerm, searchTerm);
+    }
+    
+    if (category) {
+        whereClause += ' AND category = ?';
+        params.push(category);
+    }
+    
+    if (provider) {
+        whereClause += ' AND provider = ?';
+        params.push(provider);
+    }
+    
+    if (town) {
+        whereClause += ' AND town = ?';
+        params.push(town);
+    }
+    
+    if (status) {
+        whereClause += ' AND status = ?';
+        params.push(status);
+    }
+    
+    // Distance filtering using Haversine formula in SQLite
+    if (lat && lng && radius) {
+        whereClause += ` AND (
+            6371 * acos(
+                cos(radians(?)) * cos(radians(lat)) * 
+                cos(radians(lng) - radians(?)) + 
+                sin(radians(?)) * sin(radians(lat))
+            )
+        ) <= ?`;
+        params.push(parseFloat(lat), parseFloat(lng), parseFloat(lat), parseFloat(radius));
+    }
+    
+    // Get total count for pagination
+    const countQuery = `SELECT COUNT(*) as total FROM leads ${whereClause}`;
+    const totalResult = db.prepare(countQuery).get(...params);
+    const total = totalResult.total;
+    
+    // Get paginated results
+    const dataQuery = `SELECT * FROM leads ${whereClause} ORDER BY name LIMIT ? OFFSET ?`;
+    const businesses = db.prepare(dataQuery).all(...params, parseInt(limit), offset);
+    
+    res.json({
+        data: businesses.map(business => ({
+            ...business,
+            coordinates: { lat: business.lat, lng: business.lng },
+            notes: JSON.parse(business.notes || '[]'),
+            metadata: JSON.parse(business.metadata || '{}')
+        })),
+        pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total,
+            totalPages: Math.ceil(total / parseInt(limit)),
+            hasNext: offset + parseInt(limit) < total,
+            hasPrev: parseInt(page) > 1
+        },
+        summary: {
+            totalBusinesses: total,
+            currentPage: parseInt(page),
+            showing: Math.min(parseInt(limit), total - offset)
+        }
+    });
 });
 
+// Enhanced business sync with better error handling and progress tracking
 app.post('/api/businesses/sync', auth, (req, res) => {
     const { businesses } = req.body;
     const userId = req.userData.userId;
+
+    if (!businesses || !Array.isArray(businesses)) {
+        return res.status(400).json({ message: 'Invalid businesses data' });
+    }
 
     const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
     const insertStmt = db.prepare(`
@@ -174,26 +321,61 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     `);
 
     const transaction = db.transaction((businessesToSync) => {
-        deleteStmt.run(userId);
+        // Clear existing data for this user
+        const deleteResult = deleteStmt.run(userId);
+        console.log(`Cleared ${deleteResult.changes} existing businesses for user ${userId}`);
+        
+        let successCount = 0;
+        let errorCount = 0;
+        const errors = [];
+        
         for (const business of businessesToSync) {
-            insertStmt.run({
-                ...business,
-                userId,
-                lat: business.coordinates?.lat || business.lat,
-                lng: business.coordinates?.lng || business.lng,
-                notes: JSON.stringify(business.notes || []),
-                metadata: JSON.stringify(business.metadata || {}),
-                importedAt: business.importedAt
-            });
+            try {
+                insertStmt.run({
+                    ...business,
+                    userId,
+                    lat: business.coordinates?.lat || business.lat || null,
+                    lng: business.coordinates?.lng || business.lng || null,
+                    notes: JSON.stringify(business.notes || []),
+                    metadata: JSON.stringify(business.metadata || {}),
+                    importedAt: business.importedAt || new Date().toISOString()
+                });
+                successCount++;
+            } catch (error) {
+                errorCount++;
+                errors.push({
+                    businessId: business.id,
+                    businessName: business.name,
+                    error: error.message
+                });
+                console.error(`Failed to sync business ${business.id}:`, error);
+            }
         }
+        
+        return { successCount, errorCount, errors };
     });
 
     try {
-        transaction(businesses);
-        res.json({ message: 'Business sync successful', count: businesses.length });
+        const result = transaction(businesses);
+        
+        // Update user's last sync timestamp
+        db.prepare('UPDATE users SET last_sync = CURRENT_TIMESTAMP WHERE id = ?').run(userId);
+        
+        res.json({ 
+            message: 'Business sync completed', 
+            totalReceived: businesses.length,
+            successCount: result.successCount,
+            errorCount: result.errorCount,
+            errors: result.errors,
+            timestamp: new Date().toISOString()
+        });
     } catch (error) {
-        console.error('Business sync error:', error);
-        res.status(500).json({ message: 'Business sync failed', error: error.message });
+        console.error('Business sync transaction error:', error);
+        res.status(500).json({ 
+            message: 'Business sync failed', 
+            error: error.message,
+            totalReceived: businesses.length
+        });
     }
 });
 
@@ -213,6 +395,193 @@ app.get('/api/datasets', auth, (req, res) => {
     } catch (error) {
         console.error('Dataset fetch error:', error);
         res.status(500).json({ message: 'Failed to fetch datasets', error: error.message });
+    }
+});
+
+// Get aggregated statistics
+app.get('/api/stats', auth, (req, res) => {
+    try {
+        const userId = req.userData.userId;
+        
+        // Get total counts
+        const totalBusinesses = db.prepare('SELECT COUNT(*) as count FROM leads WHERE userId = ?').get(userId).count;
+        
+        // Get provider breakdown
+        const providerStats = db.prepare(`
+            SELECT provider, COUNT(*) as count 
+            FROM leads 
+            WHERE userId = ? 
+            GROUP BY provider 
+            ORDER BY count DESC
+        `).all(userId);
+        
+        // Get category breakdown
+        const categoryStats = db.prepare(`
+            SELECT category, COUNT(*) as count 
+            FROM leads 
+            WHERE userId = ? 
+            GROUP BY category 
+            ORDER BY count DESC
+        `).all(userId);
+        
+        // Get town breakdown
+        const townStats = db.prepare(`
+            SELECT town, COUNT(*) as count 
+            FROM leads 
+            WHERE userId = ? 
+            GROUP BY town 
+            ORDER BY count DESC 
+            LIMIT 20
+        `).all(userId);
+        
+        // Get status breakdown
+        const statusStats = db.prepare(`
+            SELECT status, COUNT(*) as count 
+            FROM leads 
+            WHERE userId = ? 
+            GROUP BY status
+        `).all(userId);
+        
+        res.json({
+            totalBusinesses,
+            providerStats,
+            categoryStats,
+            townStats,
+            statusStats
+        });
+    } catch (error) {
+        console.error('Stats fetch error:', error);
+        res.status(500).json({ message: 'Failed to fetch statistics', error: error.message });
+    }
+});
+
+// Bulk operations endpoint
+app.post('/api/businesses/bulk', auth, (req, res) => {
+    const { action, businessIds, updates } = req.body;
+    const userId = req.userData.userId;
+    
+    try {
+        if (action === 'update' && updates) {
+            const updateFields = Object.keys(updates).map(key => `${key} = ?`).join(', ');
+            const updateValues = Object.values(updates);
+            
+            const stmt = db.prepare(`
+                UPDATE leads 
+                SET ${updateFields}, last_modified = CURRENT_TIMESTAMP
+                WHERE userId = ? AND id IN (${businessIds.map(() => '?').join(',')})
+            `);
+            
+            const result = stmt.run(...updateValues, userId, ...businessIds);
+            res.json({ message: 'Bulk update successful', affected: result.changes });
+            
+        } else if (action === 'delete') {
+            const stmt = db.prepare(`
+                DELETE FROM leads 
+                WHERE userId = ? AND id IN (${businessIds.map(() => '?').join(',')})
+            `);
+            
+            const result = stmt.run(userId, ...businessIds);
+            res.json({ message: 'Bulk delete successful', affected: result.changes });
+            
+        } else {
+            res.status(400).json({ message: 'Invalid bulk action' });
+        }
+    } catch (error) {
+        console.error('Bulk operation error:', error);
+        res.status(500).json({ message: 'Bulk operation failed', error: error.message });
+    }
+});
+
+// Sync status and monitoring
+app.get('/api/sync/status', auth, (req, res) => {
+    try {
+        const userId = req.userData.userId;
+        
+        // Get user sync info
+        const userInfo = db.prepare(`
+            SELECT username, last_sync, total_businesses, storage_used_mb, created_at
+            FROM users 
+            WHERE id = ?
+        `).get(userId);
+        
+        // Get recent sync history
+        const syncHistory = db.prepare(`
+            SELECT sync_type, records_count, success, error_message, sync_timestamp
+            FROM sync_log 
+            WHERE userId = ? 
+            ORDER BY sync_timestamp DESC 
+            LIMIT 10
+        `).all(userId);
+        
+        // Get current data counts
+        const businessCount = db.prepare('SELECT COUNT(*) as count FROM leads WHERE userId = ?').get(userId).count;
+        const routeCount = db.prepare('SELECT COUNT(*) as count FROM routes WHERE userId = ?').get(userId).count;
+        
+        // Calculate storage usage (rough estimate)
+        const storageInfo = db.prepare(`
+            SELECT 
+                COUNT(*) as total_records,
+                AVG(LENGTH(name) + LENGTH(address) + LENGTH(phone) + LENGTH(notes) + LENGTH(metadata)) as avg_record_size
+            FROM leads 
+            WHERE userId = ?
+        `).get(userId);
+        
+        const estimatedStorageMB = (storageInfo.total_records * (storageInfo.avg_record_size || 0)) / (1024 * 1024);
+        
+        res.json({
+            user: {
+                username: userInfo.username,
+                memberSince: userInfo.created_at,
+                lastSync: userInfo.last_sync
+            },
+            currentData: {
+                businesses: businessCount,
+                routes: routeCount,
+                estimatedStorageMB: Math.round(estimatedStorageMB * 100) / 100
+            },
+            syncHistory,
+            cloudSyncEnabled: true,
+            serverTime: new Date().toISOString()
+        });
+        
+    } catch (error) {
+        console.error('Sync status error:', error);
+        res.status(500).json({ message: 'Failed to get sync status', error: error.message });
+    }
+});
+
+// Export data for backup
+app.get('/api/export/full', auth, (req, res) => {
+    try {
+        const userId = req.userData.userId;
+        
+        const businesses = db.prepare('SELECT * FROM leads WHERE userId = ?').all(userId);
+        const routes = db.prepare('SELECT * FROM routes WHERE userId = ?').all(userId);
+        const user = db.prepare('SELECT username, created_at FROM users WHERE id = ?').get(userId);
+        
+        const exportData = {
+            exportedAt: new Date().toISOString(),
+            user,
+            businesses: businesses.map(business => ({
+                ...business,
+                coordinates: { lat: business.lat, lng: business.lng },
+                notes: JSON.parse(business.notes || '[]'),
+                metadata: JSON.parse(business.metadata || '{}')
+            })),
+            routes,
+            summary: {
+                totalBusinesses: businesses.length,
+                totalRoutes: routes.length
+            }
+        };
+        
+        res.setHeader('Content-Disposition', `attachment; filename="switchradar-backup-${user.username}-${new Date().toISOString().split('T')[0]}.json"`);
+        res.setHeader('Content-Type', 'application/json');
+        res.json(exportData);
+        
+    } catch (error) {
+        console.error('Export error:', error);
+        res.status(500).json({ message: 'Export failed', error: error.message });
     }
 });
 

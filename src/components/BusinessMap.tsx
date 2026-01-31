@@ -516,12 +516,70 @@ export const BusinessMap = React.memo(({
           chunkedLoading
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          maxClusterRadius={window.innerWidth < 768 ? 40 : 30}
-          disableClusteringAtZoom={window.innerWidth < 768 ? 16 : 18}
+          maxClusterRadius={(zoom: number) => {
+            // Dynamic clustering based on zoom level
+            if (zoom <= 10) return 80;  // Country/province level - cluster heavily
+            if (zoom <= 12) return 60;  // City level - moderate clustering
+            if (zoom <= 14) return 40;  // Suburb level - light clustering
+            return 25;                  // Street level - minimal clustering
+          }}
+          disableClusteringAtZoom={16}
           removeOutsideVisibleBounds={true}
           spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.8 : 2.2}
           animate={window.innerWidth >= 768}
           animateAddingMarkers={window.innerWidth >= 768}
+          iconCreateFunction={(cluster: any) => {
+            const count = cluster.getChildCount();
+            
+            // Only cluster if there are 15+ markers in close proximity
+            if (count < 15) {
+              // For small clusters, use a subtle indicator
+              return L.divIcon({
+                html: `<div class="flex items-center justify-center w-8 h-8 bg-slate-400 text-white font-bold rounded-full border-2 border-white shadow-lg text-xs">${count}</div>`,
+                className: 'small-cluster-icon',
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+              });
+            }
+            
+            // For larger clusters, use the full styling
+            let size = 'small';
+            let colorClass = 'bg-indigo-500';
+            let iconSize = [36, 36];
+            let textSize = 'text-sm';
+            
+            if (count >= 100) {
+              size = 'large';
+              colorClass = 'bg-rose-500';
+              iconSize = [48, 48];
+              textSize = 'text-lg';
+            } else if (count >= 50) {
+              size = 'medium';
+              colorClass = 'bg-orange-500';
+              iconSize = [42, 42];
+              textSize = 'text-base';
+            } else if (count >= 30) {
+              size = 'medium';
+              colorClass = 'bg-amber-500';
+              iconSize = [40, 40];
+              textSize = 'text-base';
+            } else if (count >= 15) {
+              size = 'small';
+              colorClass = 'bg-emerald-500';
+              iconSize = [38, 38];
+              textSize = 'text-sm';
+            }
+            
+            const sizeClass = size === 'large' ? 'w-12 h-12' : 
+                             size === 'medium' ? 'w-10 h-10' : 'w-9 h-9';
+            
+            return L.divIcon({
+              html: `<div class="flex items-center justify-center ${sizeClass} ${colorClass} text-white font-bold rounded-full border-3 border-white shadow-xl hover:scale-110 transition-transform cursor-pointer ${textSize}">${count}</div>`,
+              className: 'custom-cluster-icon',
+              iconSize: iconSize as [number, number],
+              iconAnchor: [iconSize[0]/2, iconSize[1]/2] as [number, number]
+            });
+          }}
           spiderfyShapePositions={(count: number, centerPt: any) => {
             // Enhanced spiral algorithm with more stretch
             let distanceFromCenter;
@@ -568,45 +626,6 @@ export const BusinessMap = React.memo(({
             weight: 2,
             opacity: 0.8,
             fillOpacity: 0.15
-          }}
-          iconCreateFunction={(cluster: any) => {
-            const count = cluster.getChildCount();
-            let size = 'small';
-            let colorClass = 'bg-indigo-500';
-            let iconSize = [36, 36];
-            let textSize = 'text-sm';
-            
-            if (count >= 100) {
-              size = 'large';
-              colorClass = 'bg-rose-500';
-              iconSize = [48, 48];
-              textSize = 'text-lg';
-            } else if (count >= 50) {
-              size = 'medium';
-              colorClass = 'bg-orange-500';
-              iconSize = [42, 42];
-              textSize = 'text-base';
-            } else if (count >= 20) {
-              size = 'medium';
-              colorClass = 'bg-amber-500';
-              iconSize = [40, 40];
-              textSize = 'text-base';
-            } else if (count >= 10) {
-              size = 'small';
-              colorClass = 'bg-emerald-500';
-              iconSize = [38, 38];
-              textSize = 'text-sm';
-            }
-            
-            const sizeClass = size === 'large' ? 'w-12 h-12' : 
-                             size === 'medium' ? 'w-10 h-10' : 'w-9 h-9';
-            
-            return L.divIcon({
-              html: `<div class="flex items-center justify-center ${sizeClass} ${colorClass} text-white font-bold rounded-full border-3 border-white shadow-xl hover:scale-110 transition-transform cursor-pointer ${textSize}">${count}</div>`,
-              className: 'custom-cluster-icon',
-              iconSize: iconSize as [number, number],
-              iconAnchor: [iconSize[0]/2, iconSize[1]/2] as [number, number]
-            });
           }}
           eventHandlers={{
             spiderfied: (e: any) => {

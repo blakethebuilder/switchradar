@@ -5,14 +5,14 @@ import { filterBusinesses, clearFilterCaches } from '../utils/dataProcessors';
 import { useDebounce } from './useDebounce';
 import { cloudSyncService } from '../services/cloudSync';
 import { environmentConfig } from '../config/environment';
-import { PerformanceMonitor, shouldUsePerformanceMode } from '../utils/performance';
+import { PerformanceMonitor } from '../utils/performance';
 
 export const useBusinessData = () => {
     const businesses = useLiveQuery(() => db.businesses.toArray()) || [];
     const routeItems = useLiveQuery(() => db.route.orderBy('order').toArray()) || [];
 
     const [searchInput, setSearchInput] = useState('');
-    const searchTerm = useDebounce(searchInput, 300); // Increased debounce for large datasets
+    const searchTerm = useDebounce(searchInput, 300);
 
     const [selectedCategory, setSelectedCategory] = useState('');
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
@@ -21,7 +21,7 @@ export const useBusinessData = () => {
     
     // Dropped Pin State for Filtering
     const [droppedPin, setDroppedPin] = useState<{ lat: number, lng: number } | null>(null);
-    const [radiusKm, setRadiusKm] = useState<number>(0.5); // Default radius of 0.5km
+    const [radiusKm, setRadiusKm] = useState<number>(0.5);
 
     // Clear caches when businesses change
     useEffect(() => {
@@ -39,7 +39,6 @@ export const useBusinessData = () => {
     );
 
     // Initialize visibleProviders with all available providers when businesses change
-    // But only if user hasn't interacted yet (to avoid overriding user's "none" selection)
     useEffect(() => {
         if (availableProviders.length > 0 && visibleProviders.length === 0 && !hasUserInteracted) {
             setVisibleProviders(availableProviders);
@@ -57,10 +56,8 @@ export const useBusinessData = () => {
             const cloudData = await cloudSyncService.syncFromCloud(token);
             
             if (cloudData.businesses.length > 0) {
-                // Merge cloud businesses with local data (local takes priority)
                 const transaction = db.transaction('rw', db.businesses, async () => {
                     for (const business of cloudData.businesses) {
-                        // Only add if not already exists locally
                         const existing = await db.businesses.get(business.id);
                         if (!existing) {
                             await db.businesses.add(business);
@@ -73,10 +70,8 @@ export const useBusinessData = () => {
             }
 
             if (cloudData.routeItems.length > 0) {
-                // Merge cloud route items with local data
                 const transaction = db.transaction('rw', db.route, async () => {
                     for (const routeItem of cloudData.routeItems) {
-                        // Only add if not already exists locally
                         const existing = await db.route.where('businessId').equals(routeItem.businessId).first();
                         if (!existing) {
                             await db.route.add(routeItem);
@@ -89,14 +84,13 @@ export const useBusinessData = () => {
             }
         } catch (error) {
             console.error('Failed to load from cloud:', error);
-            // Gracefully continue with local data only
         }
     };
 
     const filteredBusinesses = useMemo(() => {
         return PerformanceMonitor.measure('filterBusinesses', () => {
             return filterBusinesses(businesses, {
-                searchTerm, // <-- Use debounced term for filtering
+                searchTerm,
                 selectedCategory,
                 visibleProviders,
                 phoneType,
@@ -106,16 +100,12 @@ export const useBusinessData = () => {
         });
     }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
 
-    // Performance mode detection
-    const isPerformanceMode = shouldUsePerformanceMode(businesses.length);
-
     return {
         businesses,
         routeItems,
         filteredBusinesses,
         categories,
         availableProviders,
-        // Expose original input value and setter for UI interaction
         searchTerm: searchInput, 
         setSearchTerm: setSearchInput,
         selectedCategory,
@@ -130,6 +120,9 @@ export const useBusinessData = () => {
         radiusKm,
         setRadiusKm,
         loadFromCloud,
-        isPerformanceMode
+        // Data insights
+        totalBusinesses: businesses.length,
+        filteredCount: filteredBusinesses.length,
+        isLargeDataset: businesses.length > 1000
     };
 };
