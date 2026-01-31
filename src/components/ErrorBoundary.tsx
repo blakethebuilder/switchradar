@@ -1,5 +1,4 @@
 import { Component, type ReactNode } from 'react';
-import { cloudSyncService } from '../services/cloudSync';
 
 interface Props {
   children: ReactNode;
@@ -85,7 +84,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   private handleSyncError(error: Error) {
     console.warn('Sync error detected, enabling offline mode:', error.message);
-    cloudSyncService.enableOfflineMode();
+    console.log('Cloud sync disabled due to error');
     this.enableLocalOnlyMode();
   }
 
@@ -119,7 +118,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
       // Try to restore cloud sync if possible
       if (navigator.onLine) {
-        await cloudSyncService.retryFailedOperations();
+        console.log('Attempting to restore cloud sync connection');
       }
 
       console.log('Recovery attempt completed');

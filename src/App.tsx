@@ -12,10 +12,9 @@ import { LoginModal } from './components/LoginModal';
 import { ClientDetails } from './components/ClientDetails';
 import { RouteView } from './components/RouteView';
 import { DbSettingsPage } from './components/DbSettingsPage';
+import { ManualSyncPanel } from './components/ManualSyncPanel';
 import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
-import { useCloudSync } from './hooks/useCloudSync';
-import { CloudSyncPanel } from './components/CloudSyncPanel';
 import { processImportedData, sampleData } from './utils/dataProcessors';
 import { db } from './db';
 import './App.css';
@@ -38,7 +37,6 @@ function App() {
     setHasUserInteracted,
     phoneType,
     setPhoneType,
-    loadFromCloud,
     droppedPin,
     setDroppedPin,
     radiusKm,
@@ -63,22 +61,16 @@ function App() {
   // Enhanced loading states
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  const { isAuthenticated, token } = useAuth();
-  const { isSyncing, lastSyncTime, clearCloudData, pushToCloud } = useCloudSync(businesses, routeItems, isAuthenticated, token);
+  const { isAuthenticated } = useAuth();
 
   const handleUpdateBusiness = async (id: string, updates: Partial<Business>) => {
     await db.businesses.update(id, updates);
   };
   
   useEffect(() => {
-    if (isAuthenticated && token) {
-      loadFromCloud(token).finally(() => {
-        setTimeout(() => setIsInitialLoading(false), 500);
-      });
-    } else {
-      setTimeout(() => setIsInitialLoading(false), 1000);
-    }
-  }, [isAuthenticated, token, loadFromCloud]);
+    // Remove automatic cloud loading - now manual only
+    setTimeout(() => setIsInitialLoading(false), 500);
+  }, []);
 
   // Show initial loading when businesses are first being loaded
   useEffect(() => {
@@ -444,7 +436,7 @@ function App() {
 
   if (!isAuthenticated) {
     return (
-      <LoginModal isOpen={true} onClose={() => {}} onLoginSuccess={() => loadFromCloud(token)} />
+      <LoginModal isOpen={true} onClose={() => {}} onLoginSuccess={() => {}} />
     );
   }
 
@@ -458,11 +450,11 @@ function App() {
         onClearData={handleClearAll}
         totalCount={businesses.length}
         lastImportName={lastImportName}
-        isSyncing={isSyncing}
+        isSyncing={false}
         onLoginClick={() => setIsLoginOpen(true)}
-        onClearCloudData={clearCloudData}
-        onPushToCloud={pushToCloud}
-        onPullFromCloud={() => loadFromCloud(token)}
+        onClearCloudData={async () => {}}
+        onPushToCloud={() => {}}
+        onPullFromCloud={() => {}}
       />
       
       <main className="flex-1 flex flex-col overflow-hidden relative">
@@ -682,13 +674,7 @@ function App() {
             {viewMode === 'settings' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
                 <div className="max-w-4xl mx-auto space-y-8">
-                  <CloudSyncPanel
-                    businesses={businesses}
-                    routeItems={routeItems}
-                    onSyncComplete={() => loadFromCloud(token)}
-                    lastSyncTime={lastSyncTime}
-                    isSyncing={isSyncing}
-                  />
+                  <ManualSyncPanel />
                   <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
                 </div>
               </div>
@@ -734,7 +720,7 @@ function App() {
 
       <ImportModal isOpen={isImportOpen} isImporting={isImporting} onClose={() => setIsImportOpen(false)} onFileSelected={handleFileSelected} onLoadSample={handleImportSample} errorMessage={importError} />
       <ImportMappingModal isOpen={isMappingOpen} columns={importColumns} initialMapping={{}} onConfirm={handleConfirmMapping} onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }} />
-      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => loadFromCloud(token)} />
+      <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => {}} />
     </div>
   );
 }

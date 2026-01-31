@@ -15,92 +15,37 @@ export interface SyncError {
   details?: any;
 }
 
-export interface SyncState {
-  lastSyncTimestamp: Date | null;
-  pendingOperations: PendingOperation[];
-  isOnline: boolean;
-  retryCount: number;
-}
-
-export interface PendingOperation {
-  id: string;
-  type: 'CREATE' | 'UPDATE' | 'DELETE';
-  entityType: 'business' | 'route';
-  entityId: string;
-  data: any;
-  timestamp: Date;
-  retryCount: number;
-}
-
 class CloudSyncService {
-  private syncState: SyncState;
-  private retryTimeouts: Map<string, number> = new Map();
-  private onlineCheckInterval?: number;
+  private isOnlineStatus: boolean = navigator.onLine;
 
   constructor() {
-    this.syncState = {
-      lastSyncTimestamp: this.getStoredSyncTimestamp(),
-      pendingOperations: this.getStoredPendingOperations(),
-      isOnline: navigator.onLine,
-      retryCount: 0
-    };
-
-    this.initializeOnlineDetection();
-  }
-
-  private initializeOnlineDetection(): void {
-    // Listen for online/offline events
+    // Only track online status, no automatic syncing
     window.addEventListener('online', () => {
-      this.syncState.isOnline = true;
-      this.retryFailedOperations();
+      this.isOnlineStatus = true;
     });
 
     window.addEventListener('offline', () => {
-      this.syncState.isOnline = false;
+      this.isOnlineStatus = false;
     });
-
-    // Periodic online check
-    this.onlineCheckInterval = window.setInterval(() => {
-      this.checkOnlineStatus();
-    }, 30000); // Check every 30 seconds
-  }
-
-  private async checkOnlineStatus(): Promise<void> {
-    if (!environmentConfig.isCloudSyncEnabled()) {
-      this.syncState.isOnline = false;
-      return;
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-      
-      const apiUrl = environmentConfig.getApiUrl();
-      const pingUrl = apiUrl ? `${apiUrl}/api/auth/ping` : '/api/auth/ping';
-      
-      const response = await fetch(pingUrl, {
-        method: 'GET',
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      this.syncState.isOnline = response.ok;
-    } catch {
-      this.syncState.isOnline = false;
-    }
   }
 
   public isOnline(): boolean {
-    return this.syncState.isOnline && environmentConfig.isCloudSyncEnabled();
+    return this.isOnlineStatus && environmentConfig.isCloudSyncEnabled();
   }
 
-  public getLastSyncTimestamp(): Date | null {
-    return this.syncState.lastSyncTimestamp;
-  }
-
+  // Manual sync to cloud - user initiated
   public async syncToCloud(businesses: Business[], routeItems: RouteItem[], token: string): Promise<SyncResult> {
     if (!this.isOnline()) {
-      return this.createOfflineResult(businesses.length + routeItems.length);
+      return {
+        success: false,
+        syncedCount: 0,
+        failedCount: businesses.length + routeItems.length,
+        errors: [{
+          type: 'network',
+          message: 'No internet connection available'
+        }],
+        timestamp: new Date()
+      };
     }
 
     const errors: SyncError[] = [];
@@ -108,7 +53,7 @@ class CloudSyncService {
     let failedCount = 0;
 
     try {
-      // Sync businesses (with batching support)
+      // Sync businesses
       if (businesses.length > 0) {
         const businessResult = await this.syncBusinessesToCloud(businesses, token);
         if (businessResult.success) {
@@ -128,11 +73,6 @@ class CloudSyncService {
           failedCount += routeItems.length;
           errors.push(...routeResult.errors);
         }
-      }
-
-      // Update sync timestamp if any data was synced
-      if (syncedCount > 0) {
-        this.updateSyncTimestamp();
       }
 
       return {
@@ -163,11 +103,9 @@ class CloudSyncService {
       const apiUrl = environmentConfig.getApiUrl();
       const fullUrl = apiUrl ? `${apiUrl}/api/businesses/sync` : '/api/businesses/sync';
       
-      console.log('📤 Syncing businesses to cloud:', { 
+      console.log('📤 Manual sync: Uploading businesses to cloud:', { 
         count: businesses.length, 
-        apiUrl: apiUrl || 'relative',
-        fullUrl,
-        hasToken: !!token
+        fullUrl
       });
 
       const response = await fetch(fullUrl, {
@@ -179,17 +117,14 @@ class CloudSyncService {
         body: JSON.stringify({ businesses })
       });
 
-      console.log('📤 Business sync response:', { 
-        status: response.status, 
-        statusText: response.statusText,
-        ok: response.ok
-      });
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('📤 Business sync error response:', errorText);
+        console.error('📤 Business sync error:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+
+      const result = await response.json();
+      console.log('📤 Business sync success:', result);
 
       return {
         success: true,
@@ -255,193 +190,87 @@ class CloudSyncService {
     }
   }
 
+  // Manual sync from cloud - user initiated
   public async syncFromCloud(token: string): Promise<{ businesses: Business[]; routeItems: RouteItem[] }> {
     if (!this.isOnline()) {
-      console.log('⬇️ Sync from cloud skipped - offline');
+      console.log('⬇️ Manual sync: Offline - cannot download from cloud');
       return { businesses: [], routeItems: [] };
     }
 
     try {
       const apiUrl = environmentConfig.getApiUrl();
-      console.log('⬇️ Syncing from cloud:', { apiUrl: apiUrl || 'relative', hasToken: !!token });
+      console.log('⬇️ Manual sync: Downloading from cloud:', { apiUrl: apiUrl || 'relative' });
 
       // Fetch businesses from cloud
       const businessUrl = apiUrl ? `${apiUrl}/api/businesses` : '/api/businesses';
-      console.log('⬇️ Fetching businesses from:', businessUrl);
-      
       const businessResponse = await fetch(businessUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      console.log('⬇️ Business fetch response:', { 
-        status: businessResponse.status, 
-        ok: businessResponse.ok 
-      });
-
       // Fetch routes from cloud
       const routeUrl = apiUrl ? `${apiUrl}/api/route` : '/api/route';
-      console.log('⬇️ Fetching routes from:', routeUrl);
-      
       const routeResponse = await fetch(routeUrl, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
-      console.log('⬇️ Route fetch response:', { 
-        status: routeResponse.status, 
-        ok: routeResponse.ok 
-      });
+      let cloudBusinesses = [];
+      let cloudRouteItems = [];
 
-      const cloudBusinesses = businessResponse.ok ? await businessResponse.json() : [];
-      const cloudRouteItems = routeResponse.ok ? await routeResponse.json() : [];
+      if (businessResponse.ok) {
+        const businessData = await businessResponse.json();
+        // Handle both paginated and direct array responses
+        cloudBusinesses = businessData.data || businessData;
+      }
 
-      console.log('⬇️ Cloud data received:', { 
+      if (routeResponse.ok) {
+        cloudRouteItems = await routeResponse.json();
+      }
+
+      console.log('⬇️ Manual sync: Downloaded from cloud:', { 
         businessCount: cloudBusinesses.length, 
         routeCount: cloudRouteItems.length 
       });
 
-      // Apply conflict resolution - local data takes priority
-      const resolvedData = this.resolveConflicts(cloudBusinesses, cloudRouteItems);
-
-      return resolvedData;
+      return { 
+        businesses: cloudBusinesses, 
+        routeItems: cloudRouteItems 
+      };
 
     } catch (error) {
-      console.error('Failed to sync from cloud:', error);
+      console.error('Manual sync: Failed to download from cloud:', error);
       return { businesses: [], routeItems: [] };
     }
   }
 
-  private resolveConflicts(
-    cloudBusinesses: Business[], 
-    cloudRouteItems: RouteItem[]
-  ): { businesses: Business[]; routeItems: RouteItem[] } {
-    // Get local data timestamps for comparison
-    const localSyncTime = this.getLastSyncTimestamp();
-    
-    // If we have no local sync timestamp, accept cloud data as-is
-    if (!localSyncTime) {
-      return { businesses: cloudBusinesses, routeItems: cloudRouteItems };
+  // Check connection status
+  public async checkConnection(): Promise<boolean> {
+    if (!environmentConfig.isCloudSyncEnabled()) {
+      return false;
     }
 
-    // Filter cloud data to only include items newer than last sync
-    // This ensures local changes are preserved as source of truth
-    const filteredBusinesses = cloudBusinesses.filter(business => {
-      const businessModified = new Date(business.importedAt || Date.now());
-      return businessModified > localSyncTime;
-    });
-
-    const filteredRouteItems = cloudRouteItems.filter(route => {
-      const routeModified = new Date(route.addedAt);
-      return routeModified > localSyncTime;
-    });
-
-    // Log conflict resolution for debugging
-    if (cloudBusinesses.length !== filteredBusinesses.length) {
-      console.log(`Conflict resolution: Filtered ${cloudBusinesses.length - filteredBusinesses.length} businesses (local priority)`);
-    }
-    
-    if (cloudRouteItems.length !== filteredRouteItems.length) {
-      console.log(`Conflict resolution: Filtered ${cloudRouteItems.length - filteredRouteItems.length} route items (local priority)`);
-    }
-
-    return { 
-      businesses: filteredBusinesses, 
-      routeItems: filteredRouteItems 
-    };
-  }
-
-  public enableOfflineMode(): void {
-    this.syncState.isOnline = false;
-    console.log('Cloud sync disabled - operating in offline mode');
-  }
-
-  public async retryFailedOperations(): Promise<void> {
-    if (!this.isOnline() || this.syncState.pendingOperations.length === 0) {
-      return;
-    }
-
-    const config = environmentConfig.getConfig();
-    const operations = [...this.syncState.pendingOperations];
-    
-    for (const operation of operations) {
-      if (operation.retryCount >= config.maxRetryAttempts) {
-        // Remove operations that have exceeded retry limit
-        this.removePendingOperation(operation.id);
-        continue;
-      }
-
-      // Implement exponential backoff
-      const delay = Math.min(1000 * Math.pow(2, operation.retryCount), 30000);
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      const timeoutId = window.setTimeout(async () => {
-        try {
-          await this.executeOperation(operation);
-          this.removePendingOperation(operation.id);
-        } catch (error) {
-          operation.retryCount++;
-          this.storePendingOperations();
-        }
-        this.retryTimeouts.delete(operation.id);
-      }, delay);
-
-      this.retryTimeouts.set(operation.id, timeoutId);
+      const apiUrl = environmentConfig.getApiUrl();
+      const pingUrl = apiUrl ? `${apiUrl}/api/auth/ping` : '/api/auth/ping';
+      
+      const response = await fetch(pingUrl, {
+        method: 'GET',
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      this.isOnlineStatus = response.ok;
+      return response.ok;
+    } catch {
+      this.isOnlineStatus = false;
+      return false;
     }
-  }
-
-  private async executeOperation(operation: PendingOperation): Promise<void> {
-    // Implementation would depend on operation type
-    // This is a placeholder for the actual operation execution
-    console.log('Executing pending operation:', operation);
-  }
-
-  private createOfflineResult(totalCount: number): SyncResult {
-    return {
-      success: false,
-      syncedCount: 0,
-      failedCount: totalCount,
-      errors: [{
-        type: 'network',
-        message: 'Offline - operations queued for later sync'
-      }],
-      timestamp: new Date()
-    };
-  }
-
-  private updateSyncTimestamp(): void {
-    this.syncState.lastSyncTimestamp = new Date();
-    localStorage.setItem('cloudSync_lastSync', this.syncState.lastSyncTimestamp.toISOString());
-  }
-
-  private getStoredSyncTimestamp(): Date | null {
-    const stored = localStorage.getItem('cloudSync_lastSync');
-    return stored ? new Date(stored) : null;
-  }
-
-  private getStoredPendingOperations(): PendingOperation[] {
-    const stored = localStorage.getItem('cloudSync_pendingOps');
-    return stored ? JSON.parse(stored) : [];
-  }
-
-  private storePendingOperations(): void {
-    localStorage.setItem('cloudSync_pendingOps', JSON.stringify(this.syncState.pendingOperations));
-  }
-
-  private removePendingOperation(operationId: string): void {
-    this.syncState.pendingOperations = this.syncState.pendingOperations.filter(op => op.id !== operationId);
-    this.storePendingOperations();
-  }
-
-  public destroy(): void {
-    // Cleanup
-    if (this.onlineCheckInterval) {
-      window.clearInterval(this.onlineCheckInterval);
-    }
-    
-    this.retryTimeouts.forEach(timeout => window.clearTimeout(timeout));
-    this.retryTimeouts.clear();
   }
 }
 
