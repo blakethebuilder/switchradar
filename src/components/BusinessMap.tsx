@@ -3,12 +3,13 @@ import type { Dispatch, SetStateAction } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Plus, Minus, Target, MapPin, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Minus, Target, MapPin, X, ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import type { Business } from '../types';
 import { getProviderColor } from '../utils/providerColors';
+import { ShiftDragModal } from './ShiftDragModal';
 
 // Helper component to handle center/zoom and fit bounds
 function MapController({ 
@@ -20,6 +21,7 @@ function MapController({
   setDroppedPin, 
   droppedPin,
   onMultiSelect,
+  setShowShiftDragModal,
   // @ts-ignore - selectedBusinessIds is used in memoizedMarkers
   selectedBusinessIds = []
 }: { 
@@ -31,6 +33,7 @@ function MapController({
   setDroppedPin: (pin: { lat: number, lng: number } | null) => void,
   droppedPin: { lat: number, lng: number } | null,
   onMultiSelect?: (businesses: Business[]) => void,
+  setShowShiftDragModal: Dispatch<SetStateAction<boolean>>,
   selectedBusinessIds?: string[]
 }) {
   const map = useMap();
@@ -211,6 +214,15 @@ function MapController({
             <X className="h-5 w-5" />
           </button>
         )}
+
+        {/* Help Button for Multi-Select */}
+        <button
+          onClick={() => setShowShiftDragModal(true)}
+          className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-95"
+          title="Multi-Select Help"
+        >
+          <HelpCircle className="h-5 w-5" />
+        </button>
       </div>
 
       {isDropMode && (
@@ -354,6 +366,7 @@ export const BusinessMap = React.memo(({
   const [spiralBusinesses, setSpiralBusinesses] = useState<Business[]>([]);
   const [currentSpiralIndex, setCurrentSpiralIndex] = useState(0);
   const [isSpiralMode, setIsSpiralMode] = useState(false);
+  const [showShiftDragModal, setShowShiftDragModal] = useState(false);
 
   // Handle spiral navigation
   const handleSpiralNavigation = useCallback((businesses: Business[]) => {
@@ -474,6 +487,7 @@ export const BusinessMap = React.memo(({
           isDropMode={isDropMode}
           setIsDropMode={setIsDropMode}
           onMultiSelect={onMultiSelect}
+          setShowShiftDragModal={setShowShiftDragModal}
           selectedBusinessIds={selectedBusinessIds}
         />
         <TileLayer
@@ -556,8 +570,8 @@ export const BusinessMap = React.memo(({
                 iconSize: [40, 40]
               });
             },
-            // Minimum cluster size - only cluster if 10+ markers
-            minimumClusterSize: 10,
+            // Minimum cluster size - only cluster if 5+ markers
+            minimumClusterSize: 5,
             // Performance optimizations
             chunkedLoading: true,
             chunkInterval: 50, // Process markers in chunks
@@ -566,15 +580,10 @@ export const BusinessMap = React.memo(({
           iconCreateFunction={(cluster: any) => {
             const count = cluster.getChildCount();
             
-            // Only cluster if there are 15+ markers in close proximity
-            if (count < 15) {
-              // For small clusters, use a subtle indicator
-              return L.divIcon({
-                html: `<div class="flex items-center justify-center w-8 h-8 bg-slate-400 text-white font-bold rounded-full border-2 border-white shadow-lg text-xs">${count}</div>`,
-                className: 'small-cluster-icon',
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
-              });
+            // Only cluster if there are 5+ markers in close proximity
+            if (count < 5) {
+              // Don't cluster - return individual markers
+              return null;
             }
             
             // For larger clusters, use the full styling
@@ -602,6 +611,11 @@ export const BusinessMap = React.memo(({
               size = 'small';
               colorClass = 'bg-emerald-500';
               iconSize = [38, 38];
+              textSize = 'text-sm';
+            } else if (count >= 5) {
+              size = 'small';
+              colorClass = 'bg-blue-500';
+              iconSize = [36, 36];
               textSize = 'text-sm';
             }
             
@@ -693,7 +707,7 @@ export const BusinessMap = React.memo(({
         <div className="flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Active Insight</span>
           <span className="text-sm font-black text-slate-900 leading-none">
-            {Math.min(businesses.length, window.innerWidth < 768 ? 300 : 1000)} of {businesses.length} Visible
+            {businesses.length} of {businesses.length} Visible
           </span>
         </div>
       </div>
@@ -737,6 +751,12 @@ export const BusinessMap = React.memo(({
           </button>
         </div>
       )}
+
+      {/* Shift Drag Modal */}
+      <ShiftDragModal 
+        isOpen={showShiftDragModal} 
+        onClose={() => setShowShiftDragModal(false)} 
+      />
     </div>
   );
 });

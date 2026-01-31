@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Plus, X, Target } from 'lucide-react';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
@@ -9,7 +9,7 @@ import { ImportModal } from './components/ImportModal';
 import { ImportMappingModal } from './components/ImportMappingModal';
 import { TopNav } from './components/TopNav';
 import { LoginModal } from './components/LoginModal';
-import { ClientDetails } from './components/ClientDetails';
+import { ClientDetailsToolbar } from './components/ClientDetailsToolbar';
 import { RouteView } from './components/RouteView';
 import { DbSettingsPage } from './components/DbSettingsPage';
 import { ManualSyncPanel } from './components/ManualSyncPanel';
@@ -360,51 +360,51 @@ function App() {
   }, []);
 
   // Calculate distance between two coordinates (Haversine formula)
-  const calculateDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371; // Earth's radius in kilometers
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  }, []);
+  // const calculateDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  //   const R = 6371; // Earth's radius in kilometers
+  //   const dLat = (lat2 - lat1) * Math.PI / 180;
+  //   const dLng = (lng2 - lng1) * Math.PI / 180;
+  //   const a = 
+  //     Math.sin(dLat/2) * Math.sin(dLat/2) +
+  //     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+  //     Math.sin(dLng/2) * Math.sin(dLng/2);
+  //   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  //   return R * c;
+  // }, []);
 
   // Get businesses sorted by proximity - use a stable reference point for navigation
-  const [navigationReferencePoint, setNavigationReferencePoint] = useState<{lat: number, lng: number} | null>(null);
+  // const [navigationReferencePoint, setNavigationReferencePoint] = useState<{lat: number, lng: number} | null>(null);
   
   // Set reference point when business is first selected (not from navigation)
-  useEffect(() => {
-    if (selectedBusiness && !navigationReferencePoint) {
-      setNavigationReferencePoint({
-        lat: selectedBusiness.coordinates.lat,
-        lng: selectedBusiness.coordinates.lng
-      });
-    }
-  }, [selectedBusiness, navigationReferencePoint]);
+  // useEffect(() => {
+  //   if (selectedBusiness && !navigationReferencePoint) {
+  //     setNavigationReferencePoint({
+  //       lat: selectedBusiness.coordinates.lat,
+  //       lng: selectedBusiness.coordinates.lng
+  //     });
+  //   }
+  // }, [selectedBusiness, navigationReferencePoint]);
 
   // Reset reference point when filters change or new area is selected
-  useEffect(() => {
-    setNavigationReferencePoint(null);
-  }, [searchTerm, selectedCategory, visibleProviders, droppedPin]);
+  // useEffect(() => {
+  //   setNavigationReferencePoint(null);
+  // }, [searchTerm, selectedCategory, visibleProviders, droppedPin]);
 
-  const businessesByProximity = useMemo(() => {
-    if (!navigationReferencePoint) return filteredBusinesses;
+  // const businessesByProximity = useMemo(() => {
+  //   if (!navigationReferencePoint) return filteredBusinesses;
     
-    return [...filteredBusinesses]
-      .map(business => ({
-        ...business,
-        distance: calculateDistance(
-          navigationReferencePoint.lat, 
-          navigationReferencePoint.lng, 
-          business.coordinates.lat, 
-          business.coordinates.lng
-        )
-      }))
-      .sort((a, b) => a.distance - b.distance);
-  }, [navigationReferencePoint, filteredBusinesses, calculateDistance]);
+  //   return [...filteredBusinesses]
+  //     .map(business => ({
+  //       ...business,
+  //       distance: calculateDistance(
+  //         navigationReferencePoint.lat, 
+  //         navigationReferencePoint.lng, 
+  //         business.coordinates.lat, 
+  //         business.coordinates.lng
+  //       )
+  //     }))
+  //     .sort((a, b) => a.distance - b.distance);
+  // }, [navigationReferencePoint, filteredBusinesses, calculateDistance]);
 
   const handleMultiSelect = useCallback((businesses: Business[]) => {
     setSelectedBusinessIds(businesses.map(b => b.id));
@@ -423,18 +423,18 @@ function App() {
   }, []);
 
   // Navigation logic for ClientDetails - now proximity-based
-  const currentBusinessIndex = useMemo(() => {
-    if (!selectedBusiness) return -1;
-    return businessesByProximity.findIndex(b => b.id === selectedBusiness.id);
-  }, [selectedBusiness, businessesByProximity]);
+  // const currentBusinessIndex = useMemo(() => {
+  //   if (!selectedBusiness) return -1;
+  //   return businessesByProximity.findIndex(b => b.id === selectedBusiness.id);
+  // }, [selectedBusiness, businessesByProximity]);
 
-  const handleNavigateToNextBusiness = useCallback((business: Business) => {
-    setSelectedBusiness(business);
-    // If we're on map view, also update the map target
-    if (viewMode === 'map') {
-      setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
-    }
-  }, [viewMode]);
+  // const handleNavigateToNextBusiness = useCallback((business: Business) => {
+  //   setSelectedBusiness(business);
+  //   // If we're on map view, also update the map target
+  //   if (viewMode === 'map') {
+  //     setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
+  //   }
+  // }, [viewMode]);
   
   const handleTogglePhoneType = async (id: string, currentType: 'landline' | 'mobile') => {
     const newType = currentType === 'landline' ? 'mobile' : 'landline';
@@ -725,27 +725,19 @@ function App() {
         )}
       </main>
 
-      {/* Client Detail Sidebar */}
-      <div 
-        className={`fixed top-0 right-0 bottom-0 z-[1003] w-full sm:max-w-md md:max-w-xs lg:max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-in-out border-l border-slate-100 ${
-          selectedBusiness ? 'translate-x-0' : 'translate-x-full'
-        }`}
-      >
-        {selectedBusiness && (
-          <ClientDetails
-              business={selectedBusiness}
-              isInRoute={routeItems.some(i => i.businessId === selectedBusiness.id)}
-              onAddToRoute={handleAddToRoute}
-              onRemoveFromRoute={handleRemoveFromRoute}
-              onClose={() => setSelectedBusiness(null)}
-              onTogglePhoneType={handleTogglePhoneType}
-              onUpdateBusiness={handleUpdateBusiness}
-              allBusinesses={businessesByProximity}
-              currentIndex={currentBusinessIndex}
-              onNavigateToNext={handleNavigateToNextBusiness}
-          />
-        )}
-      </div>
+      {/* Client Details Toolbar - Bottom */}
+      {selectedBusiness && (
+        <ClientDetailsToolbar
+          business={selectedBusiness}
+          isInRoute={routeItems.some(i => i.businessId === selectedBusiness.id)}
+          onAddToRoute={handleAddToRoute}
+          onRemoveFromRoute={handleRemoveFromRoute}
+          onClose={() => setSelectedBusiness(null)}
+          onTogglePhoneType={handleTogglePhoneType}
+          onUpdateBusiness={handleUpdateBusiness}
+          onDelete={handleDeleteBusiness}
+        />
+      )}
 
       <ImportModal isOpen={isImportOpen} isImporting={isImporting} onClose={() => setIsImportOpen(false)} onFileSelected={handleFileSelected} onLoadSample={handleImportSample} errorMessage={importError} />
       <ImportMappingModal isOpen={isMappingOpen} columns={importColumns} initialMapping={{}} onConfirm={handleConfirmMapping} onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }} />
