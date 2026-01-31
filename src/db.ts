@@ -7,9 +7,15 @@ export class SwitchRadarDB extends Dexie {
 
     constructor() {
         super('SwitchRadarDB');
-        this.version(2).stores({
-            businesses: 'id, name, provider, town, status',
+        this.version(3).stores({
+            businesses: 'id, name, provider, town, status, category, [provider+category], [town+provider]',
             route: '++id, businessId, order'
+        });
+        
+        // Add performance optimizations
+        this.version(3).upgrade(trans => {
+            // Add compound indexes for common filter combinations
+            return trans.table('businesses').toCollection().modify(() => {});
         });
     }
 }

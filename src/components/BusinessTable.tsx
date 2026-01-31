@@ -145,7 +145,7 @@ export const BusinessTable = React.memo(({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {businesses.slice(0, 300).map((business) => {
+              {businesses.slice(0, 500).map((business) => {
                 const isMobile = business.phoneTypeOverride
                   ? business.phoneTypeOverride === 'mobile'
                   : isMobileProvider(business.provider);
@@ -263,7 +263,12 @@ export const BusinessTable = React.memo(({
           <tfoot>
             <tr className="bg-slate-50/50 border-t border-slate-100">
               <td colSpan={6} className="px-6 py-3 text-center text-xs font-bold text-slate-500">
-                Displaying {businesses.length} businesses
+                Displaying {Math.min(businesses.length, 500)} of {businesses.length} businesses
+                {businesses.length > 500 && (
+                  <span className="block text-[10px] font-medium text-amber-600 mt-1">
+                    Use filters to narrow results for better performance
+                  </span>
+                )}
               </td>
             </tr>
           </tfoot>

@@ -185,6 +185,40 @@ export const getDistance = (lat1: number, lon1: number, lat2: number, lon2: numb
   return EARTH_RADIUS_KM * c;
 };
 
+// Performance optimizations for large datasets
+const searchCache = new Map<string, Business[]>();
+const filterCache = new Map<string, Business[]>();
+
+// Optimized search with caching and early exit
+const optimizedSearch = (businesses: Business[], searchTerm: string): Business[] => {
+  if (!searchTerm) return businesses;
+  
+  const cacheKey = searchTerm.toLowerCase();
+  if (searchCache.has(cacheKey)) {
+    return searchCache.get(cacheKey)!;
+  }
+  
+  const lowerSearchTerm = cacheKey;
+  const results = businesses.filter(biz => {
+    // Early exit optimizations - check most likely matches first
+    return biz.name.toLowerCase().includes(lowerSearchTerm) ||
+           biz.provider.toLowerCase().includes(lowerSearchTerm) ||
+           biz.address.toLowerCase().includes(lowerSearchTerm);
+  });
+  
+  // Cache results but limit cache size
+  if (searchCache.size > 50) {
+    const firstKey = searchCache.keys().next().value;
+    if (firstKey) {
+      searchCache.delete(firstKey);
+    }
+  }
+  searchCache.set(cacheKey, results);
+  
+  return results;
+};
+
+// Optimized filtering with early exits and reduced calculations
 export const filterBusinesses = (
   businesses: Business[],
   filters: {
@@ -196,38 +230,68 @@ export const filterBusinesses = (
     radiusKm?: number;
   }
 ): Business[] => {
-  const { droppedPin, radiusKm } = filters;
+  // Create cache key for this filter combination
+  const cacheKey = JSON.stringify(filters);
+  if (filterCache.has(cacheKey)) {
+    return filterCache.get(cacheKey)!;
+  }
 
-  return businesses.filter(biz => {
-    // Existing filters
-    // ...
-    // [rest of file]
-
-    const matchesSearch = filters.searchTerm === '' ||
-      biz.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-      biz.address.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-      biz.provider.toLowerCase().includes(filters.searchTerm.toLowerCase());
-
-    const matchesCategory = filters.selectedCategory === '' || biz.category === filters.selectedCategory;
-    const matchesProvider = filters.visibleProviders.length === 0 || filters.visibleProviders.includes(biz.provider);
-
-    const isMobile = biz.phoneTypeOverride
-      ? biz.phoneTypeOverride === 'mobile'
-      : isMobileProvider(biz.provider);
-
-    const matchesPhoneType = !filters.phoneType || filters.phoneType === 'all' ||
-      (filters.phoneType === 'landline' && !isMobile) ||
-      (filters.phoneType === 'mobile' && isMobile);
-
-    const matchesDistance = !droppedPin ||
-      !radiusKm ||
-      (biz.coordinates && getDistance(
+  const { droppedPin, radiusKm, searchTerm, selectedCategory, visibleProviders, phoneType } = filters;
+  
+  // Early exit if no providers selected
+  if (visibleProviders.length === 0) {
+    return [];
+  }
+  
+  // Start with search filtering (most selective usually)
+  let filtered = searchTerm ? optimizedSearch(businesses, searchTerm) : businesses;
+  
+  // Apply other filters in order of selectivity
+  if (selectedCategory) {
+    filtered = filtered.filter(biz => biz.category === selectedCategory);
+  }
+  
+  // Provider filtering with Set for O(1) lookup
+  const providerSet = new Set(visibleProviders);
+  filtered = filtered.filter(biz => providerSet.has(biz.provider));
+  
+  // Phone type filtering
+  if (phoneType && phoneType !== 'all') {
+    filtered = filtered.filter(biz => {
+      const isMobile = biz.phoneTypeOverride
+        ? biz.phoneTypeOverride === 'mobile'
+        : isMobileProvider(biz.provider);
+      return phoneType === 'mobile' ? isMobile : !isMobile;
+    });
+  }
+  
+  // Distance filtering (most expensive, do last)
+  if (droppedPin && radiusKm && filtered.length > 0) {
+    filtered = filtered.filter(biz => {
+      if (!biz.coordinates) return false;
+      return getDistance(
         droppedPin.lat,
         droppedPin.lng,
         biz.coordinates.lat,
         biz.coordinates.lng
-      ) <= radiusKm);
+      ) <= radiusKm;
+    });
+  }
+  
+  // Cache results but limit cache size
+  if (filterCache.size > 20) {
+    const firstKey = filterCache.keys().next().value;
+    if (firstKey) {
+      filterCache.delete(firstKey);
+    }
+  }
+  filterCache.set(cacheKey, filtered);
+  
+  return filtered;
+};
 
-    return matchesSearch && matchesCategory && matchesProvider && matchesPhoneType && matchesDistance;
-  });
+// Clear caches when data changes
+export const clearFilterCaches = () => {
+  searchCache.clear();
+  filterCache.clear();
 };

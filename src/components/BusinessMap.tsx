@@ -399,8 +399,8 @@ export const BusinessMap = React.memo(({
   }), [mapInteractive]);
 
   const memoizedMarkers = React.useMemo(() => {
-    // Limit markers on mobile for performance
-    const maxMarkers = window.innerWidth < 768 ? 200 : businesses.length;
+    // Aggressive limiting for performance with large datasets
+    const maxMarkers = window.innerWidth < 768 ? 300 : 1000;
     const markersToRender = businesses.slice(0, maxMarkers);
     
     return markersToRender.map((business) => {
@@ -416,8 +416,8 @@ export const BusinessMap = React.memo(({
             onBusinessSelect?.(business);
           },
           mouseover: (e) => {
-            // Add hover effect - scale up the marker (only if not selected)
-            if (!isSelected) {
+            // Disable hover effects for performance with large datasets
+            if (!isSelected && markersToRender.length < 500) {
               const marker = e.target;
               const icon = marker.getIcon();
               if (icon && icon.options && icon.options.html) {
@@ -436,8 +436,8 @@ export const BusinessMap = React.memo(({
             }
           },
           mouseout: (e) => {
-            // Reset to original size (only if not selected)
-            if (!isSelected) {
+            // Reset to original size (only if not selected and not too many markers)
+            if (!isSelected && markersToRender.length < 500) {
               const marker = e.target;
               marker.setIcon(createProviderIcon(business.provider, false));
             }
@@ -638,7 +638,14 @@ export const BusinessMap = React.memo(({
       <div className="absolute bottom-6 left-6 z-[1000] glass-card rounded-2xl p-4 md:flex hidden items-center gap-4 border-white/40 shadow-xl animate-in slide-in-from-left-4 duration-1000">
         <div className="flex flex-col">
           <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Active Insight</span>
-          <span className="text-sm font-black text-slate-900 leading-none">{businesses.length} Visible Businesses</span>
+          <span className="text-sm font-black text-slate-900 leading-none">
+            {Math.min(businesses.length, window.innerWidth < 768 ? 300 : 1000)} of {businesses.length} Visible
+          </span>
+          {businesses.length > (window.innerWidth < 768 ? 300 : 1000) && (
+            <span className="text-[9px] font-medium text-amber-600 mt-1">
+              Showing top {window.innerWidth < 768 ? 300 : 1000} for performance
+            </span>
+          )}
         </div>
       </div>
 

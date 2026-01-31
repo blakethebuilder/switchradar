@@ -1,17 +1,18 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
-import { filterBusinesses } from '../utils/dataProcessors';
+import { filterBusinesses, clearFilterCaches } from '../utils/dataProcessors';
 import { useDebounce } from './useDebounce';
 import { cloudSyncService } from '../services/cloudSync';
 import { environmentConfig } from '../config/environment';
+import { PerformanceMonitor, shouldUsePerformanceMode } from '../utils/performance';
 
 export const useBusinessData = () => {
     const businesses = useLiveQuery(() => db.businesses.toArray()) || [];
     const routeItems = useLiveQuery(() => db.route.orderBy('order').toArray()) || [];
 
     const [searchInput, setSearchInput] = useState('');
-    const searchTerm = useDebounce(searchInput, 200); // Reduced from 300ms to 200ms for snappier response
+    const searchTerm = useDebounce(searchInput, 300); // Increased debounce for large datasets
 
     const [selectedCategory, setSelectedCategory] = useState('');
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
@@ -21,6 +22,11 @@ export const useBusinessData = () => {
     // Dropped Pin State for Filtering
     const [droppedPin, setDroppedPin] = useState<{ lat: number, lng: number } | null>(null);
     const [radiusKm, setRadiusKm] = useState<number>(0.5); // Default radius of 0.5km
+
+    // Clear caches when businesses change
+    useEffect(() => {
+        clearFilterCaches();
+    }, [businesses.length]);
 
     const categories = useMemo(
         () => Array.from(new Set(businesses.map(b => b.category))).filter(Boolean).sort(),
@@ -88,15 +94,20 @@ export const useBusinessData = () => {
     };
 
     const filteredBusinesses = useMemo(() => {
-        return filterBusinesses(businesses, {
-            searchTerm, // <-- Use debounced term for filtering
-            selectedCategory,
-            visibleProviders,
-            phoneType,
-            droppedPin: droppedPin ?? undefined,
-            radiusKm
+        return PerformanceMonitor.measure('filterBusinesses', () => {
+            return filterBusinesses(businesses, {
+                searchTerm, // <-- Use debounced term for filtering
+                selectedCategory,
+                visibleProviders,
+                phoneType,
+                droppedPin: droppedPin ?? undefined,
+                radiusKm
+            });
         });
     }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
+
+    // Performance mode detection
+    const isPerformanceMode = shouldUsePerformanceMode(businesses.length);
 
     return {
         businesses,
@@ -118,6 +129,7 @@ export const useBusinessData = () => {
         setDroppedPin,
         radiusKm,
         setRadiusKm,
-        loadFromCloud
+        loadFromCloud,
+        isPerformanceMode
     };
 };

@@ -25,11 +25,23 @@ const FilterPanelComponent = ({
   const hasActiveFilters = searchTerm || selectedCategory || phoneType !== 'all';
 
   const clearSearch = () => {
+    console.log('FilterPanel: Clear search');
     onSearchChange('');
   };
 
   const clearCategory = () => {
+    console.log('FilterPanel: Clear category');
     onCategoryChange('');
+  };
+
+  const handlePhoneTypeChange = (type: 'all' | 'landline' | 'mobile') => {
+    console.log('FilterPanel: Phone type change:', type);
+    onPhoneTypeChange(type);
+  };
+
+  const handleClearFilters = () => {
+    console.log('FilterPanel: Clear all filters');
+    onClearFilters();
   };
 
   return (
@@ -63,7 +75,7 @@ const FilterPanelComponent = ({
           {/* Phone Type Segment Control */}
           <div className="flex rounded-2xl border-2 border-slate-100 bg-white p-1.5 shadow-sm">
             <button
-              onClick={() => onPhoneTypeChange('all')}
+              onClick={() => handlePhoneTypeChange('all')}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${phoneType === 'all'
                 ? 'bg-slate-900 text-white shadow-lg scale-105'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:scale-105'
@@ -74,7 +86,7 @@ const FilterPanelComponent = ({
               <span className="sm:hidden">All</span>
             </button>
             <button
-              onClick={() => onPhoneTypeChange('landline')}
+              onClick={() => handlePhoneTypeChange('landline')}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${phoneType === 'landline'
                 ? 'bg-emerald-500 text-white shadow-lg scale-105'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:scale-105'
@@ -85,7 +97,7 @@ const FilterPanelComponent = ({
               <span className="sm:hidden">Fixed</span>
             </button>
             <button
-              onClick={() => onPhoneTypeChange('mobile')}
+              onClick={() => handlePhoneTypeChange('mobile')}
               className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${phoneType === 'mobile'
                 ? 'bg-rose-500 text-white shadow-lg scale-105'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:scale-105'
@@ -130,7 +142,7 @@ const FilterPanelComponent = ({
           {/* Reset All Button */}
           {hasActiveFilters && (
             <button
-              onClick={onClearFilters}
+              onClick={handleClearFilters}
               className="flex h-14 items-center gap-3 rounded-2xl bg-gradient-to-r from-slate-100 to-slate-200 px-6 text-xs font-bold uppercase tracking-wider text-slate-600 transition-all hover:from-slate-200 hover:to-slate-300 hover:text-slate-800 hover:shadow-md active:scale-95"
             >
               <RotateCcw className="h-4 w-4" />
@@ -162,7 +174,7 @@ const FilterPanelComponent = ({
             {phoneType !== 'all' && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-xs font-medium">
                 Type: {phoneType}
-                <button onClick={() => onPhoneTypeChange('all')} className="hover:bg-rose-200 rounded p-0.5">
+                <button onClick={() => handlePhoneTypeChange('all')} className="hover:bg-rose-200 rounded p-0.5">
                   <X className="h-3 w-3" />
                 </button>
               </span>
