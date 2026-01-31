@@ -1,9 +1,63 @@
 import React, { useState } from 'react';
-import { X, ChevronUp, ChevronDown, Phone, Mail, MapPin, Building2, Smartphone, Landmark, MessageSquare, Route, Trash2 } from 'lucide-react';
-import type { Business } from '../types';
+import { X, ChevronUp, ChevronDown, Phone, Mail, MapPin, Building2, Smartphone, Landmark, MessageSquare, Route, Trash2, DollarSign, AlertTriangle, CheckCircle, Loader2, Plus, Smile, Frown, PhoneCall, Calendar, Lightbulb, FileText } from 'lucide-react';
+import type { Business, NoteEntry, BusinessMetadata } from '../types';
 import { isMobileProvider } from '../utils/phoneUtils';
 import { ProviderBadge } from './ProviderBadge';
-import { CanvasDrawingTool } from './CanvasDrawingTool';
+
+const INTEREST_OPTIONS = [
+  { label: 'High Interest', icon: Smile, value: 'high', color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+  { label: 'Low Interest', icon: Frown, value: 'low', color: 'text-yellow-600', bg: 'bg-yellow-50', border: 'border-yellow-200' },
+  { label: 'Not Interested', icon: X, value: 'none', color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-200' },
+];
+
+const NOTE_CATEGORIES = [
+  { value: 'call', label: 'Call Notes', icon: PhoneCall, color: 'text-blue-600', bg: 'bg-blue-50' },
+  { value: 'visit', label: 'Visit Notes', icon: MapPin, color: 'text-green-600', bg: 'bg-green-50' },
+  { value: 'follow-up', label: 'Follow-up', icon: Calendar, color: 'text-purple-600', bg: 'bg-purple-50' },
+  { value: 'issue', label: 'Issue', icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50' },
+  { value: 'opportunity', label: 'Opportunity', icon: Lightbulb, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+  { value: 'general', label: 'General', icon: FileText, color: 'text-slate-600', bg: 'bg-slate-50' },
+] as const;
+
+const NOTE_TEMPLATES = {
+  call: [
+    "Called - no answer, will try again later",
+    "Spoke with [name] - interested in switching",
+    "Not interested at this time",
+    "Requested callback at [time]",
+    "Left voicemail message"
+  ],
+  visit: [
+    "Visited location - spoke with manager",
+    "Business closed - will return during business hours",
+    "Positive reception - scheduled follow-up",
+    "Not the decision maker - got contact details"
+  ],
+  'follow-up': [
+    "Schedule follow-up call in 1 week",
+    "Send information packet",
+    "Waiting for current contract to expire",
+    "Requested quote comparison"
+  ],
+  issue: [
+    "Experiencing connectivity issues with current provider",
+    "Billing disputes with current provider",
+    "Poor customer service from current provider",
+    "Service outages affecting business"
+  ],
+  opportunity: [
+    "Expanding business - needs additional lines",
+    "Unhappy with current pricing",
+    "Contract expiring soon",
+    "Looking for better service package"
+  ],
+  general: [
+    "Initial contact made",
+    "Information gathered",
+    "Positive interaction",
+    "Needs more time to decide"
+  ]
+};
 
 interface ClientDetailsToolbarProps {
   business: Business;
@@ -27,22 +81,63 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
   onDelete
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [showCanvas, setShowCanvas] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [selectedNoteCategory, setSelectedNoteCategory] = useState<'call' | 'visit' | 'follow-up' | 'general' | 'issue' | 'opportunity'>('general');
+  const [showTemplates, setShowTemplates] = useState(false);
   
   const isMobile = business.phoneTypeOverride
     ? business.phoneTypeOverride === 'mobile'
     : isMobileProvider(business.provider, business.phone);
 
-  const handleSaveCanvas = (imageData: string) => {
-    // Save canvas data to business metadata
-    onUpdateBusiness(business.id, {
-      metadata: {
-        ...business.metadata,
-        canvasData: imageData,
-        lastCanvasUpdate: new Date().toISOString()
-      }
-    });
-    setShowCanvas(false);
+  const handleUpdateInterest = async (interest: string) => {
+    setIsUpdating(`interest-${interest}`);
+    try {
+      await onUpdateBusiness(business.id, { metadata: { ...business.metadata, interest } });
+      setTimeout(() => setIsUpdating(null), 300);
+    } catch (error) {
+      setIsUpdating(null);
+    }
+  };
+
+  const handleUpdateMetadata = async (key: keyof BusinessMetadata, value: any) => {
+    setIsUpdating(`metadata-${key}-${value}`);
+    try {
+      await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
+      setTimeout(() => setIsUpdating(null), 300);
+    } catch (error) {
+      setIsUpdating(null);
+    }
+  };
+
+  const handleAddRichNote = async () => {
+    if (!newNoteContent.trim()) return;
+    
+    setIsUpdating('add-note');
+    try {
+      const newNote: NoteEntry = {
+        id: Date.now().toString(),
+        content: newNoteContent.trim(),
+        category: selectedNoteCategory,
+        timestamp: new Date()
+      };
+      
+      const currentRichNotes = business.richNotes || [];
+      await onUpdateBusiness(business.id, { 
+        richNotes: [...currentRichNotes, newNote] 
+      });
+      
+      setNewNoteContent('');
+      setShowTemplates(false);
+      setTimeout(() => setIsUpdating(null), 300);
+    } catch (error) {
+      setIsUpdating(null);
+    }
+  };
+
+  const handleUseTemplate = (template: string) => {
+    setNewNoteContent(template);
+    setShowTemplates(false);
   };
 
   return (
@@ -186,55 +281,306 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                   </div>
                 </div>
 
-                {/* Sales Canvas Section */}
+                {/* Contact Status Section */}
+                <div className="bg-white rounded-xl p-4 shadow-sm">
+                  <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    Contact Status
+                  </h4>
+                  
+                  {/* Big Issue Buttons */}
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <button
+                      onClick={() => handleUpdateMetadata('hasIssues', true)}
+                      disabled={isUpdating === 'metadata-hasIssues-true'}
+                      className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-bold uppercase tracking-wider transition-all transform active:scale-95 relative ${
+                        isUpdating === 'metadata-hasIssues-true'
+                          ? 'bg-red-500 text-white scale-95 animate-pulse'
+                          : business.metadata?.hasIssues === true
+                          ? 'bg-red-600 text-white shadow-lg shadow-red-300/50 hover:shadow-red-400/60 hover:bg-red-700'
+                          : 'bg-white text-red-600 border-2 border-red-200 hover:bg-red-50 hover:border-red-300 hover:shadow-md'
+                      }`}
+                    >
+                      {business.metadata?.hasIssues === true && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white"></div>
+                      )}
+                      {isUpdating === 'metadata-hasIssues-true' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <AlertTriangle className="h-4 w-4" />
+                      )}
+                      Issues
+                    </button>
+                    <button
+                      onClick={() => handleUpdateMetadata('hasIssues', false)}
+                      disabled={isUpdating === 'metadata-hasIssues-false'}
+                      className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-bold uppercase tracking-wider transition-all transform active:scale-95 relative ${
+                        isUpdating === 'metadata-hasIssues-false'
+                          ? 'bg-green-500 text-white scale-95 animate-pulse'
+                          : business.metadata?.hasIssues === false
+                          ? 'bg-green-600 text-white shadow-lg shadow-green-300/50 hover:shadow-green-400/60 hover:bg-green-700'
+                          : 'bg-white text-green-600 border-2 border-green-200 hover:bg-green-50 hover:border-green-300 hover:shadow-md'
+                      }`}
+                    >
+                      {business.metadata?.hasIssues === false && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
+                      )}
+                      {isUpdating === 'metadata-hasIssues-false' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4" />
+                      )}
+                      No Issues
+                    </button>
+                  </div>
+
+                  {/* Enhanced Contact Fields */}
+                  <div className="space-y-3 pt-3 border-t border-slate-200">
+                    {/* Active on Current Provider */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-600">Active on Current Provider</span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', true)}
+                          disabled={isUpdating === 'metadata-isActiveOnCurrentProvider-true'}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
+                            isUpdating === 'metadata-isActiveOnCurrentProvider-true'
+                              ? 'bg-green-500 text-white scale-95 animate-pulse'
+                              : business.metadata?.isActiveOnCurrentProvider === true
+                              ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
+                              : 'bg-slate-200 text-slate-600 hover:bg-green-100 hover:text-green-700'
+                          }`}
+                        >
+                          {business.metadata?.isActiveOnCurrentProvider === true && (
+                            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-white"></div>
+                          )}
+                          {isUpdating === 'metadata-isActiveOnCurrentProvider-true' ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'Yes'
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', false)}
+                          disabled={isUpdating === 'metadata-isActiveOnCurrentProvider-false'}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
+                            isUpdating === 'metadata-isActiveOnCurrentProvider-false'
+                              ? 'bg-red-500 text-white scale-95 animate-pulse'
+                              : business.metadata?.isActiveOnCurrentProvider === false
+                              ? 'bg-red-600 text-white shadow-md hover:bg-red-700'
+                              : 'bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-700'
+                          }`}
+                        >
+                          {business.metadata?.isActiveOnCurrentProvider === false && (
+                            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-400 rounded-full border border-white"></div>
+                          )}
+                          {isUpdating === 'metadata-isActiveOnCurrentProvider-false' ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'No'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Length with Current Provider */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-600">Length with Current Provider</label>
+                      <input
+                        type="text"
+                        value={business.metadata?.lengthWithCurrentProvider || ''}
+                        onChange={(e) => handleUpdateMetadata('lengthWithCurrentProvider', e.target.value)}
+                        placeholder="e.g., 2 years, 6 months"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500/50 transition-colors"
+                      />
+                    </div>
+
+                    {/* Can We Contact You */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-600">Can We Contact You?</span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => handleUpdateMetadata('canContact', true)}
+                          disabled={isUpdating === 'metadata-canContact-true'}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
+                            isUpdating === 'metadata-canContact-true'
+                              ? 'bg-green-500 text-white scale-95 animate-pulse'
+                              : business.metadata?.canContact === true
+                              ? 'bg-green-600 text-white shadow-md hover:bg-green-700'
+                              : 'bg-slate-200 text-slate-600 hover:bg-green-100 hover:text-green-700'
+                          }`}
+                        >
+                          {business.metadata?.canContact === true && (
+                            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-400 rounded-full border border-white"></div>
+                          )}
+                          {isUpdating === 'metadata-canContact-true' ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'Yes'
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleUpdateMetadata('canContact', false)}
+                          disabled={isUpdating === 'metadata-canContact-false'}
+                          className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
+                            isUpdating === 'metadata-canContact-false'
+                              ? 'bg-red-500 text-white scale-95 animate-pulse'
+                              : business.metadata?.canContact === false
+                              ? 'bg-red-600 text-white shadow-md hover:bg-red-700'
+                              : 'bg-slate-200 text-slate-600 hover:bg-red-100 hover:text-red-700'
+                          }`}
+                        >
+                          {business.metadata?.canContact === false && (
+                            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-red-400 rounded-full border border-white"></div>
+                          )}
+                          {isUpdating === 'metadata-canContact-false' ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            'No'
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Business Interest Section */}
+                <div className="bg-white rounded-xl p-4 shadow-sm">
+                  <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    Business Interest
+                  </h4>
+                  <div className="grid grid-cols-1 gap-2">
+                    {INTEREST_OPTIONS.map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => handleUpdateInterest(option.value)}
+                        disabled={isUpdating === `interest-${option.value}`}
+                        className={`flex items-center justify-center gap-2 p-3 h-12 rounded-xl transition-all transform active:scale-95 relative ${
+                          isUpdating === `interest-${option.value}`
+                            ? `bg-slate-300 text-slate-600 scale-95 animate-pulse`
+                            : business.metadata?.interest === option.value
+                            ? `bg-white border-2 ${option.border} ${option.color} shadow-lg shadow-slate-200/50 hover:shadow-lg ring-1 ring-current`
+                            : `bg-white/50 border border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200 hover:shadow-md`
+                        }`}
+                      >
+                        {business.metadata?.interest === option.value && (
+                          <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${option.color === 'text-emerald-600' ? 'bg-emerald-500' : option.color === 'text-yellow-600' ? 'bg-yellow-500' : 'bg-rose-500'}`}></div>
+                        )}
+                        {isUpdating === `interest-${option.value}` ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <option.icon className={`h-4 w-4 ${business.metadata?.interest === option.value ? option.color : 'text-slate-400'}`} />
+                        )}
+                        <span className={`text-xs font-bold uppercase tracking-widest ${business.metadata?.interest === option.value ? option.color : 'text-slate-600'}`}>{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Enhanced Notes Section */}
                 <div className="bg-white rounded-xl p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold text-slate-900 flex items-center gap-2">
                       <MessageSquare className="w-4 h-4" />
-                      Sales Canvas
+                      Sales Notes
                     </h4>
-                    <button
-                      onClick={() => setShowCanvas(!showCanvas)}
-                      className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-                    >
-                      {showCanvas ? 'Close Canvas' : 'Open Canvas'}
-                    </button>
                   </div>
                   
-                  {showCanvas && (
-                    <div className="mt-4">
-                      <CanvasDrawingTool
-                        onSave={handleSaveCanvas}
-                        onCancel={() => setShowCanvas(false)}
-                        initialData={business.metadata?.canvasData as string | undefined}
-                      />
+                  {/* Rich Notes Display */}
+                  {business.richNotes && business.richNotes.length > 0 && (
+                    <div className="space-y-2 max-h-40 overflow-y-auto mb-4">
+                      {business.richNotes.map((note) => {
+                        const category = NOTE_CATEGORIES.find(cat => cat.value === note.category);
+                        return (
+                          <div key={note.id} className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <div className="flex items-center gap-2 mb-1">
+                              {category && <category.icon className={`h-3 w-3 ${category.color}`} />}
+                              <span className={`text-xs font-bold uppercase tracking-wider ${category?.color || 'text-slate-600'}`}>
+                                {category?.label || 'General'}
+                              </span>
+                              <span className="text-xs text-slate-400 ml-auto">
+                                {new Date(note.timestamp).toLocaleDateString()} {new Date(note.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="text-sm text-slate-700">{note.content}</p>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
-                  
-                  {(() => {
-                    const canvasData = business.metadata?.canvasData;
-                    const lastUpdate = business.metadata?.lastCanvasUpdate;
-                    
-                    if (!showCanvas && canvasData && typeof canvasData === 'string') {
-                      return (
-                        <div className="mt-2">
-                          <p className="text-xs text-slate-500 mb-2">
-                            Last updated: {
-                              lastUpdate && typeof lastUpdate === 'string'
-                                ? new Date(lastUpdate).toLocaleDateString()
-                                : 'Unknown'
-                            }
-                          </p>
-                          <img 
-                            src={canvasData} 
-                            alt="Sales canvas"
-                            className="w-full h-32 object-cover rounded-lg border border-slate-200"
-                          />
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
+
+                  {/* Add New Note */}
+                  <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    {/* Category Selection */}
+                    <div className="flex flex-wrap gap-1">
+                      {NOTE_CATEGORIES.map((category) => (
+                        <button
+                          key={category.value}
+                          onClick={() => setSelectedNoteCategory(category.value)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold transition-all ${
+                            selectedNoteCategory === category.value
+                              ? `${category.bg} ${category.color} border border-current`
+                              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
+                        >
+                          <category.icon className="h-3 w-3" />
+                          {category.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Note Input */}
+                    <textarea
+                      value={newNoteContent}
+                      onChange={(e) => setNewNoteContent(e.target.value)}
+                      placeholder={`Add ${NOTE_CATEGORIES.find(c => c.value === selectedNoteCategory)?.label.toLowerCase()} note...`}
+                      rows={3}
+                      className="w-full p-3 rounded-lg border border-slate-200 text-sm font-medium focus:border-indigo-500/50 transition-colors resize-none"
+                    />
+
+                    {/* Templates and Actions */}
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => setShowTemplates(!showTemplates)}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                      >
+                        {showTemplates ? 'Hide Templates' : 'Quick Templates'}
+                      </button>
+                      <button
+                        onClick={handleAddRichNote}
+                        disabled={!newNoteContent.trim() || isUpdating === 'add-note'}
+                        className={`flex items-center gap-2 px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 ${
+                          isUpdating === 'add-note'
+                            ? 'bg-indigo-500 text-white scale-95 animate-pulse'
+                            : 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-md'
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {isUpdating === 'add-note' ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Plus className="h-3 w-3" />
+                        )}
+                        {isUpdating === 'add-note' ? 'Adding...' : 'Add Note'}
+                      </button>
+                    </div>
+
+                    {/* Templates */}
+                    {showTemplates && NOTE_TEMPLATES[selectedNoteCategory] && (
+                      <div className="space-y-1 pt-2 border-t border-slate-200">
+                        <p className="text-xs font-bold text-slate-600 mb-2">Quick Templates:</p>
+                        {NOTE_TEMPLATES[selectedNoteCategory].map((template, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleUseTemplate(template)}
+                            className="w-full text-left p-2 rounded-lg bg-white hover:bg-slate-100 text-xs text-slate-700 transition-colors"
+                          >
+                            {template}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Action Buttons */}

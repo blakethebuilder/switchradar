@@ -541,7 +541,7 @@ export const BusinessMap = React.memo(({
           spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.8 : 2.2}
           animate={window.innerWidth >= 768}
           animateAddingMarkers={false} // Disable for better performance
-          // Only cluster when 10 or more markers are close together
+          // Only cluster when 5 or more markers are close together
           options={{
             maxClusterRadius: (zoom: number) => {
               if (zoom <= 8) return 120;
@@ -550,25 +550,6 @@ export const BusinessMap = React.memo(({
               if (zoom <= 14) return 60;
               if (zoom <= 16) return 40;
               return 20;
-            },
-            // Custom cluster creation function
-            iconCreateFunction: (cluster: any) => {
-              const count = cluster.getChildCount();
-              
-              let className = 'marker-cluster marker-cluster-';
-              if (count < 50) {
-                className += 'small';
-              } else if (count < 100) {
-                className += 'medium';
-              } else {
-                className += 'large';
-              }
-              
-              return L.divIcon({
-                html: `<div><span>${count}</span></div>`,
-                className: className,
-                iconSize: [40, 40]
-              });
             },
             // Minimum cluster size - only cluster if 5+ markers
             minimumClusterSize: 5,
