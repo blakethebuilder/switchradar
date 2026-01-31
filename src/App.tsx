@@ -40,7 +40,10 @@ function App() {
     droppedPin,
     setDroppedPin,
     radiusKm,
-    setRadiusKm
+    setRadiusKm,
+    isDbReady,
+    dbError,
+    handleDatabaseReset
   } = useBusinessData();
 
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -57,27 +60,54 @@ function App() {
   const [selectedBusinessIds, setSelectedBusinessIds] = useState<string[]>([]);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
-  
-  // Enhanced loading states
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   const { isAuthenticated } = useAuth();
 
   const handleUpdateBusiness = async (id: string, updates: Partial<Business>) => {
     await db.businesses.update(id, updates);
   };
-  
-  useEffect(() => {
-    // Remove automatic cloud loading - now manual only
-    setTimeout(() => setIsInitialLoading(false), 500);
-  }, []);
 
-  // Show initial loading when businesses are first being loaded
-  useEffect(() => {
-    if (businesses.length > 0 && isInitialLoading) {
-      setIsInitialLoading(false);
-    }
-  }, [businesses.length, isInitialLoading]);
+  // Show database error if there's an issue
+  if (dbError && !isDbReady) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full mx-4">
+          <div className="text-center">
+            <div className="text-red-600 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Database Error</h2>
+            <p className="text-gray-600 mb-6">
+              There was an issue with the local database. This usually happens after an update.
+            </p>
+            <button
+              onClick={handleDatabaseReset}
+              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Reset Database
+            </button>
+            <p className="text-xs text-gray-500 mt-4">
+              This will clear your local data. You can re-import or sync from cloud after reset.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading while database initializes
+  if (!isDbReady) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing database...</p>
+        </div>
+      </div>
+    );
+  }
 
   const providerCount = useMemo(() => availableProviders.length, [availableProviders]);
 

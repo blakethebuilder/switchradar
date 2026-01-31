@@ -1,13 +1,55 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import { db, resetDatabase } from '../db';
 import { filterBusinesses, clearFilterCaches } from '../utils/dataProcessors';
 import { useDebounce } from './useDebounce';
 import { PerformanceMonitor } from '../utils/performance';
 
 export const useBusinessData = () => {
-    const businesses = useLiveQuery(() => db.businesses.toArray()) || [];
-    const routeItems = useLiveQuery(() => db.route.orderBy('order').toArray()) || [];
+    const [dbError, setDbError] = useState<string | null>(null);
+    const [isDbReady, setIsDbReady] = useState(false);
+
+    // Wait for database to be ready
+    useEffect(() => {
+        const checkDb = async () => {
+            try {
+                if (db) {
+                    await db.businesses.limit(1).toArray();
+                    setIsDbReady(true);
+                    setDbError(null);
+                }
+            } catch (error) {
+                console.error('Database not ready:', error);
+                setDbError('Database initialization failed');
+            }
+        };
+        
+        // Check immediately and then periodically
+        checkDb();
+        const interval = setInterval(checkDb, 1000);
+        
+        return () => clearInterval(interval);
+    }, []);
+
+    const businesses = useLiveQuery(() => {
+        if (!isDbReady) return [];
+        try {
+            return db.businesses.toArray();
+        } catch (error) {
+            console.error('Error fetching businesses:', error);
+            return [];
+        }
+    }, [isDbReady]) || [];
+
+    const routeItems = useLiveQuery(() => {
+        if (!isDbReady) return [];
+        try {
+            return db.route.orderBy('order').toArray();
+        } catch (error) {
+            console.error('Error fetching routes:', error);
+            return [];
+        }
+    }, [isDbReady]) || [];
 
     const [searchInput, setSearchInput] = useState('');
     const searchTerm = useDebounce(searchInput, 300);
@@ -44,6 +86,7 @@ export const useBusinessData = () => {
     }, [availableProviders, visibleProviders.length, hasUserInteracted]);
 
     const filteredBusinesses = useMemo(() => {
+        if (!isDbReady) return [];
         return PerformanceMonitor.measure('filterBusinesses', () => {
             return filterBusinesses(businesses, {
                 searchTerm,
@@ -54,7 +97,18 @@ export const useBusinessData = () => {
                 radiusKm
             });
         });
-    }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
+    }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm, isDbReady]);
+
+    // Database reset function
+    const handleDatabaseReset = async () => {
+        try {
+            await resetDatabase();
+            setIsDbReady(true);
+            setDbError(null);
+        } catch (error) {
+            setDbError('Failed to reset database');
+        }
+    };
 
     return {
         businesses,
@@ -78,6 +132,10 @@ export const useBusinessData = () => {
         // Data insights
         totalBusinesses: businesses.length,
         filteredCount: filteredBusinesses.length,
-        isLargeDataset: businesses.length > 1000
+        isLargeDataset: businesses.length > 1000,
+        // Database status
+        isDbReady,
+        dbError,
+        handleDatabaseReset
     };
 };
