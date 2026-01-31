@@ -114,68 +114,70 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
       {/* Content with smooth animation */}
       <div className={`transition-all duration-300 ease-in-out ${
         isVisible 
-          ? 'max-h-[800px] opacity-100' 
+          ? 'max-h-[600px] opacity-100' 
           : 'max-h-0 opacity-0 overflow-hidden'
       }`}>
-        <div className={`p-6 ${
+        <div className={`${isMapView ? 'max-h-[500px] overflow-y-auto custom-scrollbar' : ''} ${
           isMapView ? 'bg-white/90' : 'bg-white'
         }`}>
-          {/* Provider Bar */}
-          <div className="mb-6">
-            <ProviderBar
-              availableProviders={availableProviders}
-              visibleProviders={visibleProviders}
-              onToggleProvider={onToggleProvider}
-              onSelectAll={onSelectAllProviders}
-              onClearAll={onClearProviders}
-            />
-          </div>
+          <div className="p-6">
+            {/* Provider Bar */}
+            <div className="mb-6">
+              <ProviderBar
+                availableProviders={availableProviders}
+                visibleProviders={visibleProviders}
+                onToggleProvider={onToggleProvider}
+                onSelectAll={onSelectAllProviders}
+                onClearAll={onClearProviders}
+              />
+            </div>
 
-          {/* Filter Panel */}
-          <FilterPanel
-            searchTerm={searchTerm}
-            onSearchChange={onSearchChange}
-            selectedCategory={selectedCategory}
-            onCategoryChange={onCategoryChange}
-            phoneType={phoneType}
-            onPhoneTypeChange={onPhoneTypeChange}
-            categories={categories}
-            onClearFilters={onClearFilters}
-          />
-          
-          {/* Radius Filter Control (Map View Only) */}
-          {isMapView && droppedPin && radiusKm !== undefined && setRadiusKm && (
-            <div className="mt-6 pt-6 border-t border-slate-100">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
-                    Search Radius
-                  </label>
-                  <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                    {radiusKm} km
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="10"
-                  step="0.5"
-                  value={radiusKm}
-                  onChange={(e) => setRadiusKm(Number(e.target.value))}
-                  className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider"
-                  style={{
-                    background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${(radiusKm - 0.5) / 9.5 * 100}%, #e2e8f0 ${(radiusKm - 0.5) / 9.5 * 100}%, #e2e8f0 100%)`
-                  }}
-                />
-                <div className="flex justify-between text-xs text-slate-500">
-                  <span>0.5km</span>
-                  <span>5km</span>
-                  <span>10km</span>
+            {/* Filter Panel */}
+            <FilterPanel
+              searchTerm={searchTerm}
+              onSearchChange={onSearchChange}
+              selectedCategory={selectedCategory}
+              onCategoryChange={onCategoryChange}
+              phoneType={phoneType}
+              onPhoneTypeChange={onPhoneTypeChange}
+              categories={categories}
+              onClearFilters={onClearFilters}
+            />
+            
+            {/* Radius Filter Control (Map View Only) */}
+            {isMapView && droppedPin && radiusKm !== undefined && setRadiusKm && (
+              <div className="mt-6 pt-6 border-t border-slate-100">
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
+                      Search Radius
+                    </label>
+                    <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                      {radiusKm} km
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="10"
+                    step="0.5"
+                    value={radiusKm}
+                    onChange={(e) => setRadiusKm(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider"
+                    style={{
+                      background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${(radiusKm - 0.5) / 9.5 * 100}%, #e2e8f0 ${(radiusKm - 0.5) / 9.5 * 100}%, #e2e8f0 100%)`
+                    }}
+                  />
+                  <div className="flex justify-between text-xs text-slate-500">
+                    <span>0.5km</span>
+                    <span>5km</span>
+                    <span>10km</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

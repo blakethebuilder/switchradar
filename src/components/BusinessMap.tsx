@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Plus, Minus, Target, MapPin, X } from 'lucide-react';
+import { Plus, Minus, Target, MapPin, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -349,8 +349,41 @@ export const BusinessMap = React.memo(({
   radiusKm
 }: BusinessMapProps) => {
   
-  // New State Management for Map Locking
-  const [isDropMode, setIsDropMode] = useState(false); 
+  // New State Management for Map Locking and Spiral Navigation
+  const [isDropMode, setIsDropMode] = useState(false);
+  const [spiralBusinesses, setSpiralBusinesses] = useState<Business[]>([]);
+  const [currentSpiralIndex, setCurrentSpiralIndex] = useState(0);
+  const [isSpiralMode, setIsSpiralMode] = useState(false);
+
+  // Handle spiral navigation
+  const handleSpiralNavigation = useCallback((businesses: Business[]) => {
+    setSpiralBusinesses(businesses);
+    setCurrentSpiralIndex(0);
+    setIsSpiralMode(true);
+    if (businesses.length > 0) {
+      onBusinessSelect?.(businesses[0]);
+    }
+  }, [onBusinessSelect]);
+
+  const navigateSpiral = useCallback((direction: 'prev' | 'next') => {
+    if (spiralBusinesses.length === 0) return;
+    
+    let newIndex;
+    if (direction === 'next') {
+      newIndex = (currentSpiralIndex + 1) % spiralBusinesses.length;
+    } else {
+      newIndex = currentSpiralIndex === 0 ? spiralBusinesses.length - 1 : currentSpiralIndex - 1;
+    }
+    
+    setCurrentSpiralIndex(newIndex);
+    onBusinessSelect?.(spiralBusinesses[newIndex]);
+  }, [spiralBusinesses, currentSpiralIndex, onBusinessSelect]);
+
+  const exitSpiralMode = useCallback(() => {
+    setIsSpiralMode(false);
+    setSpiralBusinesses([]);
+    setCurrentSpiralIndex(0);
+  }, []);
 
   // Map Interaction Locks based on isDropMode
   const mapInteractive = !isDropMode;
@@ -486,42 +519,42 @@ export const BusinessMap = React.memo(({
           maxClusterRadius={window.innerWidth < 768 ? 80 : 60}
           disableClusteringAtZoom={window.innerWidth < 768 ? 14 : 16}
           removeOutsideVisibleBounds={true}
-          spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.2 : 1.5}
+          spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.8 : 2.2}
           animate={window.innerWidth >= 768}
           animateAddingMarkers={window.innerWidth >= 768}
           spiderfyShapePositions={(count: number, centerPt: any) => {
-            // Enhanced spiral algorithm for better distribution
+            // Enhanced spiral algorithm with more stretch
             let distanceFromCenter;
             let spiralTurns = 1;
             
             if (count <= 3) {
               // Very small clusters: tight circle
-              distanceFromCenter = 35;
+              distanceFromCenter = 50;
             } else if (count <= 8) {
               // Small clusters: single ring
-              distanceFromCenter = 45;
+              distanceFromCenter = 70;
             } else if (count <= 15) {
               // Medium clusters: wider ring
-              distanceFromCenter = 55;
-              spiralTurns = 1.2;
+              distanceFromCenter = 90;
+              spiralTurns = 1.3;
             } else if (count <= 30) {
               // Large clusters: spiral pattern
-              distanceFromCenter = 65;
-              spiralTurns = 1.5;
+              distanceFromCenter = 110;
+              spiralTurns = 1.8;
             } else if (count <= 50) {
               // Very large clusters: extended spiral
-              distanceFromCenter = 75;
-              spiralTurns = 2;
+              distanceFromCenter = 130;
+              spiralTurns = 2.2;
             } else {
               // Massive clusters: full spiral
-              distanceFromCenter = 85;
-              spiralTurns = 2.5;
+              distanceFromCenter = 150;
+              spiralTurns = 2.8;
             }
             
             return Array.from({ length: count }, (_, i) => {
-              // Create spiral pattern
+              // Create spiral pattern with better distribution
               const angle = (i / count) * (2 * Math.PI * spiralTurns);
-              const radius = distanceFromCenter * (0.3 + 0.7 * (i / count));
+              const radius = distanceFromCenter * (0.4 + 0.6 * (i / count));
               
               return [
                 centerPt.x + radius * Math.cos(angle),
@@ -575,6 +608,27 @@ export const BusinessMap = React.memo(({
               iconAnchor: [iconSize[0]/2, iconSize[1]/2] as [number, number]
             });
           }}
+          eventHandlers={{
+            spiderfied: (e: any) => {
+              // When cluster opens, get the businesses and set up navigation
+              const cluster = e.target;
+              const markers = cluster.getAllChildMarkers();
+              const clusterBusinesses = markers.map((marker: any) => {
+                return businesses.find(b => 
+                  b.coordinates.lat === marker.getLatLng().lat && 
+                  b.coordinates.lng === marker.getLatLng().lng
+                );
+              }).filter(Boolean);
+              
+              if (clusterBusinesses.length > 0) {
+                handleSpiralNavigation(clusterBusinesses);
+              }
+            },
+            unspiderfied: () => {
+              // Don't exit spiral mode when unspiderfied - let user navigate
+              // exitSpiralMode();
+            }
+          }}
         >
           {memoizedMarkers}
         </MarkerClusterGroup>
@@ -587,6 +641,46 @@ export const BusinessMap = React.memo(({
           <span className="text-sm font-black text-slate-900 leading-none">{businesses.length} Visible Businesses</span>
         </div>
       </div>
+
+      {/* Spiral Navigation Controls */}
+      {isSpiralMode && spiralBusinesses.length > 1 && (
+        <div className="absolute bottom-6 right-6 z-[1000] flex items-center gap-2 glass-card rounded-2xl p-3 border-white/40 shadow-xl animate-in slide-in-from-right-4 duration-300">
+          <button
+            onClick={() => navigateSpiral('prev')}
+            className="p-2 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all active:scale-95"
+            title="Previous business"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          
+          <div className="flex flex-col items-center px-2">
+            <span className="text-xs font-bold text-slate-900">
+              {currentSpiralIndex + 1} of {spiralBusinesses.length}
+            </span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Cluster
+            </span>
+          </div>
+          
+          <button
+            onClick={() => navigateSpiral('next')}
+            className="p-2 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all active:scale-95"
+            title="Next business"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          
+          <div className="w-px h-6 bg-slate-200 mx-1"></div>
+          
+          <button
+            onClick={exitSpiralMode}
+            className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-white/50 transition-all active:scale-95"
+            title="Exit cluster navigation"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 });

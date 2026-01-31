@@ -89,39 +89,102 @@ function App() {
   const providerCount = useMemo(() => availableProviders.length, [availableProviders]);
 
   const handleFileSelected = (file: File) => {
+    console.log('Mobile import - File selected:', file.name, file.size, file.type);
     setPendingFileName(file.name);
+    setImportError(''); // Clear any previous errors
+    
     const reader = new FileReader();
+    reader.onerror = (error) => {
+      console.error('Mobile import - FileReader error:', error);
+      setImportError('Failed to read file. Please try again.');
+    };
+    
     reader.onload = (e) => {
-      const data = e.target?.result;
-      if (file.name.endsWith('.json')) {
-        try {
-          const json = JSON.parse(data as string);
-          const rows = Array.isArray(json) ? json : [json];
-          setImportRows(rows);
-          setImportColumns(Object.keys(rows[0] || {}));
-          setIsMappingOpen(true);
-          setIsImportOpen(false);
-        } catch (error) {
-          setImportError('Invalid JSON file format.');
+      try {
+        const data = e.target?.result;
+        console.log('Mobile import - File read successfully, data type:', typeof data);
+        
+        if (file.name.endsWith('.json')) {
+          try {
+            const json = JSON.parse(data as string);
+            const rows = Array.isArray(json) ? json : [json];
+            console.log('Mobile import - JSON parsed, rows:', rows.length);
+            
+            if (rows.length === 0) {
+              setImportError('JSON file is empty or invalid.');
+              return;
+            }
+            
+            setImportRows(rows);
+            setImportColumns(Object.keys(rows[0] || {}));
+            setIsMappingOpen(true);
+            setIsImportOpen(false);
+          } catch (error) {
+            console.error('Mobile import - JSON parse error:', error);
+            setImportError('Invalid JSON file format.');
+          }
+        } else {
+          // Excel/CSV files
+          console.log('Mobile import - Processing Excel/CSV file');
+          
+          // Use dynamic import with better error handling for mobile
+          import('xlsx').then(XLSX => {
+            try {
+              console.log('Mobile import - XLSX library loaded');
+              const workbook = XLSX.read(data, { type: 'array' });
+              console.log('Mobile import - Workbook read, sheets:', workbook.SheetNames);
+              
+              const sheetName = workbook.SheetNames[0];
+              if (!sheetName) {
+                setImportError('No sheets found in the file.');
+                return;
+              }
+              
+              const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as Record<string, unknown>[];
+              console.log('Mobile import - Sheet parsed, rows:', rows.length);
+              
+              if (rows.length === 0) {
+                setImportError('The spreadsheet appears to be empty.');
+                return;
+              }
+              
+              setImportRows(rows as any[]);
+              setImportColumns(Object.keys(rows[0] || {}));
+              setIsMappingOpen(true);
+              setIsImportOpen(false);
+            } catch (error) {
+              console.error('Mobile import - XLSX processing error:', error);
+              setImportError('Failed to process spreadsheet. Please check the file format.');
+            }
+          }).catch((error) => {
+            console.error('Mobile import - XLSX library load error:', error);
+            setImportError('Failed to load Excel parser. Please try refreshing the page.');
+          });
         }
-      } else {
-        import('xlsx').then(XLSX => {
-             const workbook = XLSX.read(data, { type: 'array' });
-             const sheetName = workbook.SheetNames[0];
-             const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as Record<string, unknown>[];
-             setImportRows(rows as any[]);
-             setImportColumns(Object.keys(rows[0] || {}));
-             setIsMappingOpen(true);
-             setIsImportOpen(false);
-         }).catch((_error) => setImportError('Failed to load Excel parser'));
+      } catch (error) {
+        console.error('Mobile import - General file processing error:', error);
+        setImportError('Failed to process file. Please try again.');
       }
     };
-    if (file.name.endsWith('.json')) reader.readAsText(file);
-    else reader.readAsArrayBuffer(file);
+    
+    // Read file based on type
+    try {
+      if (file.name.endsWith('.json')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsArrayBuffer(file);
+      }
+    } catch (error) {
+      console.error('Mobile import - File read initiation error:', error);
+      setImportError('Failed to start reading file. Please try again.');
+    }
   };
 
   const handleConfirmMapping = async (mapping: ImportMapping) => {
-    console.log('handleConfirmMapping called with:', mapping);
+    console.log('Mobile import - handleConfirmMapping called with:', mapping);
+    console.log('Mobile import - importRows length:', importRows?.length);
+    console.log('Mobile import - importColumns:', importColumns);
+    
     setIsMappingOpen(false);
     setIsImporting(true);
     setImportError('');
@@ -130,24 +193,38 @@ function App() {
     await new Promise(resolve => setTimeout(resolve, 100));
     
     try {
-      console.log('Processing import with mapping:', mapping);
-      console.log('Import rows:', importRows);
+      console.log('Mobile import - Processing import with mapping:', mapping);
+      console.log('Mobile import - Import rows sample:', importRows?.slice(0, 2));
       
       if (!importRows || importRows.length === 0) {
         throw new Error('No data to import');
       }
       
-      const processed = processImportedData(importRows, mapping);
-      console.log('Processed businesses:', processed);
-      
-      if (processed.length === 0) {
-        throw new Error('No businesses were processed from the data');
+      // Check if mapping has required fields
+      if (!mapping.name) {
+        throw new Error('Business name mapping is required');
       }
       
-      await applyNewBusinesses(processed, pendingFileName);
-      console.log('Import completed successfully');
+      const processed = processImportedData(importRows, mapping);
+      console.log('Mobile import - Processed businesses count:', processed.length);
+      console.log('Mobile import - Processed businesses sample:', processed.slice(0, 2));
+      
+      if (processed.length === 0) {
+        throw new Error('No businesses were processed from the data. Please check your field mappings.');
+      }
+      
+      // Validate processed data
+      const validBusinesses = processed.filter(b => b.name && b.name.trim() !== '');
+      console.log('Mobile import - Valid businesses count:', validBusinesses.length);
+      
+      if (validBusinesses.length === 0) {
+        throw new Error('No valid businesses found. Please check that the name field is mapped correctly.');
+      }
+      
+      await applyNewBusinesses(validBusinesses, pendingFileName);
+      console.log('Mobile import - Import completed successfully');
     } catch (error) {
-      console.error('Import error:', error);
+      console.error('Mobile import - Import error:', error);
       setImportError(`Failed to process data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsImporting(false);
@@ -155,16 +232,49 @@ function App() {
   };
 
   const applyNewBusinesses = async (items: Business[], sourceName: string) => {
-    console.log('Applying new businesses:', items.length, 'items');
-    const providers = Array.from(new Set(items.map(b => b.provider))).filter(Boolean);
-    console.log('Providers found:', providers);
+    console.log('Mobile import - Applying new businesses:', items.length, 'items');
+    console.log('Mobile import - Source name:', sourceName);
     
-    await db.businesses.clear();
-    await db.businesses.bulkAdd(items);
-    
-    setVisibleProviders(providers);
-    setLastImportName(sourceName);
-    console.log('Import applied successfully');
+    try {
+      const providers = Array.from(new Set(items.map(b => b.provider))).filter(Boolean);
+      console.log('Mobile import - Providers found:', providers);
+      
+      // Clear existing data
+      console.log('Mobile import - Clearing existing businesses...');
+      await db.businesses.clear();
+      
+      // Add new businesses in smaller batches for mobile
+      console.log('Mobile import - Adding new businesses...');
+      const batchSize = 100; // Smaller batches for mobile
+      for (let i = 0; i < items.length; i += batchSize) {
+        const batch = items.slice(i, i + batchSize);
+        await db.businesses.bulkAdd(batch);
+        console.log(`Mobile import - Added batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(items.length/batchSize)}`);
+        
+        // Small delay between batches to prevent blocking
+        if (i + batchSize < items.length) {
+          await new Promise(resolve => setTimeout(resolve, 10));
+        }
+      }
+      
+      // Update UI state
+      setVisibleProviders(providers);
+      setLastImportName(sourceName);
+      
+      console.log('Mobile import - Import applied successfully');
+      
+      // Verify the data was actually saved
+      const count = await db.businesses.count();
+      console.log('Mobile import - Verification: businesses in DB:', count);
+      
+      if (count === 0) {
+        throw new Error('Data was not saved to database');
+      }
+      
+    } catch (error) {
+      console.error('Mobile import - Error applying businesses:', error);
+      throw error;
+    }
   };
 
   const handleImportSample = async () => {
@@ -183,7 +293,9 @@ function App() {
   }, []);
   
   const handleSelectAllProviders = useCallback(() => setVisibleProviders(availableProviders), [availableProviders]);
-  const handleClearProviders = useCallback(() => setVisibleProviders([]), []);
+  const handleClearProviders = useCallback(() => {
+    setVisibleProviders([]);
+  }, []);
   
   const handleClearFilters = useCallback(() => {
     setSearchTerm('');

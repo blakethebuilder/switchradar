@@ -49,6 +49,38 @@
   }
 
   .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+
+  /* Firefox scrollbar */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(203 213 225) transparent;
+  }
+
+  /* Mobile touch improvements */
+  @media (max-width: 768px) {
+    .touch-manipulation {
+      touch-action: manipulation;
+    }
+    
+    /* Larger touch targets on mobile */
+    button, select, input[type="file"] {
+      min-height: 44px;
+      touch-action: manipulation;
+    }
+    
+    /* Prevent zoom on input focus */
+    input, select, textarea {
+      font-size: 16px;
+    }
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-slate-200 rounded-full hover:bg-slate-300;
   }
 

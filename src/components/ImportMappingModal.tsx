@@ -89,20 +89,20 @@ export const ImportMappingModal: React.FC<ImportMappingModalProps> = ({
     <div className="fixed inset-0 z-[5000] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" />
 
-      <div className="relative w-full max-w-6xl overflow-hidden rounded-[2rem] bg-white shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
-        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-white z-10">
+      <div className="relative w-full max-w-6xl overflow-hidden rounded-[2rem] bg-white shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] mx-2">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 md:px-6 py-4 bg-white z-10">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shadow-sm">
-              <Settings2 className="h-5 w-5" />
+            <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 shadow-sm">
+              <Settings2 className="h-4 w-4 md:h-5 md:w-5" />
             </div>
             <div>
-              <h2 className="text-xl font-extrabold text-slate-900">Map Connections</h2>
+              <h2 className="text-lg md:text-xl font-extrabold text-slate-900">Map Connections</h2>
               <p className="text-xs font-semibold text-slate-400">Define column mappings</p>
             </div>
           </div>
         </div>
 
-        <div className="custom-scrollbar overflow-y-auto bg-slate-50/30 p-4">
+        <div className="custom-scrollbar overflow-y-auto bg-slate-50/30 p-3 md:p-4">
           <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {(Object.keys(FIELD_LABELS) as ImportFieldKey[]).map(field => {
               const isRequired = REQUIRED_FIELDS.includes(field);
@@ -133,7 +133,8 @@ export const ImportMappingModal: React.FC<ImportMappingModalProps> = ({
                   <select
                     value={mapping[field] ?? ''}
                     onChange={(event) => handleChange(field, event.target.value)}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm outline-none transition-all focus:border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/10"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 md:py-2 text-xs font-bold text-slate-700 shadow-sm outline-none transition-all focus:border-indigo-500/30 focus:ring-2 focus:ring-indigo-500/10 touch-manipulation"
+                    style={{ minHeight: '44px' }} // iOS touch target minimum
                   >
                     <option value="">Ignore Column</option>
                     {columns.map(column => (
@@ -148,19 +149,19 @@ export const ImportMappingModal: React.FC<ImportMappingModalProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-slate-100 bg-white px-6 py-4 z-10">
+        <div className="flex flex-col sm:flex-row items-center justify-between border-t border-slate-100 bg-white px-4 md:px-6 py-4 z-10 gap-3 sm:gap-4">
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors py-2 px-4 rounded-lg hover:bg-slate-50"
           >
             <ArrowLeft className="h-3.5 w-3.5" />
             Back
           </button>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
             {!isValid && (
-              <span className="hidden text-[10px] font-bold text-rose-500 md:block">
+              <span className="text-[10px] font-bold text-rose-500 text-center">
                 Missing: {missingRequired.map(f => FIELD_LABELS[f]).join(', ')}
               </span>
             )}
@@ -168,7 +169,7 @@ export const ImportMappingModal: React.FC<ImportMappingModalProps> = ({
               type="button"
               disabled={!isValid}
               onClick={() => onConfirm(mapping)}
-              className="btn-primary py-2 px-6 text-xs"
+              className="btn-primary py-3 px-6 text-xs min-h-[44px] touch-manipulation"
             >
               FINALIZE
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />

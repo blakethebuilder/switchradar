@@ -34,6 +34,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Mobile-specific file size check (50MB limit)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        // Don't call onFileSelected, just show error through parent
+        console.error('File too large:', file.size);
+        return;
+      }
+      
+      // Check file type
+      const validTypes = ['.csv', '.xlsx', '.xls', '.json'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!validTypes.includes(fileExtension)) {
+        console.error('Invalid file type:', fileExtension);
+        return;
+      }
+      
       onFileSelected(file);
     }
   };
@@ -43,6 +59,20 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     setDragActive(false);
     const file = event.dataTransfer.files?.[0];
     if (file) {
+      // Same validation as file input
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        console.error('File too large:', file.size);
+        return;
+      }
+      
+      const validTypes = ['.csv', '.xlsx', '.xls', '.json'];
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!validTypes.includes(fileExtension)) {
+        console.error('Invalid file type:', fileExtension);
+        return;
+      }
+      
       onFileSelected(file);
     }
   };
@@ -137,7 +167,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
           {errorMessage && (
             <div className="mt-4 rounded-xl border border-rose-100 bg-rose-50 p-4 text-xs font-bold text-rose-600 animate-in slide-in-from-top-2">
-              ⚠️ {errorMessage}
+              <div className="flex items-start gap-2">
+                <span className="text-rose-500">⚠️</span>
+                <div className="flex-1">
+                  <div className="font-bold mb-1">Import Error</div>
+                  <div className="text-xs font-medium leading-relaxed">{errorMessage}</div>
+                  <div className="mt-2 text-[10px] font-medium text-rose-500">
+                    If this persists, try refreshing the page or using a different file format.
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </div>
