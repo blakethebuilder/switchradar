@@ -188,6 +188,7 @@ function App() {
   const handleClearFilters = useCallback(() => {
     setSearchTerm('');
     setSelectedCategory('');
+    setPhoneType('all');
     setVisibleProviders(availableProviders);
   }, [availableProviders]);
 
