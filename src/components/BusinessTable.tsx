@@ -121,7 +121,7 @@ export const BusinessTable = React.memo(({
       ) : (
         /* Desktop Table */
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl shadow-slate-200/40 transition-all">
-        <div className="overflow-x-auto custom-scrollbar">
+          <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
             <thead>
               <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -268,7 +268,8 @@ export const BusinessTable = React.memo(({
             </tr>
           </tfoot>
         </table>
-      </div>
+          </div>
+        </div>
       )}
     </div>
   );

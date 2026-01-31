@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Search, Filter, CheckSquare, Square, Users, Building2 } from 'lucide-react';
+import { Trash2, Filter, CheckSquare, Square, Users, Building2 } from 'lucide-react';
 import type { Business } from '../types';
 
 interface BulkActionsProps {
