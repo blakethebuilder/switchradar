@@ -149,7 +149,7 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses }) => {
           <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900">
             Seen Clients
           </h1>
-          <p className="text-slate-600">Clients with sales notes and interaction history</p>
+          <p className="text-slate-600">Clients with notes and interaction history</p>
         </div>
 
         <div className="flex flex-col md:flex-row md:items-center gap-4 bg-white px-3 py-3 rounded-2xl shadow-sm border border-slate-100">

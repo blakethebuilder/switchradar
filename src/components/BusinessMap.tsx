@@ -58,10 +58,11 @@ function MapController({
 
 
   useEffect(() => {
-    if (targetLocation) {
+    // Only set view if targetLocation is provided AND we're not in drop mode
+    if (targetLocation && !isDropMode) {
       map.setView(targetLocation, zoom || map.getZoom(), { animate: true });
     }
-  }, [targetLocation, zoom, map]);
+  }, [targetLocation, zoom, map, isDropMode]);
 
   const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
     if (isDropMode) {
@@ -163,127 +164,130 @@ function MapController({
 
   return (
     <>
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
-        {/* Zoom Controls */}
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl">
-          <button
-            onClick={() => map.zoomIn()}
-            className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-b border-slate-100"
-            title="Zoom In"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-          <button
-            onClick={() => map.zoomOut()}
-            className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-            title="Zoom Out"
-          >
-            <Minus className="h-5 w-5" />
-          </button>
-        </div>
+      {/* Map Tools - Better Presentation */}
+      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-3">
+        {/* Zoom & Navigation Controls Combined */}
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 p-2">
+          <div className="grid grid-cols-3 gap-1">
+            {/* Top row - North */}
+            <div></div>
+            <button
+              onClick={() => {
+                const center = map.getCenter();
+                map.panTo([center.lat + 0.01, center.lng]);
+              }}
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+              title="Pan North"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => map.zoomIn()}
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+              title="Zoom In"
+            >
+              <Plus className="h-4 w-4" />
+            </button>
 
-        {/* Navigation Controls */}
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl">
-          <button
-            onClick={() => {
-              const center = map.getCenter();
-              map.panTo([center.lat + 0.01, center.lng]);
-            }}
-            className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-b border-slate-100"
-            title="Pan North"
-          >
-            <ChevronUp className="h-5 w-5" />
-          </button>
-          <div className="flex">
+            {/* Middle row - West/East */}
             <button
               onClick={() => {
                 const center = map.getCenter();
                 map.panTo([center.lat, center.lng - 0.01]);
               }}
-              className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-r border-slate-100"
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
               title="Pan West"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => {
+                if (businesses.length > 0) {
+                  const bounds = L.latLngBounds(businesses.map(b => [b.coordinates.lat, b.coordinates.lng]));
+                  map.fitBounds(bounds, { 
+                    padding: [20, 20],
+                    maxZoom: 12
+                  });
+                }
+              }}
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+              title="Fit All Businesses"
+            >
+              <Target className="h-4 w-4" />
             </button>
             <button
               onClick={() => {
                 const center = map.getCenter();
                 map.panTo([center.lat, center.lng + 0.01]);
               }}
-              className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
               title="Pan East"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4" />
+            </button>
+
+            {/* Bottom row - South */}
+            <div></div>
+            <button
+              onClick={() => {
+                const center = map.getCenter();
+                map.panTo([center.lat - 0.01, center.lng]);
+              }}
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+              title="Pan South"
+            >
+              <ChevronDown className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => map.zoomOut()}
+              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+              title="Zoom Out"
+            >
+              <Minus className="h-4 w-4" />
             </button>
           </div>
-          <button
-            onClick={() => {
-              const center = map.getCenter();
-              map.panTo([center.lat - 0.01, center.lng]);
-            }}
-            className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-t border-slate-100"
-            title="Pan South"
-          >
-            <ChevronDown className="h-5 w-5" />
-          </button>
         </div>
 
-        {/* Fit All Button */}
-        <button
-          onClick={() => {
-            if (businesses.length > 0) {
-              const bounds = L.latLngBounds(businesses.map(b => [b.coordinates.lat, b.coordinates.lng]));
-              map.fitBounds(bounds, { 
-                padding: [20, 20],
-                maxZoom: 12
-              });
-            }
-          }}
-          className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-95"
-          title="Fit All Businesses"
-        >
-          <Target className="h-5 w-5" />
-        </button>
-
-        {/* Drop Pin Button */}
-        <button
-          onClick={() => {
-            if (isDropMode) {
-              setIsDropMode(false);
-            } else {
-              setIsDropMode(true);
-              setDroppedPin(null);
-              map.getContainer().focus();
-            }
-          }}
-          className={`flex items-center justify-center p-3 rounded-2xl border border-white/40 backdrop-blur-md shadow-xl transition-all active:scale-95 ${
-            isDropMode 
-              ? 'bg-rose-500 text-white' 
-              : 'bg-white/80 text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
-          }`}
-          title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin (500m radius)'}
-        >
-          {isDropMode ? <X className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
-        </button>
-
-        {droppedPin && (
+        {/* Drop Pin & Help Controls */}
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 p-2 flex flex-col gap-1">
           <button
-            onClick={() => setDroppedPin(null)}
-            className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-rose-600 hover:bg-rose-50 transition-all active:scale-95"
-            title="Clear Filter Pin"
+            onClick={() => {
+              if (isDropMode) {
+                setIsDropMode(false);
+              } else {
+                setIsDropMode(true);
+                setDroppedPin(null);
+                map.getContainer().focus();
+              }
+            }}
+            className={`p-2 rounded-lg transition-all active:scale-95 ${
+              isDropMode 
+                ? 'bg-rose-500 text-white' 
+                : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
+            }`}
+            title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin (500m radius)'}
           >
-            <X className="h-5 w-5" />
+            {isDropMode ? <X className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
           </button>
-        )}
 
-        {/* Help Button */}
-        <button
-          onClick={() => setShowShiftDragModal(true)}
-          className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-95"
-          title="Map Controls Help"
-        >
-          <HelpCircle className="h-5 w-5" />
-        </button>
+          {droppedPin && (
+            <button
+              onClick={() => setDroppedPin(null)}
+              className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 transition-all active:scale-95"
+              title="Clear Filter Pin"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowShiftDragModal(true)}
+            className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-95"
+            title="Map Controls Help"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {isDropMode && (
@@ -875,23 +879,32 @@ export const BusinessMap = React.memo(({
       </MapContainer>
 
       {/* Map Stats Overlay - Enhanced for Testing */}
-      <div className="absolute bottom-6 left-6 z-[1000] glass-card rounded-2xl p-4 flex items-center gap-4 border-white/40 shadow-xl animate-in slide-in-from-left-4 duration-1000">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Map Info</span>
-          <span className="text-sm font-black text-slate-900 leading-none">
-            {businesses.length} businesses • Zoom: {mapInstance?.getZoom()?.toFixed(1) || 'Loading...'}
-          </span>
-          <span className="text-xs text-slate-500 mt-1">
-            {mapInstance?.getZoom() && mapInstance.getZoom() >= 14 ? 'Scattered View' : 'Clustered View'}
-          </span>
+      <div className={`absolute z-[1000] bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-white/40 animate-in duration-1000 ${
+        droppedPin ? 'top-6 left-6 slide-in-from-top-4' : 'bottom-6 left-6 slide-in-from-left-4'
+      }`}>
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Map Info</span>
+            <span className="text-sm font-black text-slate-900 leading-none">
+              {businesses.length} businesses • Zoom: {mapInstance?.getZoom()?.toFixed(1) || 'Loading...'}
+            </span>
+            <span className="text-xs text-slate-500 mt-1">
+              {mapInstance?.getZoom() && mapInstance.getZoom() >= 14 ? 'Scattered View' : 'Clustered View'}
+            </span>
+            {droppedPin && (
+              <span className="text-xs text-rose-600 mt-1 font-bold">
+                📍 Filter Pin Active (500m radius)
+              </span>
+            )}
+          </div>
+          <button
+            onClick={() => setShowShiftDragModal(true)}
+            className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+            title="Map Controls Help"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
-        <button
-          onClick={() => setShowShiftDragModal(true)}
-          className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-          title="Map Controls Help"
-        >
-          <HelpCircle className="h-4 w-4" />
-        </button>
       </div>
 
       {/* Icon Scroll Navigation Controls */}

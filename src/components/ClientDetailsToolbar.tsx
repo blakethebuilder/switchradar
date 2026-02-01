@@ -86,7 +86,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
   const [selectedNoteCategory, setSelectedNoteCategory] = useState<'call' | 'visit' | 'follow-up' | 'general' | 'issue' | 'opportunity'>('general');
   const [showTemplates, setShowTemplates] = useState(false);
   
-  // Auto-refresh sales notes every 30 seconds when expanded
+  // Auto-refresh notes every 30 seconds when expanded
   React.useEffect(() => {
     if (!isExpanded) return;
     
@@ -176,10 +176,26 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                 <h3 className="font-bold text-slate-900 truncate text-sm">
                   {business.name}
                 </h3>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 mb-1">
                   <ProviderBadge provider={business.provider} className="scale-75 origin-left" />
                   <span className="text-xs text-slate-500">•</span>
+                  <span className="text-xs text-slate-500 truncate">{business.category}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {business.phone && (
+                    <>
+                      <Phone className="w-3 h-3 text-slate-400" />
+                      <span className="text-xs text-slate-600 font-medium">{business.phone}</span>
+                      <span className="text-xs text-slate-500">•</span>
+                    </>
+                  )}
                   <span className="text-xs text-slate-500 truncate">{business.town}</span>
+                  {business.richNotes && business.richNotes.length > 0 && (
+                    <>
+                      <span className="text-xs text-slate-500">•</span>
+                      <span className="text-xs text-indigo-600 font-bold">{business.richNotes.length} notes</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -500,7 +516,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="font-semibold text-slate-900 flex items-center gap-2">
                       <MessageSquare className="w-4 h-4" />
-                      Sales Notes
+                      Notes
                     </h4>
                   </div>
                   
