@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Plus, Minus, Target, MapPin, X, ChevronLeft, ChevronRight, HelpCircle } from 'lucide-react';
+import { Plus, Minus, Target, MapPin, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
@@ -164,6 +164,7 @@ function MapController({
   return (
     <>
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-2">
+        {/* Zoom Controls */}
         <div className="flex flex-col overflow-hidden rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl">
           <button
             onClick={() => map.zoomIn()}
@@ -181,6 +182,53 @@ function MapController({
           </button>
         </div>
 
+        {/* Navigation Controls */}
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl">
+          <button
+            onClick={() => {
+              const center = map.getCenter();
+              map.panTo([center.lat + 0.01, center.lng]);
+            }}
+            className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-b border-slate-100"
+            title="Pan North"
+          >
+            <ChevronUp className="h-5 w-5" />
+          </button>
+          <div className="flex">
+            <button
+              onClick={() => {
+                const center = map.getCenter();
+                map.panTo([center.lat, center.lng - 0.01]);
+              }}
+              className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-r border-slate-100"
+              title="Pan West"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={() => {
+                const center = map.getCenter();
+                map.panTo([center.lat, center.lng + 0.01]);
+              }}
+              className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
+              title="Pan East"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              const center = map.getCenter();
+              map.panTo([center.lat - 0.01, center.lng]);
+            }}
+            className="p-3 text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors border-t border-slate-100"
+            title="Pan South"
+          >
+            <ChevronDown className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Fit All Button */}
         <button
           onClick={() => {
             if (businesses.length > 0) {
@@ -197,14 +245,14 @@ function MapController({
           <Target className="h-5 w-5" />
         </button>
 
-        {/* Mobile/Desktop Drop Pin Button */}
+        {/* Drop Pin Button */}
         <button
           onClick={() => {
             if (isDropMode) {
               setIsDropMode(false);
             } else {
               setIsDropMode(true);
-              setDroppedPin(null); // Clear previous pin when starting new drop mode
+              setDroppedPin(null);
               map.getContainer().focus();
             }
           }}
@@ -213,7 +261,7 @@ function MapController({
               ? 'bg-rose-500 text-white' 
               : 'bg-white/80 text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
           }`}
-          title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin'}
+          title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin (500m radius)'}
         >
           {isDropMode ? <X className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
         </button>
@@ -228,11 +276,11 @@ function MapController({
           </button>
         )}
 
-        {/* Help Button for Multi-Select */}
+        {/* Help Button */}
         <button
           onClick={() => setShowShiftDragModal(true)}
           className="flex items-center justify-center p-3 rounded-2xl border border-white/40 bg-white/80 backdrop-blur-md shadow-xl text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-95"
-          title="Multi-Select Help"
+          title="Map Controls Help"
         >
           <HelpCircle className="h-5 w-5" />
         </button>
@@ -441,6 +489,7 @@ export const BusinessMap = React.memo(({
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
+  const [currentBusinessIndex, setCurrentBusinessIndex] = useState(0);
 
   // Handle map invalidation when fullScreen changes
   useEffect(() => {
@@ -484,6 +533,31 @@ export const BusinessMap = React.memo(({
     window.addEventListener('error', handleError);
     return () => window.removeEventListener('error', handleError);
   }, []);
+
+  // Icon scroll navigation functions
+  const navigateToNextBusiness = useCallback(() => {
+    if (businesses.length === 0) return;
+    const nextIndex = (currentBusinessIndex + 1) % businesses.length;
+    setCurrentBusinessIndex(nextIndex);
+    onBusinessSelect?.(businesses[nextIndex]);
+  }, [businesses, currentBusinessIndex, onBusinessSelect]);
+
+  const navigateToPrevBusiness = useCallback(() => {
+    if (businesses.length === 0) return;
+    const prevIndex = currentBusinessIndex === 0 ? businesses.length - 1 : currentBusinessIndex - 1;
+    setCurrentBusinessIndex(prevIndex);
+    onBusinessSelect?.(businesses[prevIndex]);
+  }, [businesses, currentBusinessIndex, onBusinessSelect]);
+
+  // Update current business index when selectedBusinessId changes
+  useEffect(() => {
+    if (selectedBusinessId && businesses.length > 0) {
+      const index = businesses.findIndex(b => b.id === selectedBusinessId);
+      if (index !== -1) {
+        setCurrentBusinessIndex(index);
+      }
+    }
+  }, [selectedBusinessId, businesses]);
 
   // Show error state if map fails to load
   if (mapError) {
@@ -631,7 +705,21 @@ export const BusinessMap = React.memo(({
                   console.error('Error in marker click handler:', error);
                 }
               },
-              // Simplified event handlers to reduce complexity
+              dblclick: (e) => {
+                try {
+                  e.originalEvent?.stopPropagation();
+                  onBusinessSelect?.(business);
+                  // Auto-expand the customer details toolbar
+                  setTimeout(() => {
+                    const expandButton = document.querySelector('[title="Expand"]') as HTMLButtonElement;
+                    if (expandButton) {
+                      expandButton.click();
+                    }
+                  }, 100);
+                } catch (error) {
+                  console.error('Error in marker double-click handler:', error);
+                }
+              },
             }}
           />
         );
@@ -732,26 +820,45 @@ export const BusinessMap = React.memo(({
           animate={false}
           animateAddingMarkers={false}
           removeOutsideVisibleBounds={false}
+          disableClusteringAtZoom={14} // Scatter at zoom 14 and above
+          maxClusterRadius={80} // Reasonable clustering distance
           iconCreateFunction={(cluster: any) => {
             try {
               const count = cluster.getChildCount();
+              
+              // Different sizes based on count
+              let size = 40;
+              let bgColor = '#3b82f6';
+              
+              if (count >= 100) {
+                size = 50;
+                bgColor = '#dc2626'; // Red for 100+
+              } else if (count >= 50) {
+                size = 45;
+                bgColor = '#ea580c'; // Orange for 50+
+              } else if (count >= 20) {
+                size = 42;
+                bgColor = '#ca8a04'; // Yellow for 20+
+              }
+              
               return L.divIcon({
                 html: `<div style="
-                  background: #3b82f6;
+                  background: ${bgColor};
                   color: white;
                   border-radius: 50%;
-                  width: 40px;
-                  height: 40px;
+                  width: ${size}px;
+                  height: ${size}px;
                   display: flex;
                   align-items: center;
                   justify-content: center;
                   font-weight: bold;
                   border: 3px solid white;
                   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                  font-size: ${size > 45 ? '14px' : '12px'};
                 ">${count}</div>`,
-                className: 'simple-cluster-icon',
-                iconSize: [40, 40],
-                iconAnchor: [20, 20]
+                className: 'cluster-icon',
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2]
               });
             } catch (error) {
               console.error('Cluster icon error:', error);
@@ -767,15 +874,55 @@ export const BusinessMap = React.memo(({
         </MarkerClusterGroup>
       </MapContainer>
 
-      {/* Map Stats Overlay - Floating Glass */}
-      <div className="absolute bottom-6 left-6 z-[1000] glass-card rounded-2xl p-4 md:flex hidden items-center gap-4 border-white/40 shadow-xl animate-in slide-in-from-left-4 duration-1000">
+      {/* Map Stats Overlay - Enhanced for Testing */}
+      <div className="absolute bottom-6 left-6 z-[1000] glass-card rounded-2xl p-4 flex items-center gap-4 border-white/40 shadow-xl animate-in slide-in-from-left-4 duration-1000">
         <div className="flex flex-col">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Active Insight</span>
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Map Info</span>
           <span className="text-sm font-black text-slate-900 leading-none">
-            {businesses.length} of {businesses.length} Visible
+            {businesses.length} businesses • Zoom: {mapInstance?.getZoom()?.toFixed(1) || 'Loading...'}
+          </span>
+          <span className="text-xs text-slate-500 mt-1">
+            {mapInstance?.getZoom() && mapInstance.getZoom() >= 14 ? 'Scattered View' : 'Clustered View'}
           </span>
         </div>
+        <button
+          onClick={() => setShowShiftDragModal(true)}
+          className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+          title="Map Controls Help"
+        >
+          <HelpCircle className="h-4 w-4" />
+        </button>
       </div>
+
+      {/* Icon Scroll Navigation Controls */}
+      {businesses.length > 1 && selectedBusinessId && (
+        <div className="absolute bottom-6 right-6 z-[1000] flex items-center gap-2 glass-card rounded-2xl p-3 border-white/40 shadow-xl animate-in slide-in-from-right-4 duration-300">
+          <button
+            onClick={navigateToPrevBusiness}
+            className="p-2 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all active:scale-95"
+            title="Previous business"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          
+          <div className="flex flex-col items-center px-2">
+            <span className="text-xs font-bold text-slate-900">
+              {currentBusinessIndex + 1} of {businesses.length}
+            </span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+              Navigate
+            </span>
+          </div>
+          
+          <button
+            onClick={navigateToNextBusiness}
+            className="p-2 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all active:scale-95"
+            title="Next business"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Spiral Navigation Controls */}
       {isSpiralMode && spiralBusinesses.length > 1 && (

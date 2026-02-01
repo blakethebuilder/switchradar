@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, MousePointer, Move } from 'lucide-react';
+import { X, MousePointer, Move, ZoomIn, MapPin, Navigation, RotateCcw } from 'lucide-react';
 
 interface ShiftDragModalProps {
   isOpen: boolean;
@@ -16,11 +16,11 @@ export const ShiftDragModal: React.FC<ShiftDragModalProps> = ({ isOpen, onClose 
         onClick={onClose}
       />
 
-      <div className="relative w-full max-w-md overflow-hidden rounded-[2rem] bg-white shadow-2xl animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-lg overflow-hidden rounded-[2rem] bg-white shadow-2xl animate-in zoom-in-95 duration-300 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
           <div>
-            <h2 className="text-xl font-extrabold text-slate-900">Multi-Select</h2>
-            <p className="text-sm font-semibold text-slate-400">Select multiple businesses</p>
+            <h2 className="text-xl font-extrabold text-slate-900">Map Controls</h2>
+            <p className="text-sm font-semibold text-slate-400">Complete guide to map navigation</p>
           </div>
           <button
             onClick={onClose}
@@ -30,55 +30,119 @@ export const ShiftDragModal: React.FC<ShiftDragModalProps> = ({ isOpen, onClose 
           </button>
         </div>
 
-        <div className="p-6">
-          <div className="text-center mb-6">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-indigo-50 flex items-center justify-center">
-              <Move className="h-8 w-8 text-indigo-600" />
+        <div className="p-6 space-y-6">
+          {/* Multi-Select */}
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                <Move className="h-5 w-5 text-indigo-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Multi-Select</h3>
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Drag to Select</h3>
-            <p className="text-sm text-slate-600">
-              Hold <kbd className="px-2 py-1 bg-slate-100 rounded text-xs font-mono">Shift</kbd> and drag to select multiple businesses on the map
-            </p>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50">
-              <div className="mt-1">
-                <MousePointer className="h-5 w-5 text-slate-400" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 text-sm">Step 1</h4>
-                <p className="text-xs text-slate-600">Hold down the Shift key</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-slate-50">
-              <div className="mt-1">
-                <Move className="h-5 w-5 text-slate-400" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-slate-900 text-sm">Step 2</h4>
-                <p className="text-xs text-slate-600">Click and drag to create a selection box</p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-xl bg-indigo-50">
-              <div className="mt-1">
-                <div className="h-5 w-5 rounded bg-indigo-600 flex items-center justify-center">
-                  <span className="text-white text-xs font-bold">✓</span>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-semibold text-indigo-900 text-sm">Step 3</h4>
-                <p className="text-xs text-indigo-700">Release to select all businesses in the area</p>
-              </div>
+            <div className="space-y-2 ml-13">
+              <p className="text-sm text-slate-600">
+                Hold <kbd className="px-2 py-1 bg-slate-100 rounded text-xs font-mono">Shift</kbd> and drag to select multiple businesses
+              </p>
+              <p className="text-xs text-slate-500">Selected businesses can be bulk added to routes</p>
             </div>
           </div>
 
-          <div className="mt-6 p-3 rounded-xl bg-amber-50 border border-amber-200">
-            <p className="text-xs text-amber-800">
-              <span className="font-semibold">Tip:</span> Selected businesses will be highlighted and can be bulk deleted or added to routes.
-            </p>
+          {/* Zoom Controls */}
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                <ZoomIn className="h-5 w-5 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Zoom & Scatter</h3>
+            </div>
+            <div className="space-y-2 ml-13">
+              <p className="text-sm text-slate-600">
+                <strong>Zoom 14+:</strong> Icons scatter individually for precise selection
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>Zoom 13-:</strong> Icons cluster by proximity (100+ = red clusters)
+              </p>
+              <p className="text-xs text-slate-500">Use zoom buttons or mouse wheel to control clustering</p>
+            </div>
+          </div>
+
+          {/* Navigation */}
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-xl bg-green-50 flex items-center justify-center">
+                <Navigation className="h-5 w-5 text-green-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Navigation</h3>
+            </div>
+            <div className="space-y-2 ml-13">
+              <p className="text-sm text-slate-600">
+                <strong>Arrow buttons:</strong> Pan map in any direction
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>Fit All button:</strong> Zoom to show all businesses
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>Mouse/Touch:</strong> Drag to pan, scroll/pinch to zoom
+              </p>
+            </div>
+          </div>
+
+          {/* Drop Pin */}
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Filter Pin</h3>
+            </div>
+            <div className="space-y-2 ml-13">
+              <p className="text-sm text-slate-600">
+                <strong>Drop Pin:</strong> Click pin button, then click map to place
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>500m Radius:</strong> Shows businesses within walking distance
+              </p>
+              <p className="text-xs text-slate-500">Drag the pin to move it, or click X to remove</p>
+            </div>
+          </div>
+
+          {/* Business Selection */}
+          <div>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="h-10 w-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                <MousePointer className="h-5 w-5 text-purple-600" />
+              </div>
+              <h3 className="text-lg font-bold text-slate-900">Business Selection</h3>
+            </div>
+            <div className="space-y-2 ml-13">
+              <p className="text-sm text-slate-600">
+                <strong>Single Click:</strong> Select business, show in toolbar
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>Double Click:</strong> Select and auto-expand details
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>Icon Navigation:</strong> Use arrow buttons to scroll through businesses
+              </p>
+              <p className="text-sm text-slate-600">
+                <strong>Add to Route:</strong> Use toolbar button or multi-select
+              </p>
+            </div>
+          </div>
+
+          {/* Tips */}
+          <div className="p-4 rounded-xl bg-amber-50 border border-amber-200">
+            <h4 className="font-bold text-amber-900 mb-2 flex items-center gap-2">
+              <RotateCcw className="h-4 w-4" />
+              Pro Tips
+            </h4>
+            <ul className="text-sm text-amber-800 space-y-1">
+              <li>• Zoom in to see individual businesses clearly</li>
+              <li>• Use drop pin for route planning in specific areas</li>
+              <li>• Multi-select for bulk operations</li>
+              <li>• Double-click for quick access to customer details</li>
+              <li>• Use icon navigation arrows to browse businesses sequentially</li>
+            </ul>
           </div>
         </div>
 
