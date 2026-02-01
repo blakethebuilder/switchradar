@@ -592,7 +592,7 @@ function App() {
             )}
 
             {viewMode === 'map' && (
-              <div className="absolute inset-0 w-full h-full">
+              <div className="fixed inset-0 top-16 w-full h-full bg-slate-100 z-10">
                 <div className="absolute top-4 left-0 right-0 z-[2000] px-4">
                   <div className="max-w-4xl mx-auto">
                     <WorkspaceFilters
@@ -670,19 +670,21 @@ function App() {
                   </div>
                 )}
 
-                <BusinessMap
-                  businesses={filteredBusinesses}
-                  targetLocation={mapTarget?.center}
-                  zoom={mapTarget?.zoom}
-                  fullScreen={true}
-                  onBusinessSelect={handleSelectBusinessOnMap}
-                  onMultiSelect={handleMultiSelect}
-                  selectedBusinessId={selectedBusiness?.id}
-                  selectedBusinessIds={selectedBusinessIds}
-                  droppedPin={droppedPin}
-                  setDroppedPin={setDroppedPin}
-                  radiusKm={radiusKm}
-                />
+                <div className="w-full h-full">
+                  <BusinessMap
+                    businesses={filteredBusinesses}
+                    targetLocation={mapTarget?.center}
+                    zoom={mapTarget?.zoom}
+                    fullScreen={true}
+                    onBusinessSelect={handleSelectBusinessOnMap}
+                    onMultiSelect={handleMultiSelect}
+                    selectedBusinessId={selectedBusiness?.id}
+                    selectedBusinessIds={selectedBusinessIds}
+                    droppedPin={droppedPin}
+                    setDroppedPin={setDroppedPin}
+                    radiusKm={radiusKm}
+                  />
+                </div>
               </div>
             )}
 

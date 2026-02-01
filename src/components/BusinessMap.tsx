@@ -551,8 +551,8 @@ export const BusinessMap = React.memo(({
               if (zoom <= 16) return 40;
               return 20;
             },
-            // Minimum cluster size - only cluster if 5+ markers
-            minimumClusterSize: 5,
+            // Minimum cluster size - only cluster if 15+ markers
+            minimumClusterSize: 15,
             // Performance optimizations
             chunkedLoading: true,
             chunkInterval: 50, // Process markers in chunks
@@ -561,8 +561,8 @@ export const BusinessMap = React.memo(({
           iconCreateFunction={(cluster: any) => {
             const count = cluster.getChildCount();
             
-            // Only cluster if there are 5+ markers in close proximity
-            if (count < 5) {
+            // Only cluster if there are 15+ markers in close proximity
+            if (count < 15) {
               // Don't cluster - return individual markers
               return null;
             }
@@ -593,7 +593,7 @@ export const BusinessMap = React.memo(({
               colorClass = 'bg-emerald-500';
               iconSize = [38, 38];
               textSize = 'text-sm';
-            } else if (count >= 5) {
+            } else if (count >= 15) {
               size = 'small';
               colorClass = 'bg-blue-500';
               iconSize = [36, 36];
