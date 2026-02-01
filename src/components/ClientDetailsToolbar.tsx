@@ -127,6 +127,15 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
     }
   };
 
+  const handleUpdateTextMetadata = async (key: keyof BusinessMetadata, value: string) => {
+    // For text inputs, update immediately without showing loading state
+    try {
+      await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
+    } catch (error) {
+      console.error('Error updating metadata:', error);
+    }
+  };
+
   const handleAddRichNote = async () => {
     if (!newNoteContent.trim()) return;
     
@@ -461,7 +470,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <input
                         type="text"
                         value={business.metadata?.lengthWithCurrentProvider || ''}
-                        onChange={(e) => handleUpdateMetadata('lengthWithCurrentProvider', e.target.value)}
+                        onChange={(e) => handleUpdateTextMetadata('lengthWithCurrentProvider', e.target.value)}
                         placeholder="e.g., 2 years, 6 months"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
                       />
@@ -473,7 +482,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <input
                         type="text"
                         value={business.metadata?.ispProvider || ''}
-                        onChange={(e) => handleUpdateMetadata('ispProvider', e.target.value)}
+                        onChange={(e) => handleUpdateTextMetadata('ispProvider', e.target.value)}
                         placeholder="e.g., Telkom, Vodacom, MTN"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
                       />
@@ -485,7 +494,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <input
                         type="text"
                         value={business.metadata?.pabxProvider || ''}
-                        onChange={(e) => handleUpdateMetadata('pabxProvider', e.target.value)}
+                        onChange={(e) => handleUpdateTextMetadata('pabxProvider', e.target.value)}
                         placeholder="e.g., Panasonic, Avaya, Cisco"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
                       />
