@@ -14,6 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { RouteView } from './components/RouteView';
 import { DbSettingsPage } from './components/DbSettingsPage';
 import { ManualSyncPanel } from './components/ManualSyncPanel';
+import { SeenClients } from './components/SeenClients';
 import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
 import { processImportedData, sampleData } from './utils/dataProcessors';
@@ -501,7 +502,7 @@ function App() {
         <main className="flex-1 flex flex-col overflow-hidden relative">
           {businesses.length > 0 ? (
             <div className="flex-1 flex flex-col h-full relative">
-            {(viewMode === 'table' || viewMode === 'stats') && (
+            {(viewMode === 'table' || viewMode === 'stats' || viewMode === 'seen') && (
               <div className="p-4 md:p-6 lg:p-8 pb-0">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-8">
                   <div className="space-y-1">
@@ -725,6 +726,12 @@ function App() {
             {viewMode === 'stats' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
                 <MarketIntelligence businesses={filteredBusinesses} droppedPin={droppedPin} radiusKm={radiusKm} />
+              </div>
+            )}
+
+            {viewMode === 'seen' && (
+              <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
+                <SeenClients businesses={businesses} />
               </div>
             )}
           </div>
