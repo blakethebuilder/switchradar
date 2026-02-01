@@ -5,6 +5,9 @@ export interface BusinessMetadata {
   isActiveOnCurrentProvider?: boolean;
   lengthWithCurrentProvider?: string; // e.g., "2 years", "6 months"
   canContact?: boolean;
+  // Additional provider information
+  ispProvider?: string; // Internet Service Provider
+  pabxProvider?: string; // PABX Provider
   [key: string]: unknown; // Allow other properties
 }
 

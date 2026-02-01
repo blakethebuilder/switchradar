@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ChevronUp, ChevronDown, Phone, Mail, MapPin, Building2, Smartphone, Landmark, MessageSquare, Route, Trash2, DollarSign, AlertTriangle, CheckCircle, Loader2, Plus, Smile, Frown, PhoneCall, Calendar, Lightbulb, FileText } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, Phone, Mail, MapPin, Building2, Smartphone, Landmark, MessageSquare, Route, Trash2, DollarSign, AlertTriangle, CheckCircle, Loader2, Plus, Smile, Frown, PhoneCall, Calendar, Lightbulb, FileText, ExternalLink } from 'lucide-react';
 import type { Business, NoteEntry, BusinessMetadata } from '../types';
 import { isMobileProvider } from '../utils/phoneUtils';
 import { ProviderBadge } from './ProviderBadge';
@@ -202,6 +202,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
 
             {/* Quick Actions */}
             <div className="flex items-center gap-2">
+              {/* Call Button */}
               {business.phone && (
                 <a
                   href={`tel:${business.phone}`}
@@ -211,7 +212,44 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                   <Phone className="w-4 h-4" />
                 </a>
               )}
+
+              {/* Google Maps Button */}
+              {business.mapsLink ? (
+                <a
+                  href={business.mapsLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  title="Open in Google Maps"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              ) : (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address + ', ' + business.town + ', ' + business.province)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  title="Open in Google Maps"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              )}
+
+              {/* Add to Route Button */}
+              <button
+                onClick={() => isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id)}
+                className={`p-2 rounded-lg transition-colors ${
+                  isInRoute
+                    ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                    : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                }`}
+                title={isInRoute ? "Remove from Route" : "Add to Route"}
+              >
+                <Route className="w-4 h-4" />
+              </button>
               
+              {/* Expand Button */}
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
@@ -220,6 +258,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                 {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
               </button>
               
+              {/* Close Button */}
               <button
                 onClick={onClose}
                 className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -321,10 +360,10 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                     Contact Status
                   </h4>
                   
-                  {/* Big Issue Buttons */}
+                  {/* Big Issue Buttons - Fixed Radio Button Behavior */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <button
-                      onClick={() => handleUpdateMetadata('hasIssues', true)}
+                      onClick={() => handleUpdateMetadata('hasIssues', business.metadata?.hasIssues === true ? null : true)}
                       disabled={isUpdating === 'metadata-hasIssues-true'}
                       className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-bold uppercase tracking-wider transition-all transform active:scale-95 relative ${
                         isUpdating === 'metadata-hasIssues-true'
@@ -345,7 +384,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       Issues
                     </button>
                     <button
-                      onClick={() => handleUpdateMetadata('hasIssues', false)}
+                      onClick={() => handleUpdateMetadata('hasIssues', business.metadata?.hasIssues === false ? null : false)}
                       disabled={isUpdating === 'metadata-hasIssues-false'}
                       className={`flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-bold uppercase tracking-wider transition-all transform active:scale-95 relative ${
                         isUpdating === 'metadata-hasIssues-false'
@@ -374,7 +413,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <span className="text-xs font-bold text-slate-600">Active on Current Provider</span>
                       <div className="flex gap-1">
                         <button
-                          onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', true)}
+                          onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', business.metadata?.isActiveOnCurrentProvider === true ? null : true)}
                           disabled={isUpdating === 'metadata-isActiveOnCurrentProvider-true'}
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
                             isUpdating === 'metadata-isActiveOnCurrentProvider-true'
@@ -394,7 +433,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                           )}
                         </button>
                         <button
-                          onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', false)}
+                          onClick={() => handleUpdateMetadata('isActiveOnCurrentProvider', business.metadata?.isActiveOnCurrentProvider === false ? null : false)}
                           disabled={isUpdating === 'metadata-isActiveOnCurrentProvider-false'}
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
                             isUpdating === 'metadata-isActiveOnCurrentProvider-false'
@@ -416,7 +455,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       </div>
                     </div>
 
-                    {/* Length with Current Provider */}
+                    {/* Length with Current Provider - Fixed Input */}
                     <div className="space-y-2">
                       <label className="text-xs font-bold text-slate-600">Length with Current Provider</label>
                       <input
@@ -424,7 +463,31 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                         value={business.metadata?.lengthWithCurrentProvider || ''}
                         onChange={(e) => handleUpdateMetadata('lengthWithCurrentProvider', e.target.value)}
                         placeholder="e.g., 2 years, 6 months"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500/50 transition-colors"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
+                      />
+                    </div>
+
+                    {/* ISP Provider */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-600">ISP Provider</label>
+                      <input
+                        type="text"
+                        value={business.metadata?.ispProvider || ''}
+                        onChange={(e) => handleUpdateMetadata('ispProvider', e.target.value)}
+                        placeholder="e.g., Telkom, Vodacom, MTN"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
+                      />
+                    </div>
+
+                    {/* PABX Provider */}
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-600">PABX Provider</label>
+                      <input
+                        type="text"
+                        value={business.metadata?.pabxProvider || ''}
+                        onChange={(e) => handleUpdateMetadata('pabxProvider', e.target.value)}
+                        placeholder="e.g., Panasonic, Avaya, Cisco"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
                       />
                     </div>
 
@@ -433,7 +496,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <span className="text-xs font-bold text-slate-600">Can We Contact You?</span>
                       <div className="flex gap-1">
                         <button
-                          onClick={() => handleUpdateMetadata('canContact', true)}
+                          onClick={() => handleUpdateMetadata('canContact', business.metadata?.canContact === true ? null : true)}
                           disabled={isUpdating === 'metadata-canContact-true'}
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
                             isUpdating === 'metadata-canContact-true'
@@ -453,7 +516,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                           )}
                         </button>
                         <button
-                          onClick={() => handleUpdateMetadata('canContact', false)}
+                          onClick={() => handleUpdateMetadata('canContact', business.metadata?.canContact === false ? null : false)}
                           disabled={isUpdating === 'metadata-canContact-false'}
                           className={`px-3 py-1 rounded-lg text-xs font-bold transition-all transform active:scale-95 relative ${
                             isUpdating === 'metadata-canContact-false'

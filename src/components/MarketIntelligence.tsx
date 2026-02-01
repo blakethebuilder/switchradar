@@ -11,9 +11,10 @@ interface MarketIntelligenceProps {
     businesses: Business[];
     droppedPin: { lat: number, lng: number } | null;
     radiusKm: number;
+    onProviderFilter?: (provider: string) => void;
 }
 
-export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ businesses, droppedPin, radiusKm }) => {
+export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ businesses, droppedPin, radiusKm, onProviderFilter }) => {
     const [minimized, setMinimized] = useState<Record<string, boolean>>({});
 
     const toggleMinimize = (id: string) => {
@@ -222,19 +223,24 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                     {!minimized['pct'] && (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                             {networkPcts.map((network) => (
-                                <div key={network.name} className="flex flex-col gap-2 p-4 rounded-3xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                                <button
+                                    key={network.name}
+                                    onClick={() => onProviderFilter?.(network.name)}
+                                    className="flex flex-col gap-2 p-4 rounded-3xl bg-slate-50/50 border border-slate-100 hover:bg-white hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group"
+                                    title={`Filter map to show only ${network.name} businesses`}
+                                >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: getProviderColor(network.name) }} />
-                                            <span className="text-xs font-bold text-slate-700 uppercase tracking-tight truncate max-w-[80px]">{network.name}</span>
+                                            <span className="text-xs font-bold text-slate-900 uppercase tracking-tight truncate max-w-[80px] group-hover:text-indigo-600 transition-colors">{network.name}</span>
                                         </div>
-                                        <span className="text-lg font-black text-slate-900">{network.pct}%</span>
+                                        <span className="text-lg font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{network.pct}%</span>
                                     </div>
                                     <div className="w-full bg-slate-200/50 rounded-full h-1.5 overflow-hidden">
                                         <div className="h-full rounded-full transition-all duration-1000 ease-out" style={{ width: `${network.pct}%`, backgroundColor: getProviderColor(network.name) }} />
                                     </div>
-                                    <div className="text-[10px] font-medium text-slate-400 text-right">{network.value.toLocaleString()} businesses</div>
-                                </div>
+                                    <div className="text-[10px] font-medium text-slate-500 text-right group-hover:text-indigo-500 transition-colors">{network.value.toLocaleString()} businesses</div>
+                                </button>
                             ))}
                         </div>
                     )}

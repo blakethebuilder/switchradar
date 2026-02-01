@@ -3,13 +3,13 @@ import type { Dispatch, SetStateAction } from 'react';
 import { MapContainer, TileLayer, Marker, useMap, Circle } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
-import { Plus, Minus, Target, MapPin, X, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, HelpCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import type { Business } from '../types';
 import { getProviderColor } from '../utils/providerColors';
-import { ShiftDragModal } from './ShiftDragModal';
+import { MapControlsModal } from './MapControlsModal';
 
 // Helper component to handle center/zoom and fit bounds
 function MapController({ 
@@ -19,9 +19,7 @@ function MapController({
   isDropMode, 
   setIsDropMode, 
   setDroppedPin, 
-  droppedPin,
   onMultiSelect,
-  setShowShiftDragModal,
   onMapReady,
   // @ts-ignore - selectedBusinessIds is used in memoizedMarkers
   selectedBusinessIds = []
@@ -32,9 +30,7 @@ function MapController({
   isDropMode: boolean,
   setIsDropMode: Dispatch<SetStateAction<boolean>>,
   setDroppedPin: (pin: { lat: number, lng: number } | null) => void,
-  droppedPin: { lat: number, lng: number } | null,
   onMultiSelect?: (businesses: Business[]) => void,
-  setShowShiftDragModal: Dispatch<SetStateAction<boolean>>,
   onMapReady?: (map: L.Map) => void,
   selectedBusinessIds?: string[]
 }) {
@@ -164,130 +160,15 @@ function MapController({
 
   return (
     <>
-      {/* Map Tools - Better Presentation */}
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-3">
-        {/* Zoom & Navigation Controls Combined */}
-        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 p-2">
-          <div className="grid grid-cols-3 gap-1">
-            {/* Top row - North */}
-            <div></div>
-            <button
-              onClick={() => {
-                const center = map.getCenter();
-                map.panTo([center.lat + 0.01, center.lng]);
-              }}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-              title="Pan North"
-            >
-              <ChevronUp className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => map.zoomIn()}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-              title="Zoom In"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-
-            {/* Middle row - West/East */}
-            <button
-              onClick={() => {
-                const center = map.getCenter();
-                map.panTo([center.lat, center.lng - 0.01]);
-              }}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-              title="Pan West"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => {
-                if (businesses.length > 0) {
-                  const bounds = L.latLngBounds(businesses.map(b => [b.coordinates.lat, b.coordinates.lng]));
-                  map.fitBounds(bounds, { 
-                    padding: [20, 20],
-                    maxZoom: 12
-                  });
-                }
-              }}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-              title="Fit All Businesses"
-            >
-              <Target className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => {
-                const center = map.getCenter();
-                map.panTo([center.lat, center.lng + 0.01]);
-              }}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-              title="Pan East"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-
-            {/* Bottom row - South */}
-            <div></div>
-            <button
-              onClick={() => {
-                const center = map.getCenter();
-                map.panTo([center.lat - 0.01, center.lng]);
-              }}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-              title="Pan South"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => map.zoomOut()}
-              className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-              title="Zoom Out"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        {/* Drop Pin & Help Controls */}
-        <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 p-2 flex flex-col gap-1">
-          <button
-            onClick={() => {
-              if (isDropMode) {
-                setIsDropMode(false);
-              } else {
-                setIsDropMode(true);
-                setDroppedPin(null);
-                map.getContainer().focus();
-              }
-            }}
-            className={`p-2 rounded-lg transition-all active:scale-95 ${
-              isDropMode 
-                ? 'bg-rose-500 text-white' 
-                : 'text-slate-600 hover:bg-slate-50 hover:text-indigo-600'
-            }`}
-            title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin (500m radius)'}
-          >
-            {isDropMode ? <X className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
-          </button>
-
-          {droppedPin && (
-            <button
-              onClick={() => setDroppedPin(null)}
-              className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 transition-all active:scale-95"
-              title="Clear Filter Pin"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-
-          <button
-            onClick={() => setShowShiftDragModal(true)}
-            className="p-2 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-indigo-600 transition-all active:scale-95"
-            title="Map Controls Help"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </button>
-        </div>
+      {/* Simplified Map Controls - Just Settings Button */}
+      <div className="absolute top-4 right-4 z-[1000]">
+        <button
+          onClick={() => setShowMapControlsModal(true)}
+          className="p-3 rounded-2xl bg-white/90 backdrop-blur-md shadow-xl border border-white/40 text-slate-600 hover:bg-white hover:text-indigo-600 transition-all active:scale-95"
+          title="Map Controls & Info"
+        >
+          <Settings className="h-5 w-5" />
+        </button>
       </div>
 
       {isDropMode && (
@@ -486,14 +367,11 @@ export const BusinessMap = React.memo(({
   
   // New State Management for Map Locking and Spiral Navigation
   const [isDropMode, setIsDropMode] = useState(false);
-  const [spiralBusinesses, setSpiralBusinesses] = useState<Business[]>([]);
-  const [currentSpiralIndex, setCurrentSpiralIndex] = useState(0);
-  const [isSpiralMode, setIsSpiralMode] = useState(false);
-  const [showShiftDragModal, setShowShiftDragModal] = useState(false);
+  const [currentBusinessIndex, setCurrentBusinessIndex] = useState(0);
+  const [showMapControlsModal, setShowMapControlsModal] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
-  const [currentBusinessIndex, setCurrentBusinessIndex] = useState(0);
 
   // Handle map invalidation when fullScreen changes
   useEffect(() => {
@@ -603,26 +481,6 @@ export const BusinessMap = React.memo(({
   //     onBusinessSelect?.(businesses[0]);
   //   }
   // }, [onBusinessSelect]);
-
-  const navigateSpiral = useCallback((direction: 'prev' | 'next') => {
-    if (spiralBusinesses.length === 0) return;
-    
-    let newIndex;
-    if (direction === 'next') {
-      newIndex = (currentSpiralIndex + 1) % spiralBusinesses.length;
-    } else {
-      newIndex = currentSpiralIndex === 0 ? spiralBusinesses.length - 1 : currentSpiralIndex - 1;
-    }
-    
-    setCurrentSpiralIndex(newIndex);
-    onBusinessSelect?.(spiralBusinesses[newIndex]);
-  }, [spiralBusinesses, currentSpiralIndex, onBusinessSelect]);
-
-  const exitSpiralMode = useCallback(() => {
-    setIsSpiralMode(false);
-    setSpiralBusinesses([]);
-    setCurrentSpiralIndex(0);
-  }, []);
 
   // Map Interaction Locks based on isDropMode
   const mapInteractive = !isDropMode;
@@ -775,12 +633,10 @@ export const BusinessMap = React.memo(({
           targetLocation={targetLocation} 
           zoom={zoom} 
           businesses={businesses} 
-          droppedPin={droppedPin}
-          setDroppedPin={setDroppedPin}
           isDropMode={isDropMode}
           setIsDropMode={setIsDropMode}
+          setDroppedPin={setDroppedPin}
           onMultiSelect={onMultiSelect}
-          setShowShiftDragModal={setShowShiftDragModal}
           onMapReady={handleMapReady}
           selectedBusinessIds={selectedBusinessIds}
         />
@@ -878,38 +734,9 @@ export const BusinessMap = React.memo(({
         </MarkerClusterGroup>
       </MapContainer>
 
-      {/* Map Stats Overlay - Enhanced for Testing */}
-      <div className={`absolute z-[1000] bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-xl border border-white/40 animate-in duration-1000 ${
-        droppedPin ? 'top-6 left-6 slide-in-from-top-4' : 'bottom-6 left-6 slide-in-from-left-4'
-      }`}>
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Map Info</span>
-            <span className="text-sm font-black text-slate-900 leading-none">
-              {businesses.length} businesses • Zoom: {mapInstance?.getZoom()?.toFixed(1) || 'Loading...'}
-            </span>
-            <span className="text-xs text-slate-500 mt-1">
-              {mapInstance?.getZoom() && mapInstance.getZoom() >= 14 ? 'Scattered View' : 'Clustered View'}
-            </span>
-            {droppedPin && (
-              <span className="text-xs text-rose-600 mt-1 font-bold">
-                📍 Filter Pin Active (500m radius)
-              </span>
-            )}
-          </div>
-          <button
-            onClick={() => setShowShiftDragModal(true)}
-            className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-            title="Map Controls Help"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-
       {/* Icon Scroll Navigation Controls */}
       {businesses.length > 1 && selectedBusinessId && (
-        <div className="absolute bottom-6 right-6 z-[1000] flex items-center gap-2 glass-card rounded-2xl p-3 border-white/40 shadow-xl animate-in slide-in-from-right-4 duration-300">
+        <div className="absolute bottom-6 right-6 z-[1000] flex items-center gap-2 bg-white/90 backdrop-blur-md rounded-2xl p-3 border border-white/40 shadow-xl animate-in slide-in-from-right-4 duration-300">
           <button
             onClick={navigateToPrevBusiness}
             className="p-2 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all active:scale-95"
@@ -937,50 +764,16 @@ export const BusinessMap = React.memo(({
         </div>
       )}
 
-      {/* Spiral Navigation Controls */}
-      {isSpiralMode && spiralBusinesses.length > 1 && (
-        <div className="absolute bottom-6 right-6 z-[1000] flex items-center gap-2 glass-card rounded-2xl p-3 border-white/40 shadow-xl animate-in slide-in-from-right-4 duration-300">
-          <button
-            onClick={() => navigateSpiral('prev')}
-            className="p-2 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all active:scale-95"
-            title="Previous business"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-          
-          <div className="flex flex-col items-center px-2">
-            <span className="text-xs font-bold text-slate-900">
-              {currentSpiralIndex + 1} of {spiralBusinesses.length}
-            </span>
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-              Cluster
-            </span>
-          </div>
-          
-          <button
-            onClick={() => navigateSpiral('next')}
-            className="p-2 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-white/50 transition-all active:scale-95"
-            title="Next business"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-          
-          <div className="w-px h-6 bg-slate-200 mx-1"></div>
-          
-          <button
-            onClick={exitSpiralMode}
-            className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-white/50 transition-all active:scale-95"
-            title="Exit cluster navigation"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Shift Drag Modal */}
-      <ShiftDragModal 
-        isOpen={showShiftDragModal} 
-        onClose={() => setShowShiftDragModal(false)} 
+      {/* Map Controls Modal */}
+      <MapControlsModal 
+        isOpen={showMapControlsModal} 
+        onClose={() => setShowMapControlsModal(false)}
+        businesses={businesses}
+        mapInstance={mapInstance}
+        droppedPin={droppedPin}
+        setDroppedPin={setDroppedPin}
+        isDropMode={isDropMode}
+        setIsDropMode={setIsDropMode}
       />
     </div>
   );

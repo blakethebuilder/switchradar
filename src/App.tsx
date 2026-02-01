@@ -725,7 +725,15 @@ function App() {
 
             {viewMode === 'stats' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
-                <MarketIntelligence businesses={filteredBusinesses} droppedPin={droppedPin} radiusKm={radiusKm} />
+                <MarketIntelligence 
+                  businesses={filteredBusinesses} 
+                  droppedPin={droppedPin} 
+                  radiusKm={radiusKm}
+                  onProviderFilter={(provider) => {
+                    setVisibleProviders([provider]);
+                    setViewMode('map');
+                  }}
+                />
               </div>
             )}
 
