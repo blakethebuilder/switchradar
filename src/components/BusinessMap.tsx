@@ -47,7 +47,11 @@ function MapController({
   // Notify parent component when map is ready
   useEffect(() => {
     if (map && onMapReady) {
-      onMapReady(map);
+      try {
+        onMapReady(map);
+      } catch (error) {
+        console.error('Error in map ready callback:', error);
+      }
     }
   }, [map, onMapReady]);
 
@@ -301,59 +305,89 @@ const getProviderLabel = (provider: string) => {
 const iconCache: Record<string, L.DivIcon> = {};
 
 const createProviderIcon = (provider: string, isSelected: boolean = false) => {
-  const cacheKey = `${provider}-${isSelected}`;
-  if (iconCache[cacheKey]) return iconCache[cacheKey];
+  try {
+    // Ensure provider is a valid string
+    if (!provider || typeof provider !== 'string') {
+      provider = 'Unknown';
+    }
 
-  const color = getProviderColor(provider);
-  const label = getProviderLabel(provider);
-  
-  const size = isSelected ? 36 : 28;
-  const borderWidth = isSelected ? 4 : 3;
-  const fontSize = isSelected ? '10px' : '8px';
-  const borderRadius = isSelected ? '14px' : '10px';
-  
-  const icon = L.divIcon({
-    className: 'custom-marker',
-    html: `
-      <div style="
-        background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
-        width: ${size}px;
-        height: ${size}px;
-        border-radius: ${borderRadius};
-        border: ${borderWidth}px solid ${isSelected ? '#fbbf24' : 'white'};
-        box-shadow: ${isSelected ? 
-          '0 8px 25px -5px rgb(0 0 0 / 0.3), 0 4px 6px -2px rgb(0 0 0 / 0.1), 0 0 0 4px rgb(251 191 36 / 0.3)' : 
-          '0 6px 20px -5px rgb(0 0 0 / 0.2), 0 4px 6px -2px rgb(0 0 0 / 0.1)'
-        };
+    const cacheKey = `${provider}-${isSelected}`;
+    if (iconCache[cacheKey]) return iconCache[cacheKey];
+
+    const color = getProviderColor(provider) || '#6b7280'; // Default gray color
+    const label = getProviderLabel(provider) || '?';
+    
+    const size = isSelected ? 36 : 28;
+    const borderWidth = isSelected ? 4 : 3;
+    const fontSize = isSelected ? '10px' : '8px';
+    const borderRadius = isSelected ? '14px' : '10px';
+    
+    const icon = L.divIcon({
+      className: 'custom-marker',
+      html: `
+        <div style="
+          background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
+          width: ${size}px;
+          height: ${size}px;
+          border-radius: ${borderRadius};
+          border: ${borderWidth}px solid ${isSelected ? '#fbbf24' : 'white'};
+          box-shadow: ${isSelected ? 
+            '0 8px 25px -5px rgb(0 0 0 / 0.3), 0 4px 6px -2px rgb(0 0 0 / 0.1), 0 0 0 4px rgb(251 191 36 / 0.3)' : 
+            '0 6px 20px -5px rgb(0 0 0 / 0.2), 0 4px 6px -2px rgb(0 0 0 / 0.1)'
+          };
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 900;
+          font-size: ${fontSize};
+          letter-spacing: -0.2px;
+          transform: rotate(45deg);
+          transition: all 0.2s ease;
+          cursor: pointer;
+          ${isSelected ? 'animation: pulse 2s infinite;' : ''}
+        ">
+          <div style="transform: rotate(-45deg); text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${label}</div>
+        </div>
+        ${isSelected ? `
+          <style>
+            @keyframes pulse {
+              0%, 100% { transform: scale(1) rotate(45deg); }
+              50% { transform: scale(1.1) rotate(45deg); }
+            }
+          </style>
+        ` : ''}
+      `,
+      iconSize: [size, size],
+      iconAnchor: [size/2, size/2],
+    });
+
+    iconCache[cacheKey] = icon;
+    return icon;
+  } catch (error) {
+    console.error('Error creating provider icon:', error, { provider, isSelected });
+    
+    // Return a fallback icon
+    return L.divIcon({
+      className: 'custom-marker-fallback',
+      html: `<div style="
+        width: 28px;
+        height: 28px;
+        background: #6b7280;
+        border-radius: 10px;
+        border: 3px solid white;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: 900;
-        font-size: ${fontSize};
-        letter-spacing: -0.2px;
+        font-size: 8px;
         transform: rotate(45deg);
-        transition: all 0.2s ease;
-        cursor: pointer;
-        ${isSelected ? 'animation: pulse 2s infinite;' : ''}
-      ">
-        <div style="transform: rotate(-45deg); text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${label}</div>
-      </div>
-      ${isSelected ? `
-        <style>
-          @keyframes pulse {
-            0%, 100% { transform: scale(1) rotate(45deg); }
-            50% { transform: scale(1.1) rotate(45deg); }
-          }
-        </style>
-      ` : ''}
-    `,
-    iconSize: [size, size],
-    iconAnchor: [size/2, size/2],
-  });
-
-  iconCache[cacheKey] = icon;
-  return icon;
+      "><div style="transform: rotate(-45deg);">?</div></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+    });
+  }
 };
 
 export const BusinessMap = React.memo(({
@@ -410,9 +444,12 @@ export const BusinessMap = React.memo(({
   // Error boundary for map rendering
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
-      if (event.message.includes('leaflet') || event.message.includes('map')) {
+      if (event.message.includes('leaflet') || event.message.includes('map') || event.message.includes('createIcon')) {
         console.error('Map error:', event.error);
         setMapError('Map rendering error');
+        
+        // Clear icon cache to prevent corrupted icons
+        Object.keys(iconCache).forEach(key => delete iconCache[key]);
       }
     };
 
@@ -501,48 +538,81 @@ export const BusinessMap = React.memo(({
     }
     
     return businesses.map((business) => {
-      const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
-      return (
-        <Marker
-          key={business.id}
-          position={[business.coordinates.lat, business.coordinates.lng]}
-          icon={createProviderIcon(business.provider, isSelected)}
-          eventHandlers={{
-          click: (e) => {
-            e.originalEvent.stopPropagation();
-            onBusinessSelect?.(business);
-          },
-          mouseover: (e) => {
-            // Disable hover effects for performance with large datasets
-            if (!isSelected && businesses.length < 1000) {
-              const marker = e.target;
-              const icon = marker.getIcon();
-              if (icon && icon.options && icon.options.html) {
-                const newHtml = icon.options.html.replace(
-                  /width: (\d+)px; height: (\d+)px;/,
-                  'width: 36px; height: 36px; transform: scale(1.15) rotate(45deg);'
-                );
-                const hoverIcon = L.divIcon({
-                  ...icon.options,
-                  html: newHtml,
-                  iconSize: [36, 36],
-                  iconAnchor: [18, 18],
-                });
-                marker.setIcon(hoverIcon);
+      try {
+        // Validate business data
+        if (!business || !business.id || !business.coordinates) {
+          console.warn('Invalid business data:', business);
+          return null;
+        }
+
+        const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
+        const icon = createProviderIcon(business.provider || 'Unknown', isSelected);
+        
+        if (!icon) {
+          console.warn('Failed to create icon for business:', business.id);
+          return null;
+        }
+
+        return (
+          <Marker
+            key={business.id}
+            position={[business.coordinates.lat, business.coordinates.lng]}
+            icon={icon}
+            eventHandlers={{
+            click: (e) => {
+              try {
+                e.originalEvent.stopPropagation();
+                onBusinessSelect?.(business);
+              } catch (error) {
+                console.error('Error handling marker click:', error);
               }
-            }
-          },
-          mouseout: (e) => {
-            // Reset to original size (only if not selected and not too many markers)
-            if (!isSelected && businesses.length < 1000) {
-              const marker = e.target;
-              marker.setIcon(createProviderIcon(business.provider, false));
-            }
-          },
-        }}
-      />
-    );
-    });
+            },
+            mouseover: (e) => {
+              try {
+                // Disable hover effects for performance with large datasets
+                if (!isSelected && businesses.length < 1000) {
+                  const marker = e.target;
+                  const icon = marker.getIcon();
+                  if (icon && icon.options && icon.options.html) {
+                    const newHtml = icon.options.html.replace(
+                      /width: (\d+)px; height: (\d+)px;/,
+                      'width: 36px; height: 36px; transform: scale(1.15) rotate(45deg);'
+                    );
+                    const hoverIcon = L.divIcon({
+                      ...icon.options,
+                      html: newHtml,
+                      iconSize: [36, 36],
+                      iconAnchor: [18, 18],
+                    });
+                    marker.setIcon(hoverIcon);
+                  }
+                }
+              } catch (error) {
+                console.error('Error handling marker mouseover:', error);
+              }
+            },
+            mouseout: (e) => {
+              try {
+                // Reset to original size (only if not selected and not too many markers)
+                if (!isSelected && businesses.length < 1000) {
+                  const marker = e.target;
+                  const resetIcon = createProviderIcon(business.provider || 'Unknown', false);
+                  if (resetIcon) {
+                    marker.setIcon(resetIcon);
+                  }
+                }
+              } catch (error) {
+                console.error('Error handling marker mouseout:', error);
+              }
+            },
+          }}
+        />
+      );
+      } catch (error) {
+        console.error('Error creating marker for business:', business.id, error);
+        return null;
+      }
+    }).filter(Boolean); // Remove null markers
   }, [businesses, onBusinessSelect, selectedBusinessId, selectedBusinessIds]);
 
   return (
