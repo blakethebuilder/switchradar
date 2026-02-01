@@ -294,99 +294,127 @@ interface BusinessMapProps {
   radiusKm: number;
 }
 
+// Simple fallback icon that should never fail
+const createFallbackIcon = () => {
+  return L.divIcon({
+    className: 'fallback-marker',
+    html: `<div style="
+      width: 24px;
+      height: 24px;
+      background: #6b7280;
+      border-radius: 50%;
+      border: 2px solid white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    ">?</div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  });
+};
+
 const getProviderLabel = (provider: string) => {
-  const trimmed = provider.trim();
-  if (!trimmed) return '?';
-  const words = trimmed.split(' ').filter(Boolean);
-  if (words.length === 1) return trimmed.slice(0, 3).toUpperCase();
-  return words.map(word => word[0]).join('').slice(0, 3).toUpperCase();
+  try {
+    if (!provider || typeof provider !== 'string') return '?';
+    const trimmed = provider.trim();
+    if (!trimmed) return '?';
+    const words = trimmed.split(' ').filter(Boolean);
+    if (words.length === 1) return trimmed.slice(0, 3).toUpperCase();
+    return words.map(word => word[0]).join('').slice(0, 3).toUpperCase();
+  } catch (error) {
+    console.error('Error in getProviderLabel:', error);
+    return '?';
+  }
 };
 
 const iconCache: Record<string, L.DivIcon> = {};
 
 const createProviderIcon = (provider: string, isSelected: boolean = false) => {
   try {
-    // Ensure provider is a valid string
-    if (!provider || typeof provider !== 'string') {
-      provider = 'Unknown';
+    // Always ensure we have a valid provider string
+    const safeProvider = (provider && typeof provider === 'string') ? provider.trim() : 'Unknown';
+    if (!safeProvider) {
+      console.warn('Empty provider, using fallback');
+      return createFallbackIcon();
     }
 
-    const cacheKey = `${provider}-${isSelected}`;
-    if (iconCache[cacheKey]) return iconCache[cacheKey];
-
-    const color = getProviderColor(provider) || '#6b7280'; // Default gray color
-    const label = getProviderLabel(provider) || '?';
+    const cacheKey = `${safeProvider}-${isSelected}`;
     
-    const size = isSelected ? 36 : 28;
-    const borderWidth = isSelected ? 4 : 3;
+    // Check cache first
+    if (iconCache[cacheKey]) {
+      return iconCache[cacheKey];
+    }
+
+    // Get color and label with fallbacks
+    let color;
+    let label;
+    
+    try {
+      color = getProviderColor(safeProvider);
+      if (!color || typeof color !== 'string') {
+        color = '#6b7280'; // Default gray
+      }
+    } catch (error) {
+      console.error('Error getting provider color:', error);
+      color = '#6b7280';
+    }
+
+    try {
+      label = getProviderLabel(safeProvider);
+      if (!label || typeof label !== 'string') {
+        label = '?';
+      }
+    } catch (error) {
+      console.error('Error getting provider label:', error);
+      label = '?';
+    }
+    
+    const size = isSelected ? 32 : 24;
+    const borderWidth = isSelected ? 3 : 2;
     const fontSize = isSelected ? '10px' : '8px';
-    const borderRadius = isSelected ? '14px' : '10px';
     
-    const icon = L.divIcon({
+    // Create the icon with maximum safety
+    const iconOptions = {
       className: 'custom-marker',
-      html: `
-        <div style="
-          background: linear-gradient(135deg, ${color} 0%, ${color}dd 100%);
-          width: ${size}px;
-          height: ${size}px;
-          border-radius: ${borderRadius};
-          border: ${borderWidth}px solid ${isSelected ? '#fbbf24' : 'white'};
-          box-shadow: ${isSelected ? 
-            '0 8px 25px -5px rgb(0 0 0 / 0.3), 0 4px 6px -2px rgb(0 0 0 / 0.1), 0 0 0 4px rgb(251 191 36 / 0.3)' : 
-            '0 6px 20px -5px rgb(0 0 0 / 0.2), 0 4px 6px -2px rgb(0 0 0 / 0.1)'
-          };
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: 900;
-          font-size: ${fontSize};
-          letter-spacing: -0.2px;
-          transform: rotate(45deg);
-          transition: all 0.2s ease;
-          cursor: pointer;
-          ${isSelected ? 'animation: pulse 2s infinite;' : ''}
-        ">
-          <div style="transform: rotate(-45deg); text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${label}</div>
-        </div>
-        ${isSelected ? `
-          <style>
-            @keyframes pulse {
-              0%, 100% { transform: scale(1) rotate(45deg); }
-              50% { transform: scale(1.1) rotate(45deg); }
-            }
-          </style>
-        ` : ''}
-      `,
-      iconSize: [size, size],
-      iconAnchor: [size/2, size/2],
-    });
-
-    iconCache[cacheKey] = icon;
-    return icon;
-  } catch (error) {
-    console.error('Error creating provider icon:', error, { provider, isSelected });
-    
-    // Return a fallback icon
-    return L.divIcon({
-      className: 'custom-marker-fallback',
       html: `<div style="
-        width: 28px;
-        height: 28px;
-        background: #6b7280;
-        border-radius: 10px;
-        border: 3px solid white;
+        background: ${color};
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50%;
+        border: ${borderWidth}px solid ${isSelected ? '#fbbf24' : 'white'};
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
-        font-weight: 900;
-        font-size: 8px;
-        transform: rotate(45deg);
-      "><div style="transform: rotate(-45deg);">?</div></div>`,
-      iconSize: [28, 28],
-      iconAnchor: [14, 14],
-    });
+        font-weight: bold;
+        font-size: ${fontSize};
+        cursor: pointer;
+      ">${label}</div>`,
+      iconSize: [size, size] as [number, number],
+      iconAnchor: [size/2, size/2] as [number, number],
+    };
+
+    const icon = L.divIcon(iconOptions);
+    
+    // Verify the icon was created successfully
+    if (!icon) {
+      console.error('L.divIcon returned null/undefined');
+      return createFallbackIcon();
+    }
+
+    // Cache the successful icon
+    iconCache[cacheKey] = icon;
+    return icon;
+    
+  } catch (error) {
+    console.error('Critical error in createProviderIcon:', error, { provider, isSelected });
+    // Always return a fallback icon, never null
+    return createFallbackIcon();
   }
 };
 
@@ -488,15 +516,15 @@ export const BusinessMap = React.memo(({
     );
   }
 
-  // Handle spiral navigation
-  const handleSpiralNavigation = useCallback((businesses: Business[]) => {
-    setSpiralBusinesses(businesses);
-    setCurrentSpiralIndex(0);
-    setIsSpiralMode(true);
-    if (businesses.length > 0) {
-      onBusinessSelect?.(businesses[0]);
-    }
-  }, [onBusinessSelect]);
+  // Handle spiral navigation (commented out for now to fix unused warning)
+  // const handleSpiralNavigation = useCallback((businesses: Business[]) => {
+  //   setSpiralBusinesses(businesses);
+  //   setCurrentSpiralIndex(0);
+  //   setIsSpiralMode(true);
+  //   if (businesses.length > 0) {
+  //     onBusinessSelect?.(businesses[0]);
+  //   }
+  // }, [onBusinessSelect]);
 
   const navigateSpiral = useCallback((direction: 'prev' | 'next') => {
     if (spiralBusinesses.length === 0) return;
@@ -532,87 +560,92 @@ export const BusinessMap = React.memo(({
   }), [mapInteractive]);
 
   const memoizedMarkers = React.useMemo(() => {
-    // No artificial limits - render all businesses with proper clustering
-    if (businesses.length === 0) {
+    // Return empty array if no businesses
+    if (!businesses || !Array.isArray(businesses) || businesses.length === 0) {
       return [];
     }
     
-    return businesses.map((business) => {
+    const validMarkers: React.ReactElement[] = [];
+    
+    businesses.forEach((business, index) => {
       try {
-        // Validate business data
-        if (!business || !business.id || !business.coordinates) {
-          console.warn('Invalid business data:', business);
-          return null;
+        // Extensive validation of business data
+        if (!business) {
+          console.warn(`Business at index ${index} is null/undefined`);
+          return;
         }
 
-        const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
-        const icon = createProviderIcon(business.provider || 'Unknown', isSelected);
-        
+        if (!business.id || typeof business.id !== 'string') {
+          console.warn(`Business at index ${index} has invalid id:`, business.id);
+          return;
+        }
+
+        if (!business.coordinates) {
+          console.warn(`Business ${business.id} has no coordinates`);
+          return;
+        }
+
+        if (typeof business.coordinates.lat !== 'number' || typeof business.coordinates.lng !== 'number') {
+          console.warn(`Business ${business.id} has invalid coordinates:`, business.coordinates);
+          return;
+        }
+
+        if (isNaN(business.coordinates.lat) || isNaN(business.coordinates.lng)) {
+          console.warn(`Business ${business.id} has NaN coordinates:`, business.coordinates);
+          return;
+        }
+
+        // Create icon with maximum safety
+        let icon;
+        try {
+          const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
+          icon = createProviderIcon(business.provider || 'Unknown', isSelected);
+          
+          // Double-check the icon was created
+          if (!icon) {
+            console.error(`Failed to create icon for business ${business.id}`);
+            icon = createFallbackIcon();
+          }
+        } catch (iconError) {
+          console.error(`Error creating icon for business ${business.id}:`, iconError);
+          icon = createFallbackIcon();
+        }
+
+        // Final safety check
         if (!icon) {
-          console.warn('Failed to create icon for business:', business.id);
-          return null;
+          console.error(`Still no icon for business ${business.id}, skipping marker`);
+          return;
         }
 
-        return (
+        const marker = (
           <Marker
             key={business.id}
             position={[business.coordinates.lat, business.coordinates.lng]}
             icon={icon}
             eventHandlers={{
-            click: (e) => {
-              try {
-                e.originalEvent.stopPropagation();
-                onBusinessSelect?.(business);
-              } catch (error) {
-                console.error('Error handling marker click:', error);
-              }
-            },
-            mouseover: (e) => {
-              try {
-                // Disable hover effects for performance with large datasets
-                if (!isSelected && businesses.length < 1000) {
-                  const marker = e.target;
-                  const icon = marker.getIcon();
-                  if (icon && icon.options && icon.options.html) {
-                    const newHtml = icon.options.html.replace(
-                      /width: (\d+)px; height: (\d+)px;/,
-                      'width: 36px; height: 36px; transform: scale(1.15) rotate(45deg);'
-                    );
-                    const hoverIcon = L.divIcon({
-                      ...icon.options,
-                      html: newHtml,
-                      iconSize: [36, 36],
-                      iconAnchor: [18, 18],
-                    });
-                    marker.setIcon(hoverIcon);
-                  }
+              click: (e) => {
+                try {
+                  e.originalEvent?.stopPropagation();
+                  onBusinessSelect?.(business);
+                } catch (error) {
+                  console.error('Error in marker click handler:', error);
                 }
-              } catch (error) {
-                console.error('Error handling marker mouseover:', error);
-              }
-            },
-            mouseout: (e) => {
-              try {
-                // Reset to original size (only if not selected and not too many markers)
-                if (!isSelected && businesses.length < 1000) {
-                  const marker = e.target;
-                  const resetIcon = createProviderIcon(business.provider || 'Unknown', false);
-                  if (resetIcon) {
-                    marker.setIcon(resetIcon);
-                  }
-                }
-              } catch (error) {
-                console.error('Error handling marker mouseout:', error);
-              }
-            },
-          }}
-        />
-      );
+              },
+              // Simplified event handlers to reduce complexity
+            }}
+          />
+        );
+
+        validMarkers.push(marker);
+        
       } catch (error) {
-        console.error('Error creating marker for business:', business.id, error);
-        return null;
+        console.error(`Critical error creating marker for business at index ${index}:`, error);
+        // Continue with next business instead of breaking
       }
-    }).filter(Boolean); // Remove null markers
+    });
+
+    console.log(`Created ${validMarkers.length} valid markers out of ${businesses.length} businesses`);
+    return validMarkers;
   }, [businesses, onBusinessSelect, selectedBusinessId, selectedBusinessIds]);
 
   return (
@@ -693,162 +726,44 @@ export const BusinessMap = React.memo(({
         )}
 
         <MarkerClusterGroup
-          chunkedLoading
-          spiderfyOnMaxZoom={true}
+          chunkedLoading={false}
+          spiderfyOnMaxZoom={false}
           showCoverageOnHover={false}
-          maxClusterRadius={(zoom: number) => {
-            // More aggressive clustering for better performance with large datasets
-            if (zoom <= 8) return 120;   // Country level - heavy clustering
-            if (zoom <= 10) return 100;  // Province level - heavy clustering
-            if (zoom <= 12) return 80;   // City level - moderate clustering
-            if (zoom <= 14) return 60;   // Suburb level - light clustering
-            if (zoom <= 16) return 40;   // Street level - minimal clustering
-            return 20;                   // Very close - very minimal clustering
-          }}
-          disableClusteringAtZoom={18} // Only disable at very high zoom
-          removeOutsideVisibleBounds={true}
-          spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.8 : 2.2}
-          animate={window.innerWidth >= 768}
-          animateAddingMarkers={false} // Disable for better performance
-          // Only cluster when 5 or more markers are close together
-          options={{
-            maxClusterRadius: (zoom: number) => {
-              if (zoom <= 8) return 120;
-              if (zoom <= 10) return 100;
-              if (zoom <= 12) return 80;
-              if (zoom <= 14) return 60;
-              if (zoom <= 16) return 40;
-              return 20;
-            },
-            // Minimum cluster size - only cluster if 15+ markers
-            minimumClusterSize: 15,
-            // Performance optimizations
-            chunkedLoading: true,
-            chunkInterval: 50, // Process markers in chunks
-            chunkDelay: 10     // Small delay between chunks
-          }}
+          animate={false}
+          animateAddingMarkers={false}
+          removeOutsideVisibleBounds={false}
           iconCreateFunction={(cluster: any) => {
-            const count = cluster.getChildCount();
-            
-            // Only cluster if there are 15+ markers in close proximity
-            if (count < 15) {
-              // Don't cluster - return individual markers
-              return null;
-            }
-            
-            // For larger clusters, use the full styling
-            let size = 'small';
-            let colorClass = 'bg-indigo-500';
-            let iconSize = [36, 36];
-            let textSize = 'text-sm';
-            
-            if (count >= 100) {
-              size = 'large';
-              colorClass = 'bg-rose-500';
-              iconSize = [48, 48];
-              textSize = 'text-lg';
-            } else if (count >= 50) {
-              size = 'medium';
-              colorClass = 'bg-orange-500';
-              iconSize = [42, 42];
-              textSize = 'text-base';
-            } else if (count >= 30) {
-              size = 'medium';
-              colorClass = 'bg-amber-500';
-              iconSize = [40, 40];
-              textSize = 'text-base';
-            } else if (count >= 15) {
-              size = 'small';
-              colorClass = 'bg-emerald-500';
-              iconSize = [38, 38];
-              textSize = 'text-sm';
-            } else if (count >= 15) {
-              size = 'small';
-              colorClass = 'bg-blue-500';
-              iconSize = [36, 36];
-              textSize = 'text-sm';
-            }
-            
-            const sizeClass = size === 'large' ? 'w-12 h-12' : 
-                             size === 'medium' ? 'w-10 h-10' : 'w-9 h-9';
-            
-            return L.divIcon({
-              html: `<div class="flex items-center justify-center ${sizeClass} ${colorClass} text-white font-bold rounded-full border-3 border-white shadow-xl hover:scale-110 transition-transform cursor-pointer ${textSize}">${count}</div>`,
-              className: 'custom-cluster-icon',
-              iconSize: iconSize as [number, number],
-              iconAnchor: [iconSize[0]/2, iconSize[1]/2] as [number, number]
-            });
-          }}
-          spiderfyShapePositions={(count: number, centerPt: any) => {
-            // Enhanced spiral algorithm with more stretch
-            let distanceFromCenter;
-            let spiralTurns = 1;
-            
-            if (count <= 3) {
-              // Very small clusters: tight circle
-              distanceFromCenter = 50;
-            } else if (count <= 8) {
-              // Small clusters: single ring
-              distanceFromCenter = 70;
-            } else if (count <= 15) {
-              // Medium clusters: wider ring
-              distanceFromCenter = 90;
-              spiralTurns = 1.3;
-            } else if (count <= 30) {
-              // Large clusters: spiral pattern
-              distanceFromCenter = 110;
-              spiralTurns = 1.8;
-            } else if (count <= 50) {
-              // Very large clusters: extended spiral
-              distanceFromCenter = 130;
-              spiralTurns = 2.2;
-            } else {
-              // Massive clusters: full spiral
-              distanceFromCenter = 150;
-              spiralTurns = 2.8;
-            }
-            
-            return Array.from({ length: count }, (_, i) => {
-              // Create spiral pattern with better distribution
-              const angle = (i / count) * (2 * Math.PI * spiralTurns);
-              const radius = distanceFromCenter * (0.4 + 0.6 * (i / count));
-              
-              return [
-                centerPt.x + radius * Math.cos(angle),
-                centerPt.y + radius * Math.sin(angle)
-              ];
-            });
-          }}
-          polygonOptions={{
-            fillColor: '#6366f1',
-            color: '#6366f1',
-            weight: 2,
-            opacity: 0.8,
-            fillOpacity: 0.15
-          }}
-          eventHandlers={{
-            spiderfied: (e: any) => {
-              // When cluster opens, get the businesses and set up navigation
-              const cluster = e.target;
-              const markers = cluster.getAllChildMarkers();
-              const clusterBusinesses = markers.map((marker: any) => {
-                return businesses.find(b => 
-                  b.coordinates.lat === marker.getLatLng().lat && 
-                  b.coordinates.lng === marker.getLatLng().lng
-                );
-              }).filter(Boolean);
-              
-              if (clusterBusinesses.length > 0) {
-                handleSpiralNavigation(clusterBusinesses);
-              }
-            },
-            unspiderfied: () => {
-              // Don't exit spiral mode when unspiderfied - let user navigate
-              // exitSpiralMode();
+            try {
+              const count = cluster.getChildCount();
+              return L.divIcon({
+                html: `<div style="
+                  background: #3b82f6;
+                  color: white;
+                  border-radius: 50%;
+                  width: 40px;
+                  height: 40px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-weight: bold;
+                  border: 3px solid white;
+                  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                ">${count}</div>`,
+                className: 'simple-cluster-icon',
+                iconSize: [40, 40],
+                iconAnchor: [20, 20]
+              });
+            } catch (error) {
+              console.error('Cluster icon error:', error);
+              return L.divIcon({
+                html: '<div style="background: #6b7280; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">•</div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+              });
             }
           }}
         >
-          {memoizedMarkers}
+          {memoizedMarkers.length > 0 ? memoizedMarkers : []}
         </MarkerClusterGroup>
       </MapContainer>
 
