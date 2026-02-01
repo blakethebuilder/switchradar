@@ -1,4 +1,5 @@
-import { Component, type ReactNode } from 'react';
+import { Component } from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 
 interface Props {
   children: ReactNode;
@@ -7,224 +8,57 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error: Error | null;
-  errorInfo: any;
-  isInFallbackMode: boolean;
+  error?: Error;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  private errorHistory: Array<{ error: Error; timestamp: Date; context: string }> = [];
-
-  constructor(props: Props) {
-    super(props);
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      isInFallbackMode: false
-    };
-  }
-
-  static getDerivedStateFromError(error: Error): Partial<State> {
-    return {
-      hasError: true,
-      error
-    };
-  }
-
-  componentDidCatch(error: Error, errorInfo: any) {
-    this.setState({
-      error,
-      errorInfo
-    });
-
-    // Log error for debugging
-    this.logError(error, 'React Error Boundary', errorInfo);
-
-    // Handle different types of errors
-    this.handleError(error);
-  }
-
-  private logError(error: Error, context: string, details?: any) {
-    const errorRecord = {
-      error,
-      timestamp: new Date(),
-      context
-    };
-
-    this.errorHistory.push(errorRecord);
-
-    // Keep only last 10 errors
-    if (this.errorHistory.length > 10) {
-      this.errorHistory.shift();
-    }
-
-    console.error(`[ErrorBoundary] ${context}:`, error);
-    if (details) {
-      console.error('Error details:', details);
-    }
-  }
-
-  private handleError(error: Error) {
-    const errorMessage = error.message.toLowerCase();
-
-    // Handle sync-related errors
-    if (errorMessage.includes('sync') || errorMessage.includes('network') || errorMessage.includes('fetch')) {
-      this.handleSyncError(error);
-    }
-    // Handle API-related errors
-    else if (errorMessage.includes('api') || errorMessage.includes('endpoint')) {
-      this.handleAPIError(error);
-    }
-    // Handle other errors
-    else {
-      this.enableLocalOnlyMode();
-    }
-  }
-
-  private handleSyncError(error: Error) {
-    console.warn('Sync error detected, enabling offline mode:', error.message);
-    console.log('Cloud sync disabled due to error');
-    this.enableLocalOnlyMode();
-  }
-
-  private handleAPIError(error: Error) {
-    console.warn('API error detected, falling back to local mode:', error.message);
-    this.enableLocalOnlyMode();
-  }
-
-  private enableLocalOnlyMode() {
-    this.setState({ isInFallbackMode: true });
-    
-    // Notify user about fallback mode
-    const event = new CustomEvent('localOnlyMode', {
-      detail: {
-        reason: this.state.error?.message || 'Unknown error',
-        timestamp: new Date()
-      }
-    });
-    window.dispatchEvent(event);
-  }
-
-  private attemptRecovery = async () => {
-    try {
-      // Clear error state
-      this.setState({
-        hasError: false,
-        error: null,
-        errorInfo: null,
-        isInFallbackMode: false
-      });
-
-      // Try to restore cloud sync if possible
-      if (navigator.onLine) {
-        console.log('Attempting to restore cloud sync connection');
-      }
-
-      console.log('Recovery attempt completed');
-    } catch (error) {
-      console.error('Recovery failed:', error);
-      this.enableLocalOnlyMode();
-    }
+  public state: State = {
+    hasError: false
   };
 
-  public isInFallbackMode(): boolean {
-    return this.state.isInFallbackMode;
+  public static getDerivedStateFromError(error: Error): State {
+    return { hasError: true, error };
   }
 
-  public getErrorHistory() {
-    return [...this.errorHistory];
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
-  render() {
+  public render() {
     if (this.state.hasError) {
-      // Custom fallback UI
       if (this.props.fallback) {
         return this.props.fallback;
       }
 
-      // Default fallback UI
       return (
-        <div className="error-boundary-fallback" style={{
-          padding: '20px',
-          margin: '20px',
-          border: '1px solid #ff6b6b',
-          borderRadius: '8px',
-          backgroundColor: '#fff5f5'
-        }}>
-          <h2 style={{ color: '#c92a2a', marginBottom: '16px' }}>
-            Something went wrong
-          </h2>
-          
-          <div style={{ marginBottom: '16px' }}>
-            <p style={{ color: '#495057', marginBottom: '8px' }}>
-              The application encountered an error but your data is safe. 
-              You can continue working in local-only mode.
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full text-center">
+            <div className="text-red-500 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-slate-900 mb-2">Something went wrong</h2>
+            <p className="text-slate-600 mb-4">
+              The application encountered an error. Please try refreshing the page.
             </p>
-            
-            {this.state.isInFallbackMode && (
-              <div style={{
-                padding: '12px',
-                backgroundColor: '#fff3cd',
-                border: '1px solid #ffeaa7',
-                borderRadius: '4px',
-                marginBottom: '12px'
-              }}>
-                <strong>Local-Only Mode Active</strong>
-                <br />
-                Cloud sync is temporarily disabled. Your data will be saved locally.
-              </div>
-            )}
+            <div className="space-y-2">
+              <button
+                onClick={() => window.location.reload()}
+                className="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Refresh Page
+              </button>
+              <details className="text-left">
+                <summary className="text-sm text-slate-500 cursor-pointer hover:text-slate-700">
+                  Error Details
+                </summary>
+                <pre className="text-xs text-slate-600 mt-2 p-2 bg-slate-100 rounded overflow-auto">
+                  {this.state.error?.message}
+                </pre>
+              </details>
+            </div>
           </div>
-
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button
-              onClick={this.attemptRecovery}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#51cf66',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Try Recovery
-            </button>
-            
-            <button
-              onClick={() => window.location.reload()}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#868e96',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
-              Reload Page
-            </button>
-          </div>
-
-          {import.meta.env.DEV && (
-            <details style={{ marginTop: '16px' }}>
-              <summary style={{ cursor: 'pointer', color: '#868e96' }}>
-                Error Details (Development)
-              </summary>
-              <pre style={{
-                marginTop: '8px',
-                padding: '12px',
-                backgroundColor: '#f8f9fa',
-                border: '1px solid #dee2e6',
-                borderRadius: '4px',
-                fontSize: '12px',
-                overflow: 'auto'
-              }}>
-                {this.state.error?.stack}
-              </pre>
-            </details>
-          )}
         </div>
       );
     }

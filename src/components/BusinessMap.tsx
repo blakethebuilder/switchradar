@@ -377,15 +377,79 @@ export const BusinessMap = React.memo(({
   const [isSpiralMode, setIsSpiralMode] = useState(false);
   const [showShiftDragModal, setShowShiftDragModal] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const [mapError, setMapError] = useState<string | null>(null);
+  const [isMapLoading, setIsMapLoading] = useState(true);
 
   // Handle map invalidation when fullScreen changes
   useEffect(() => {
     if (mapInstance && fullScreen) {
       setTimeout(() => {
-        mapInstance.invalidateSize();
+        try {
+          mapInstance.invalidateSize();
+          setIsMapLoading(false);
+        } catch (error) {
+          console.error('Error invalidating map size:', error);
+          setMapError('Map resize failed');
+        }
       }, 100);
     }
   }, [mapInstance, fullScreen]);
+
+  // Handle map ready
+  const handleMapReady = useCallback((map: L.Map) => {
+    try {
+      setMapInstance(map);
+      setIsMapLoading(false);
+      setMapError(null);
+    } catch (error) {
+      console.error('Error setting up map:', error);
+      setMapError('Map initialization failed');
+    }
+  }, []);
+
+  // Error boundary for map rendering
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      if (event.message.includes('leaflet') || event.message.includes('map')) {
+        console.error('Map error:', event.error);
+        setMapError('Map rendering error');
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  // Show error state if map fails to load
+  if (mapError) {
+    return (
+      <div className={`relative group transition-all duration-700 ${fullScreen
+        ? 'h-full w-full bg-slate-100'
+        : 'rounded-[2.5rem] border-[12px] border-white bg-white shadow-2xl shadow-indigo-100 overflow-hidden min-h-[600px] h-[700px]'
+        }`}>
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center p-8">
+            <div className="text-red-500 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 18.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">Map Error</h3>
+            <p className="text-slate-600 mb-4">{mapError}</p>
+            <button
+              onClick={() => {
+                setMapError(null);
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              Reload Map
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Handle spiral navigation
   const handleSpiralNavigation = useCallback((businesses: Business[]) => {
@@ -432,6 +496,10 @@ export const BusinessMap = React.memo(({
 
   const memoizedMarkers = React.useMemo(() => {
     // No artificial limits - render all businesses with proper clustering
+    if (businesses.length === 0) {
+      return [];
+    }
+    
     return businesses.map((business) => {
       const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
       return (
@@ -482,6 +550,17 @@ export const BusinessMap = React.memo(({
       ? 'h-full w-full bg-slate-100'
       : 'rounded-[2.5rem] border-[12px] border-white bg-white shadow-2xl shadow-indigo-100 overflow-hidden min-h-[600px] h-[700px]'
       }`}>
+      
+      {/* Loading overlay */}
+      {isMapLoading && (
+        <div className="absolute inset-0 z-[3000] bg-slate-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <p className="text-slate-600 font-medium">Loading map...</p>
+          </div>
+        </div>
+      )}
+
       <MapContainer
         center={[-29.0000, 24.0000]}
         zoom={6}
@@ -507,7 +586,7 @@ export const BusinessMap = React.memo(({
           setIsDropMode={setIsDropMode}
           onMultiSelect={onMultiSelect}
           setShowShiftDragModal={setShowShiftDragModal}
-          onMapReady={setMapInstance}
+          onMapReady={handleMapReady}
           selectedBusinessIds={selectedBusinessIds}
         />
         <TileLayer

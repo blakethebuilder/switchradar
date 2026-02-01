@@ -10,6 +10,7 @@ import { ImportMappingModal } from './components/ImportMappingModal';
 import { TopNav } from './components/TopNav';
 import { LoginModal } from './components/LoginModal';
 import { ClientDetailsToolbar } from './components/ClientDetailsToolbar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { RouteView } from './components/RouteView';
 import { DbSettingsPage } from './components/DbSettingsPage';
 import { ManualSyncPanel } from './components/ManualSyncPanel';
@@ -480,25 +481,26 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 flex flex-col relative overflow-hidden">
-      <TopNav
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        onImportClick={openImportModal}
-        onExportClick={handleExport}
-        onClearData={handleClearAll}
-        totalCount={businesses.length}
-        lastImportName={lastImportName}
-        isSyncing={false}
-        onLoginClick={() => setIsLoginOpen(true)}
-        onClearCloudData={async () => {}}
-        onPushToCloud={() => {}}
-        onPullFromCloud={() => {}}
-      />
-      
-      <main className="flex-1 flex flex-col overflow-hidden relative">
-        {businesses.length > 0 ? (
-          <div className="flex-1 flex flex-col h-full relative">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-indigo-100 selection:text-indigo-900 flex flex-col relative overflow-hidden">
+        <TopNav
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          onImportClick={openImportModal}
+          onExportClick={handleExport}
+          onClearData={handleClearAll}
+          totalCount={businesses.length}
+          lastImportName={lastImportName}
+          isSyncing={false}
+          onLoginClick={() => setIsLoginOpen(true)}
+          onClearCloudData={async () => {}}
+          onPushToCloud={() => {}}
+          onPullFromCloud={() => {}}
+        />
+        
+        <main className="flex-1 flex flex-col overflow-hidden relative">
+          {businesses.length > 0 ? (
+            <div className="flex-1 flex flex-col h-full relative">
             {(viewMode === 'table' || viewMode === 'stats') && (
               <div className="p-4 md:p-6 lg:p-8 pb-0">
                 <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-8">
@@ -754,6 +756,7 @@ function App() {
       <ImportMappingModal isOpen={isMappingOpen} columns={importColumns} initialMapping={{}} onConfirm={handleConfirmMapping} onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }} />
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => {}} />
     </div>
+    </ErrorBoundary>
   );
 }
 
