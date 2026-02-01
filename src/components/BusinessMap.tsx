@@ -22,6 +22,7 @@ function MapController({
   droppedPin,
   onMultiSelect,
   setShowShiftDragModal,
+  onMapReady,
   // @ts-ignore - selectedBusinessIds is used in memoizedMarkers
   selectedBusinessIds = []
 }: { 
@@ -34,6 +35,7 @@ function MapController({
   droppedPin: { lat: number, lng: number } | null,
   onMultiSelect?: (businesses: Business[]) => void,
   setShowShiftDragModal: Dispatch<SetStateAction<boolean>>,
+  onMapReady?: (map: L.Map) => void,
   selectedBusinessIds?: string[]
 }) {
   const map = useMap();
@@ -41,6 +43,13 @@ function MapController({
   const [dragStart, setDragStart] = useState<{x: number, y: number} | null>(null);
   const [dragEnd, setDragEnd] = useState<{x: number, y: number} | null>(null);
   const [selectionBox, setSelectionBox] = useState<HTMLDivElement | null>(null);
+
+  // Notify parent component when map is ready
+  useEffect(() => {
+    if (map && onMapReady) {
+      onMapReady(map);
+    }
+  }, [map, onMapReady]);
 
 
 
@@ -367,6 +376,16 @@ export const BusinessMap = React.memo(({
   const [currentSpiralIndex, setCurrentSpiralIndex] = useState(0);
   const [isSpiralMode, setIsSpiralMode] = useState(false);
   const [showShiftDragModal, setShowShiftDragModal] = useState(false);
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+
+  // Handle map invalidation when fullScreen changes
+  useEffect(() => {
+    if (mapInstance && fullScreen) {
+      setTimeout(() => {
+        mapInstance.invalidateSize();
+      }, 100);
+    }
+  }, [mapInstance, fullScreen]);
 
   // Handle spiral navigation
   const handleSpiralNavigation = useCallback((businesses: Business[]) => {
@@ -488,6 +507,7 @@ export const BusinessMap = React.memo(({
           setIsDropMode={setIsDropMode}
           onMultiSelect={onMultiSelect}
           setShowShiftDragModal={setShowShiftDragModal}
+          onMapReady={setMapInstance}
           selectedBusinessIds={selectedBusinessIds}
         />
         <TileLayer

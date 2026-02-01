@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { Plus, X, Target } from 'lucide-react';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
@@ -61,6 +61,16 @@ function App() {
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
 
   const { isAuthenticated } = useAuth();
+
+  // Force map re-render when switching to map view
+  useEffect(() => {
+    if (viewMode === 'map') {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+      }, 100);
+    }
+  }, [viewMode]);
 
   const handleUpdateBusiness = async (id: string, updates: Partial<Business>) => {
     await db.businesses.update(id, updates);
@@ -592,7 +602,7 @@ function App() {
             )}
 
             {viewMode === 'map' && (
-              <div className="fixed inset-0 top-16 w-full h-full bg-slate-100 z-10">
+              <div className="absolute inset-0 w-full h-full">
                 <div className="absolute top-4 left-0 right-0 z-[2000] px-4">
                   <div className="max-w-4xl mx-auto">
                     <WorkspaceFilters
@@ -670,21 +680,20 @@ function App() {
                   </div>
                 )}
 
-                <div className="w-full h-full">
-                  <BusinessMap
-                    businesses={filteredBusinesses}
-                    targetLocation={mapTarget?.center}
-                    zoom={mapTarget?.zoom}
-                    fullScreen={true}
-                    onBusinessSelect={handleSelectBusinessOnMap}
-                    onMultiSelect={handleMultiSelect}
-                    selectedBusinessId={selectedBusiness?.id}
-                    selectedBusinessIds={selectedBusinessIds}
-                    droppedPin={droppedPin}
-                    setDroppedPin={setDroppedPin}
-                    radiusKm={radiusKm}
-                  />
-                </div>
+                <BusinessMap
+                  key={`map-${viewMode}-${filteredBusinesses.length}`}
+                  businesses={filteredBusinesses}
+                  targetLocation={mapTarget?.center}
+                  zoom={mapTarget?.zoom}
+                  fullScreen={true}
+                  onBusinessSelect={handleSelectBusinessOnMap}
+                  onMultiSelect={handleMultiSelect}
+                  selectedBusinessId={selectedBusiness?.id}
+                  selectedBusinessIds={selectedBusinessIds}
+                  droppedPin={droppedPin}
+                  setDroppedPin={setDroppedPin}
+                  radiusKm={radiusKm}
+                />
               </div>
             )}
 
