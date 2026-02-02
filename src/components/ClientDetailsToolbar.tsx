@@ -178,10 +178,10 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
     <>
       {/* Bottom Toolbar */}
       <div className="fixed bottom-0 left-0 right-0 z-[1000] bg-white border-t border-slate-200 shadow-2xl">
-        {/* Collapsed State - Business Info Bar */}
+        {/* Collapsed State - Business Info Bar - Improved Layout */}
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            {/* Business Info - Redesigned Layout */}
+            {/* Business Info - Better Organization */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
@@ -190,33 +190,36 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
               </div>
               
               <div className="flex-1 min-w-0">
+                {/* Line 1: Business Name + Notes Badge */}
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="font-bold text-slate-900 truncate text-sm">
                     {business.name}
                   </h3>
                   {business.richNotes && business.richNotes.length > 0 && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
-                      {business.richNotes.length} notes
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 flex-shrink-0">
+                      {business.richNotes.length}
                     </span>
                   )}
                 </div>
                 
-                <div className="flex items-center gap-2 text-xs text-slate-600">
-                  <ProviderBadge provider={business.provider} className="scale-75 origin-left" />
-                  <span className="text-slate-400">•</span>
-                  <span className="truncate">{business.category}</span>
+                {/* Line 2: Category */}
+                <div className="text-xs text-slate-600 font-medium mb-1 truncate">
+                  {business.category}
                 </div>
                 
-                <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                {/* Line 3: Provider + Phone + Location */}
+                <div className="flex items-center gap-2 text-xs">
+                  <ProviderBadge provider={business.provider} className="scale-75 origin-left flex-shrink-0" />
                   {business.phone && (
                     <>
-                      <Phone className="w-3 h-3" />
-                      <span className="font-medium">{business.phone}</span>
                       <span className="text-slate-400">•</span>
+                      <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                      <span className="text-slate-600 font-medium">{business.phone}</span>
                     </>
                   )}
-                  <MapPin className="w-3 h-3" />
-                  <span className="truncate">{business.town}</span>
+                  <span className="text-slate-400">•</span>
+                  <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                  <span className="text-slate-500 truncate">{business.town}</span>
                 </div>
               </div>
             </div>

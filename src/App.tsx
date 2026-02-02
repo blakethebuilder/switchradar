@@ -749,7 +749,15 @@ function App() {
 
             {viewMode === 'seen' && (
               <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
-                <SeenClients businesses={businesses} />
+                <SeenClients 
+                  businesses={businesses} 
+                  onDeleteBusiness={handleDeleteBusiness}
+                  onViewOnMap={(business) => {
+                    setSelectedBusiness(business);
+                    setViewMode('map');
+                    setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
+                  }}
+                />
               </div>
             )}
           </div>

@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Download, Eye, Calendar, MessageSquare, Phone, Mail, MapPin, Search, X, FileText } from 'lucide-react';
+import { Download, Eye, Calendar, MessageSquare, Phone, Mail, MapPin, Search, X, FileText, Trash2, ExternalLink, Map } from 'lucide-react';
 import type { Business } from '../types';
 import { ProviderBadge } from './ProviderBadge';
 
 interface SeenClientsProps {
   businesses: Business[];
+  onDeleteBusiness?: (id: string) => void;
+  onViewOnMap?: (business: Business) => void;
 }
 
 const NOTE_CATEGORIES = [
@@ -16,7 +18,7 @@ const NOTE_CATEGORIES = [
   { value: 'general', label: 'General', icon: FileText, color: 'text-slate-600', bg: 'bg-slate-50' },
 ] as const;
 
-export const SeenClients: React.FC<SeenClientsProps> = ({ businesses }) => {
+export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBusiness, onViewOnMap }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'notes'>('recent');
@@ -340,10 +342,74 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses }) => {
 
                   {/* All Notes */}
                   <div className="lg:w-80">
-                    <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                      <MessageSquare className="h-4 w-4" />
-                      All Notes ({business.richNotes?.length || 0})
-                    </h4>
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <MessageSquare className="h-4 w-4" />
+                        All Notes ({business.richNotes?.length || 0})
+                      </h4>
+                      
+                      {/* Action Buttons */}
+                      <div className="flex items-center gap-1">
+                        {/* Call Button */}
+                        {business.phone && (
+                          <a
+                            href={`tel:${business.phone}`}
+                            className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                            title="Call"
+                          >
+                            <Phone className="w-3 h-3" />
+                          </a>
+                        )}
+
+                        {/* Email Button */}
+                        {business.email && (
+                          <a
+                            href={`mailto:${business.email}`}
+                            className="p-1.5 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 transition-colors"
+                            title="Send Email"
+                          >
+                            <Mail className="w-3 h-3" />
+                          </a>
+                        )}
+
+                        {/* Google Maps Button */}
+                        <a
+                          href={business.mapsLink || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address + ', ' + business.town + ', ' + business.province)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                          title="Open in Google Maps"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+
+                        {/* View on Map Button */}
+                        {onViewOnMap && (
+                          <button
+                            onClick={() => onViewOnMap(business)}
+                            className="p-1.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                            title="View on Map"
+                          >
+                            <Map className="w-3 h-3" />
+                          </button>
+                        )}
+
+                        {/* Delete Button */}
+                        {onDeleteBusiness && (
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Delete ${business.name}? This will remove the business and all its notes permanently.`)) {
+                                onDeleteBusiness(business.id);
+                              }
+                            }}
+                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            title="Delete Business"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {business.richNotes?.map(note => {
                         const category = NOTE_CATEGORIES.find(cat => cat.value === note.category);

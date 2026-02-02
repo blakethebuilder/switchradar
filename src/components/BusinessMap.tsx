@@ -174,8 +174,8 @@ function MapController({
     <>
       {/* Combined Map Info & Controls */}
       <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-3">
-        {/* Map Info Panel */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 p-4 min-w-[200px]">
+        {/* Map Info Panel - Reduced Width */}
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 p-3 min-w-[160px]">
           <div className="flex items-center gap-2 mb-2">
             <Info className="h-4 w-4 text-indigo-600" />
             <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">Map Info</span>
@@ -212,23 +212,23 @@ function MapController({
           </div>
         </div>
 
-        {/* Modern Map Controls */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 overflow-hidden">
+        {/* Modern Map Controls - Reduced Width */}
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 overflow-hidden w-12">
           {/* Zoom Controls */}
           <div className="flex flex-col">
             <button
               onClick={() => map.zoomIn()}
-              className="p-3 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50"
+              className="p-2 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50"
               title="Zoom In"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-4 w-4" />
             </button>
             <button
               onClick={() => map.zoomOut()}
-              className="p-3 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50"
+              className="p-2 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50"
               title="Zoom Out"
             >
-              <Minus className="h-5 w-5" />
+              <Minus className="h-4 w-4" />
             </button>
           </div>
           
@@ -241,10 +241,10 @@ function MapController({
                   map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
                 }
               }}
-              className="p-3 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-200 border-b border-slate-100/50"
+              className="p-2 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-200 border-b border-slate-100/50"
               title="Fit All Businesses"
             >
-              <Target className="h-5 w-5" />
+              <Target className="h-4 w-4" />
             </button>
             <button
               onClick={() => {
@@ -256,14 +256,14 @@ function MapController({
                   map.getContainer().focus();
                 }
               }}
-              className={`p-3 transition-all duration-200 ${
+              className={`p-2 transition-all duration-200 ${
                 isDropMode 
                   ? 'bg-rose-500 text-white hover:bg-rose-600' 
                   : 'text-slate-600 hover:bg-rose-50 hover:text-rose-600'
               }`}
               title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin (500m radius)'}
             >
-              {isDropMode ? <X className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+              {isDropMode ? <X className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
             </button>
           </div>
         </div>
