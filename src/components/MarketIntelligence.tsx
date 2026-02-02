@@ -189,7 +189,11 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                                         axisLine={false}
                                         tickLine={false}
                                         tick={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }}
-                                        width={140}
+                                        width={160}
+                                        tickFormatter={(value) => {
+                                            // Ensure the provider name is displayed properly
+                                            return value || 'Unknown';
+                                        }}
                                     />
                                     <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
                                     <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={12}>
@@ -232,7 +236,7 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: getProviderColor(network.name) }} />
-                                            <span className="text-xs font-bold text-slate-900 uppercase tracking-tight truncate max-w-[80px] group-hover:text-indigo-600 transition-colors" style={{ color: network.name.toLowerCase().includes('telkom') ? '#1e293b' : undefined }}>{network.name}</span>
+                                            <span className="text-xs font-bold text-slate-900 uppercase tracking-tight truncate max-w-[80px] group-hover:text-indigo-600 transition-colors">{network.name}</span>
                                         </div>
                                         <span className="text-lg font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{network.pct}%</span>
                                     </div>
