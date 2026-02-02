@@ -173,7 +173,7 @@ function MapController({
   return (
     <>
       {/* Combined Map Info & Controls - Absolute Right Edge */}
-      <div className="absolute top-4 right-0 z-[1000] flex flex-row gap-0">
+      <div className="absolute top-4 right-0 z-[1000] flex flex-col gap-1 md:gap-2">
         {/* Map Info Panel - Compact Mobile */}
         <div className="bg-white/95 backdrop-blur-md rounded-l-xl shadow-xl border-l border-t border-b border-white/40 p-1.5 md:p-3 min-w-[100px] md:min-w-[160px]">
           <div className="flex items-center gap-1 mb-1 md:mb-2">
@@ -192,7 +192,7 @@ function MapController({
             <div className="flex justify-between items-center">
               <span className="text-[8px] md:text-xs text-slate-500">View:</span>
               <span className="text-[8px] md:text-xs font-bold text-indigo-600">
-                {currentZoom >= 15.5 ? 'Scattered' : currentZoom >= 14 ? 'Spirals' : 'Clustered'}
+                {currentZoom >= 19 ? 'Ultra Close' : currentZoom >= 15.5 ? 'Scattered' : currentZoom >= 14 ? 'Spirals' : 'Clustered'}
               </span>
             </div>
             {droppedPin && (
@@ -212,8 +212,8 @@ function MapController({
           </div>
         </div>
 
-        {/* Modern Map Controls - Flush Right Edge */}
-        <div className="bg-white/95 backdrop-blur-md shadow-xl border-t border-b border-r border-white/40 overflow-hidden w-8 md:w-12 flex flex-col">
+        {/* Modern Map Controls - Below Info, Right Aligned */}
+        <div className="bg-white/95 backdrop-blur-md shadow-xl border-t border-b border-r border-white/40 overflow-hidden w-8 md:w-12 ml-auto flex flex-col">
           {/* Zoom Controls */}
           <div className="flex flex-col">
             <button
@@ -733,7 +733,7 @@ export const BusinessMap = React.memo(({
         worldCopyJump={true}
         maxBounds={[[-35, 16], [-22, 33]]} // Rough bounds for South Africa
         minZoom={5}
-        maxZoom={19}
+        maxZoom={22} // Increased max zoom to prevent map breaking
         zoomSnap={0.5}
         zoomDelta={0.5}
         wheelPxPerZoomLevel={120}
@@ -793,9 +793,14 @@ export const BusinessMap = React.memo(({
           animate={false}
           animateAddingMarkers={false}
           removeOutsideVisibleBounds={false}
-          disableClusteringAtZoom={16} // Scatter at zoom 15.5+ (rounds to 16)
-          maxClusterRadius={80} // Reasonable clustering distance
-          spiderfyDistanceMultiplier={0.8} // Tighter spiral spacing
+          disableClusteringAtZoom={25} // Allow clustering at all zoom levels
+          maxClusterRadius={(zoom: number) => {
+            // Dynamic clustering - tighter at higher zoom levels
+            if (zoom >= 19) return 15; // Very tight clustering for overlapping markers
+            if (zoom >= 15) return 30; // Medium clustering
+            return 80; // Default clustering
+          }}
+          spiderfyDistanceMultiplier={0.6} // Tighter spiral spacing
           spiderfyOnEveryZoom={true}
           iconCreateFunction={(cluster: any) => {
             try {
