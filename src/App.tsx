@@ -23,6 +23,7 @@ const RouteView = lazy(() => import('./components/RouteView'));
 const DbSettingsPage = lazy(() => import('./components/DbSettingsPage'));
 const ManualSyncPanel = lazy(() => import('./components/ManualSyncPanel'));
 const SeenClients = lazy(() => import('./components/SeenClients'));
+const PresentationView = lazy(() => import('./components/PresentationView'));
 
 // Loading component for lazy-loaded components
 const LoadingSpinner = () => (
@@ -779,6 +780,16 @@ function App() {
                       setViewMode('map');
                       setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
                     }}
+                  />
+                </Suspense>
+              </div>
+            )}
+
+            {viewMode === 'present' && (
+              <div className="flex-1 h-full">
+                <Suspense fallback={<LoadingSpinner />}>
+                  <PresentationView 
+                    onBack={() => setViewMode('map')}
                   />
                 </Suspense>
               </div>

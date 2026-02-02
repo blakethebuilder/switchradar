@@ -45,7 +45,7 @@ export interface Business {
   mapsLink?: string;
 }
 
-export type ViewMode = 'table' | 'map' | 'stats' | 'settings' | 'route' | 'seen';
+export type ViewMode = 'table' | 'map' | 'stats' | 'settings' | 'route' | 'seen' | 'present';
 
 export interface FilterState {
   searchTerm: string;

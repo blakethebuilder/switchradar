@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, User as UserIcon, LogOut, Menu, X, Route, Settings, Eye } from 'lucide-react';
+import { Database, Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, User as UserIcon, LogOut, Menu, X, Route, Settings, Eye, Presentation } from 'lucide-react';
 import type { ViewMode } from '../types';
 import { useAuth } from '../context/AuthContext';
 
@@ -156,6 +156,15 @@ export const TopNav = ({
                 </button>
                 {isUserMenuOpen && (
                   <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-10 animate-in fade-in zoom-in-95">
+                    {/* Present */}
+                    <button
+                      onClick={() => { onViewModeChange('present'); setIsUserMenuOpen(false); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors text-sm font-bold"
+                    >
+                      <Presentation className="h-4 w-4" />
+                      <span>Present</span>
+                    </button>
+                    
                     {/* Settings */}
                     <button
                       onClick={() => { onViewModeChange('settings'); setIsUserMenuOpen(false); }}
@@ -210,7 +219,14 @@ export const TopNav = ({
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Local Mode</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => { onViewModeChange('present'); setIsMenuOpen(false); }}
+                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 text-xs font-bold"
+                >
+                  <Presentation className="h-4 w-4" />
+                  Present
+                </button>
                 <button
                   onClick={() => { onViewModeChange('settings'); setIsMenuOpen(false); }}
                   className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 text-xs font-bold"
