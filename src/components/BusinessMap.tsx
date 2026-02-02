@@ -175,7 +175,7 @@ function MapController({
       {/* Combined Map Info & Controls - Absolute Right Edge */}
       <div className="absolute top-4 right-0 z-[1000] flex flex-col gap-1 md:gap-2">
         {/* Map Info Panel - Compact Mobile */}
-        <div className="bg-white/95 backdrop-blur-md rounded-l-xl md:rounded-2xl shadow-xl border border-white/40 p-1.5 md:p-3 min-w-[100px] md:min-w-[160px]">
+        <div className="bg-white/95 backdrop-blur-md rounded-l-xl shadow-xl border-l border-t border-b border-white/40 p-1.5 md:p-3 min-w-[100px] md:min-w-[160px]">
           <div className="flex items-center gap-1 mb-1 md:mb-2">
             <Info className="h-2.5 w-2.5 md:h-4 md:w-4 text-indigo-600" />
             <span className="text-[8px] md:text-xs font-bold text-slate-600 uppercase tracking-wider">Info</span>
@@ -213,7 +213,7 @@ function MapController({
         </div>
 
         {/* Modern Map Controls - Absolute Right Edge */}
-        <div className="bg-white/95 backdrop-blur-md rounded-l-xl md:rounded-2xl shadow-xl border border-white/40 overflow-hidden w-8 md:w-12">
+        <div className="bg-white/95 backdrop-blur-md rounded-l-xl shadow-xl border-l border-t border-b border-white/40 overflow-hidden w-8 md:w-12">
           {/* Zoom Controls */}
           <div className="flex flex-col">
             <button
