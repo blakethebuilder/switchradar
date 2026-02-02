@@ -47,7 +47,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                 setIsRegister(false);
                 setError('Account created! Please login.');
             } else {
-                login(data.token, { id: data.userId, username: data.username });
+                login(data.token, { 
+                    id: data.userId, 
+                    username: data.username,
+                    role: data.role || 'user',
+                    createdAt: data.createdAt || new Date().toISOString(),
+                    email: data.email
+                });
                 onLoginSuccess();
                 onClose();
             }

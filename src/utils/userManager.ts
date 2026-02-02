@@ -78,7 +78,7 @@ export class UserManager {
     return users.find(u => u.username === username) || null;
   }
 
-  static authenticateUser(username: string, password: string): User | null {
+  static authenticateUser(username: string, _password: string): User | null {
     // Simple authentication - in real app this would be hashed
     const users = this.getUsers();
     const user = users.find(u => u.username === username && u.isActive);
