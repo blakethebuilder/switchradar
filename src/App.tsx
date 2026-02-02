@@ -38,6 +38,27 @@ function App() {
   // Initialize SuperAdmin on app startup
   useEffect(() => {
     UserManager.initializeSuperAdmin();
+    
+    // Also ensure current user blake is in the user management system
+    const currentUser = JSON.parse(localStorage.getItem('sr_user') || 'null');
+    if (currentUser && currentUser.username.toLowerCase() === 'blake') {
+      const existingBlake = UserManager.getUserByUsername('blake');
+      if (!existingBlake) {
+        try {
+          UserManager.addUser({
+            username: 'blake',
+            email: currentUser.email || 'blake@switchradar.com',
+            role: 'superAdmin'
+          });
+          console.log('Added blake to user management system');
+        } catch (error) {
+          console.log('Blake already exists in user management system');
+        }
+      } else if (existingBlake.role !== 'superAdmin') {
+        UserManager.updateUser(existingBlake.id, { role: 'superAdmin' });
+        console.log('Upgraded blake to superAdmin in user management system');
+      }
+    }
   }, []);
 
   const {

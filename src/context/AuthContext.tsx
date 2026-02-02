@@ -31,6 +31,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 parsedUser.createdAt = parsedUser.createdAt || new Date().toISOString();
                 localStorage.setItem('sr_user', JSON.stringify(parsedUser));
             }
+            // Ensure blake is always superAdmin
+            if (parsedUser.username && parsedUser.username.toLowerCase() === 'blake' && parsedUser.role !== 'superAdmin') {
+                parsedUser.role = 'superAdmin';
+                localStorage.setItem('sr_user', JSON.stringify(parsedUser));
+                console.log('Upgraded blake to superAdmin in AuthContext');
+            }
             return parsedUser;
         }
         return null;

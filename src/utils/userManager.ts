@@ -96,16 +96,24 @@ export class UserManager {
   static initializeSuperAdmin(): void {
     const users = this.getUsers();
     
-    // Check if superAdmin already exists
+    // First, ensure blake is superAdmin if he exists
+    const blakeUser = users.find(u => u.username.toLowerCase() === 'blake');
+    if (blakeUser && blakeUser.role !== 'superAdmin') {
+      blakeUser.role = 'superAdmin';
+      this.saveUsers(users);
+      console.log('Upgraded blake to superAdmin');
+    }
+    
+    // Check if any superAdmin exists
     if (users.some(u => u.role === 'superAdmin')) {
       return;
     }
 
-    // Create default superAdmin
+    // Create blake as default superAdmin if no superAdmin exists
     const superAdmin: User = {
       id: 1,
-      username: 'admin',
-      email: 'admin@switchradar.com',
+      username: 'blake',
+      email: 'blake@switchradar.com',
       role: 'superAdmin',
       createdAt: new Date().toISOString(),
       isActive: true
@@ -113,6 +121,7 @@ export class UserManager {
 
     users.push(superAdmin);
     this.saveUsers(users);
+    console.log('Created blake as default superAdmin');
   }
 }
 
