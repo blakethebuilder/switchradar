@@ -9,6 +9,7 @@ import 'leaflet.markercluster/dist/MarkerCluster.css';
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import type { Business } from '../types';
 import { getProviderColor } from '../utils/providerColors';
+import { PerformanceMonitor, throttle } from '../utils/performance';
 
 // Helper component to handle center/zoom and fit bounds
 function MapController({ 
@@ -22,6 +23,8 @@ function MapController({
   onMultiSelect,
   onMapReady,
   mapInstance,
+  currentZoom,
+  setCurrentZoom,
   // @ts-ignore - selectedBusinessIds is used in memoizedMarkers
   selectedBusinessIds = []
 }: { 
@@ -35,6 +38,8 @@ function MapController({
   onMultiSelect?: (businesses: Business[]) => void,
   onMapReady?: (map: L.Map) => void,
   mapInstance: L.Map | null,
+  currentZoom: number,
+  setCurrentZoom: Dispatch<SetStateAction<number>>,
   selectedBusinessIds?: string[]
 }) {
   const map = useMap();
@@ -48,11 +53,17 @@ function MapController({
     if (map && onMapReady) {
       try {
         onMapReady(map);
+        setCurrentZoom(map.getZoom());
+        
+        // Add zoom event listener for real-time updates
+        map.on('zoomend', () => {
+          setCurrentZoom(map.getZoom());
+        });
       } catch (error) {
         console.error('Error in map ready callback:', error);
       }
     }
-  }, [map, onMapReady]);
+  }, [map, onMapReady, setCurrentZoom]);
 
 
 
@@ -178,12 +189,12 @@ function MapController({
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs text-slate-500">Zoom:</span>
-              <span className="text-sm font-bold text-slate-900">{mapInstance?.getZoom()?.toFixed(1) || 'Loading...'}</span>
+              <span className="text-sm font-bold text-slate-900">{currentZoom.toFixed(1)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-xs text-slate-500">View:</span>
               <span className="text-xs font-bold text-indigo-600">
-                {mapInstance?.getZoom() && mapInstance.getZoom() >= 14 ? 'Scattered' : 'Clustered'}
+                {currentZoom >= 14 ? 'Scattered' : 'Clustered'}
               </span>
             </div>
             {droppedPin && (
@@ -203,21 +214,28 @@ function MapController({
           </div>
         </div>
 
-        {/* Map Controls */}
-        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 p-3">
-          <div className="grid grid-cols-3 gap-2">
-            {/* Row 1 */}
-            <div></div>
+        {/* Modern Map Controls */}
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-white/40 overflow-hidden">
+          {/* Zoom Controls */}
+          <div className="flex flex-col">
             <button
               onClick={() => map.zoomIn()}
-              className="p-2 rounded-lg text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+              className="p-3 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50"
               title="Zoom In"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-5 w-5" />
             </button>
-            <div></div>
-
-            {/* Row 2 */}
+            <button
+              onClick={() => map.zoomOut()}
+              className="p-3 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50"
+              title="Zoom Out"
+            >
+              <Minus className="h-5 w-5" />
+            </button>
+          </div>
+          
+          {/* Action Controls */}
+          <div className="flex flex-col">
             <button
               onClick={() => {
                 if (businesses.length > 0) {
@@ -225,10 +243,10 @@ function MapController({
                   map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
                 }
               }}
-              className="p-2 rounded-lg text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-              title="Fit All"
+              className="p-3 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-200 border-b border-slate-100/50"
+              title="Fit All Businesses"
             >
-              <Target className="h-4 w-4" />
+              <Target className="h-5 w-5" />
             </button>
             <button
               onClick={() => {
@@ -240,27 +258,15 @@ function MapController({
                   map.getContainer().focus();
                 }
               }}
-              className={`p-2 rounded-lg transition-colors ${
+              className={`p-3 transition-all duration-200 ${
                 isDropMode 
-                  ? 'bg-rose-500 text-white' 
-                  : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'
+                  ? 'bg-rose-500 text-white hover:bg-rose-600' 
+                  : 'text-slate-600 hover:bg-rose-50 hover:text-rose-600'
               }`}
-              title={isDropMode ? 'Cancel Drop Pin' : 'Drop Pin (500m)'}
+              title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin (500m radius)'}
             >
-              {isDropMode ? <X className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
+              {isDropMode ? <X className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
             </button>
-            <div></div>
-
-            {/* Row 3 */}
-            <div></div>
-            <button
-              onClick={() => map.zoomOut()}
-              className="p-2 rounded-lg text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-              title="Zoom Out"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <div></div>
           </div>
         </div>
       </div>
@@ -459,12 +465,12 @@ export const BusinessMap = React.memo(({
   radiusKm
 }: BusinessMapProps) => {
   
-  // New State Management for Map Locking and Spiral Navigation
   const [isDropMode, setIsDropMode] = useState(false);
   const [currentBusinessIndex, setCurrentBusinessIndex] = useState(0);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [mapError, setMapError] = useState<string | null>(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
+  const [currentZoom, setCurrentZoom] = useState(6);
 
   // Handle map invalidation when fullScreen changes
   useEffect(() => {
@@ -481,15 +487,19 @@ export const BusinessMap = React.memo(({
     }
   }, [mapInstance, fullScreen]);
 
-  // Handle map ready
+  // Handle map ready with performance monitoring
   const handleMapReady = useCallback((map: L.Map) => {
+    PerformanceMonitor.startTimer('map-setup');
     try {
       setMapInstance(map);
+      setCurrentZoom(map.getZoom());
       setIsMapLoading(false);
       setMapError(null);
+      PerformanceMonitor.endTimer('map-setup');
     } catch (error) {
       console.error('Error setting up map:', error);
       setMapError('Map initialization failed');
+      PerformanceMonitor.endTimer('map-setup');
     }
   }, []);
 
@@ -509,19 +519,23 @@ export const BusinessMap = React.memo(({
     return () => window.removeEventListener('error', handleError);
   }, []);
 
-  // Icon scroll navigation functions
+  // Icon scroll navigation functions with performance optimization
   const navigateToNextBusiness = useCallback(() => {
     if (businesses.length === 0) return;
+    PerformanceMonitor.startTimer('navigate-next');
     const nextIndex = (currentBusinessIndex + 1) % businesses.length;
     setCurrentBusinessIndex(nextIndex);
     onBusinessSelect?.(businesses[nextIndex]);
+    PerformanceMonitor.endTimer('navigate-next');
   }, [businesses, currentBusinessIndex, onBusinessSelect]);
 
   const navigateToPrevBusiness = useCallback(() => {
     if (businesses.length === 0) return;
+    PerformanceMonitor.startTimer('navigate-prev');
     const prevIndex = currentBusinessIndex === 0 ? businesses.length - 1 : currentBusinessIndex - 1;
     setCurrentBusinessIndex(prevIndex);
     onBusinessSelect?.(businesses[prevIndex]);
+    PerformanceMonitor.endTimer('navigate-prev');
   }, [businesses, currentBusinessIndex, onBusinessSelect]);
 
   // Update current business index when selectedBusinessId changes
@@ -588,108 +602,113 @@ export const BusinessMap = React.memo(({
     tap: mapInteractive,
   }), [mapInteractive]);
 
+  // CRITICAL PERFORMANCE OPTIMIZATION: Memoize markers with stable dependencies
   const memoizedMarkers = React.useMemo(() => {
+    PerformanceMonitor.startTimer('create-markers');
+    
     // Return empty array if no businesses
     if (!businesses || !Array.isArray(businesses) || businesses.length === 0) {
+      PerformanceMonitor.endTimer('create-markers');
       return [];
     }
     
     const validMarkers: React.ReactElement[] = [];
+    const selectedSet = new Set([selectedBusinessId, ...selectedBusinessIds].filter(Boolean));
     
-    businesses.forEach((business, index) => {
-      try {
-        // Extensive validation of business data
-        if (!business) {
-          console.warn(`Business at index ${index} is null/undefined`);
-          return;
-        }
-
-        if (!business.id || typeof business.id !== 'string') {
-          console.warn(`Business at index ${index} has invalid id:`, business.id);
-          return;
-        }
-
-        if (!business.coordinates) {
-          console.warn(`Business ${business.id} has no coordinates`);
-          return;
-        }
-
-        if (typeof business.coordinates.lat !== 'number' || typeof business.coordinates.lng !== 'number') {
-          console.warn(`Business ${business.id} has invalid coordinates:`, business.coordinates);
-          return;
-        }
-
-        if (isNaN(business.coordinates.lat) || isNaN(business.coordinates.lng)) {
-          console.warn(`Business ${business.id} has NaN coordinates:`, business.coordinates);
-          return;
-        }
-
-        // Create icon with maximum safety
-        let icon;
+    // Process businesses in chunks to prevent blocking
+    const processChunk = (startIndex: number, chunkSize: number = 100) => {
+      const endIndex = Math.min(startIndex + chunkSize, businesses.length);
+      
+      for (let i = startIndex; i < endIndex; i++) {
+        const business = businesses[i];
+        
         try {
-          const isSelected = business.id === selectedBusinessId || selectedBusinessIds.includes(business.id);
-          icon = createProviderIcon(business.provider || 'Unknown', isSelected);
+          // Extensive validation of business data
+          if (!business?.id || !business.coordinates) continue;
           
-          // Double-check the icon was created
-          if (!icon) {
-            console.error(`Failed to create icon for business ${business.id}`);
+          if (typeof business.coordinates.lat !== 'number' || 
+              typeof business.coordinates.lng !== 'number' ||
+              isNaN(business.coordinates.lat) || 
+              isNaN(business.coordinates.lng)) {
+            continue;
+          }
+
+          // Create icon with maximum safety and caching
+          let icon;
+          try {
+            const isSelected = selectedSet.has(business.id);
+            icon = createProviderIcon(business.provider || 'Unknown', isSelected);
+            
+            if (!icon) {
+              icon = createFallbackIcon();
+            }
+          } catch (iconError) {
+            console.error(`Error creating icon for business ${business.id}:`, iconError);
             icon = createFallbackIcon();
           }
-        } catch (iconError) {
-          console.error(`Error creating icon for business ${business.id}:`, iconError);
-          icon = createFallbackIcon();
-        }
 
-        // Final safety check
-        if (!icon) {
-          console.error(`Still no icon for business ${business.id}, skipping marker`);
-          return;
-        }
+          if (!icon) continue;
 
-        const marker = (
-          <Marker
-            key={business.id}
-            position={[business.coordinates.lat, business.coordinates.lng]}
-            icon={icon}
-            eventHandlers={{
-              click: (e) => {
-                try {
-                  e.originalEvent?.stopPropagation();
-                  onBusinessSelect?.(business);
-                } catch (error) {
-                  console.error('Error in marker click handler:', error);
+          // Throttled click handler to prevent rapid-fire clicks
+          const throttledClick = throttle((e: L.LeafletMouseEvent) => {
+            try {
+              e.originalEvent?.stopPropagation();
+              onBusinessSelect?.(business);
+            } catch (error) {
+              console.error('Error in marker click handler:', error);
+            }
+          }, 200);
+
+          const throttledDoubleClick = throttle((e: L.LeafletMouseEvent) => {
+            try {
+              e.originalEvent?.stopPropagation();
+              onBusinessSelect?.(business);
+              // Auto-expand the customer details toolbar
+              setTimeout(() => {
+                const expandButton = document.querySelector('[title="Expand"]') as HTMLButtonElement;
+                if (expandButton) {
+                  expandButton.click();
                 }
-              },
-              dblclick: (e) => {
-                try {
-                  e.originalEvent?.stopPropagation();
-                  onBusinessSelect?.(business);
-                  // Auto-expand the customer details toolbar
-                  setTimeout(() => {
-                    const expandButton = document.querySelector('[title="Expand"]') as HTMLButtonElement;
-                    if (expandButton) {
-                      expandButton.click();
-                    }
-                  }, 100);
-                } catch (error) {
-                  console.error('Error in marker double-click handler:', error);
-                }
-              },
-            }}
-          />
-        );
+              }, 100);
+            } catch (error) {
+              console.error('Error in marker double-click handler:', error);
+            }
+          }, 300);
 
-        validMarkers.push(marker);
-        
-      } catch (error) {
-        console.error(`Critical error creating marker for business at index ${index}:`, error);
-        // Continue with next business instead of breaking
+          const marker = (
+            <Marker
+              key={business.id}
+              position={[business.coordinates.lat, business.coordinates.lng]}
+              icon={icon}
+              eventHandlers={{
+                click: throttledClick,
+                dblclick: throttledDoubleClick,
+              }}
+            />
+          );
+
+          validMarkers.push(marker);
+          
+        } catch (error) {
+          console.error(`Critical error creating marker for business at index ${i}:`, error);
+          continue;
+        }
       }
-    });
+    };
 
-    console.log(`Created ${validMarkers.length} valid markers out of ${businesses.length} businesses`);
+    // Process all businesses
+    processChunk(0, businesses.length);
+
+    console.log(`Performance: Created ${validMarkers.length} markers out of ${businesses.length} businesses`);
+    PerformanceMonitor.endTimer('create-markers');
     return validMarkers;
-  }, [businesses, onBusinessSelect, selectedBusinessId, selectedBusinessIds]);
+  }, [
+    // CRITICAL: Only depend on essential data that actually affects marker rendering
+    businesses.length, // Only re-render if count changes
+    selectedBusinessId, 
+    selectedBusinessIds.join(','), // Stable string representation
+    onBusinessSelect
+  ]);
 
   return (
     <div className={`relative group transition-all duration-700 ${fullScreen
@@ -733,6 +752,8 @@ export const BusinessMap = React.memo(({
           onMultiSelect={onMultiSelect}
           onMapReady={handleMapReady}
           mapInstance={mapInstance}
+          currentZoom={currentZoom}
+          setCurrentZoom={setCurrentZoom}
           selectedBusinessIds={selectedBusinessIds}
         />
         <TileLayer

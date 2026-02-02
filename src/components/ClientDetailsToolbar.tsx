@@ -68,6 +68,10 @@ interface ClientDetailsToolbarProps {
   onTogglePhoneType?: (id: string, currentType: 'landline' | 'mobile') => void;
   onUpdateBusiness: (id: string, updates: Partial<Business>) => void;
   onDelete?: (id: string) => void;
+  onNavigateNext?: () => void;
+  onNavigatePrev?: () => void;
+  currentIndex?: number;
+  totalCount?: number;
 }
 
 export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
@@ -78,7 +82,11 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
   onClose,
   onTogglePhoneType,
   onUpdateBusiness,
-  onDelete
+  onDelete,
+  onNavigateNext,
+  onNavigatePrev,
+  currentIndex,
+  totalCount
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
@@ -173,7 +181,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
         {/* Collapsed State - Business Info Bar */}
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
-            {/* Business Info */}
+            {/* Business Info - Redesigned Layout */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <div className="flex-shrink-0">
                 <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
@@ -182,29 +190,33 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
               </div>
               
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-slate-900 truncate text-sm">
-                  {business.name}
-                </h3>
                 <div className="flex items-center gap-2 mb-1">
-                  <ProviderBadge provider={business.provider} className="scale-75 origin-left" />
-                  <span className="text-xs text-slate-500">•</span>
-                  <span className="text-xs text-slate-500 truncate">{business.category}</span>
+                  <h3 className="font-bold text-slate-900 truncate text-sm">
+                    {business.name}
+                  </h3>
+                  {business.richNotes && business.richNotes.length > 0 && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700">
+                      {business.richNotes.length} notes
+                    </span>
+                  )}
                 </div>
-                <div className="flex items-center gap-2">
+                
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <ProviderBadge provider={business.provider} className="scale-75 origin-left" />
+                  <span className="text-slate-400">•</span>
+                  <span className="truncate">{business.category}</span>
+                </div>
+                
+                <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                   {business.phone && (
                     <>
-                      <Phone className="w-3 h-3 text-slate-400" />
-                      <span className="text-xs text-slate-600 font-medium">{business.phone}</span>
-                      <span className="text-xs text-slate-500">•</span>
+                      <Phone className="w-3 h-3" />
+                      <span className="font-medium">{business.phone}</span>
+                      <span className="text-slate-400">•</span>
                     </>
                   )}
-                  <span className="text-xs text-slate-500 truncate">{business.town}</span>
-                  {business.richNotes && business.richNotes.length > 0 && (
-                    <>
-                      <span className="text-xs text-slate-500">•</span>
-                      <span className="text-xs text-indigo-600 font-bold">{business.richNotes.length} notes</span>
-                    </>
-                  )}
+                  <MapPin className="w-3 h-3" />
+                  <span className="truncate">{business.town}</span>
                 </div>
               </div>
             </div>
@@ -257,6 +269,29 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
               >
                 <Route className="w-4 h-4" />
               </button>
+
+              {/* Navigation Controls - RESTORED */}
+              {onNavigateNext && onNavigatePrev && totalCount && totalCount > 1 && (
+                <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden ml-2">
+                  <button
+                    onClick={onNavigatePrev}
+                    className="p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                    title="Previous Business"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div className="px-2 py-1 text-xs font-bold text-slate-600 bg-slate-100">
+                    {currentIndex !== undefined ? `${currentIndex + 1}/${totalCount}` : 'Nav'}
+                  </div>
+                  <button
+                    onClick={onNavigateNext}
+                    className="p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                    title="Next Business"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
               
               {/* Expand Button */}
               <button

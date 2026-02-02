@@ -434,19 +434,33 @@ function App() {
     setSelectedBusinessIds([]);
   }, []);
 
-  // Navigation logic for ClientDetails - now proximity-based
-  // const currentBusinessIndex = useMemo(() => {
-  //   if (!selectedBusiness) return -1;
-  //   return businessesByProximity.findIndex(b => b.id === selectedBusiness.id);
-  // }, [selectedBusiness, businessesByProximity]);
+  // Navigation logic for ClientDetails - proximity-based
+  const currentBusinessIndex = useMemo(() => {
+    if (!selectedBusiness) return -1;
+    return filteredBusinesses.findIndex(b => b.id === selectedBusiness.id);
+  }, [selectedBusiness, filteredBusinesses]);
 
-  // const handleNavigateToNextBusiness = useCallback((business: Business) => {
-  //   setSelectedBusiness(business);
-  //   // If we're on map view, also update the map target
-  //   if (viewMode === 'map') {
-  //     setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
-  //   }
-  // }, [viewMode]);
+  const handleNavigateToNextBusiness = useCallback(() => {
+    if (filteredBusinesses.length === 0 || currentBusinessIndex === -1) return;
+    const nextIndex = (currentBusinessIndex + 1) % filteredBusinesses.length;
+    const nextBusiness = filteredBusinesses[nextIndex];
+    setSelectedBusiness(nextBusiness);
+    // If we're on map view, also update the map target
+    if (viewMode === 'map') {
+      setMapTarget({ center: [nextBusiness.coordinates.lat, nextBusiness.coordinates.lng], zoom: 15 });
+    }
+  }, [filteredBusinesses, currentBusinessIndex, viewMode]);
+
+  const handleNavigateToPrevBusiness = useCallback(() => {
+    if (filteredBusinesses.length === 0 || currentBusinessIndex === -1) return;
+    const prevIndex = currentBusinessIndex === 0 ? filteredBusinesses.length - 1 : currentBusinessIndex - 1;
+    const prevBusiness = filteredBusinesses[prevIndex];
+    setSelectedBusiness(prevBusiness);
+    // If we're on map view, also update the map target
+    if (viewMode === 'map') {
+      setMapTarget({ center: [prevBusiness.coordinates.lat, prevBusiness.coordinates.lng], zoom: 15 });
+    }
+  }, [filteredBusinesses, currentBusinessIndex, viewMode]);
   
   const handleTogglePhoneType = async (id: string, currentType: 'landline' | 'mobile') => {
     const newType = currentType === 'landline' ? 'mobile' : 'landline';
@@ -764,6 +778,10 @@ function App() {
           onTogglePhoneType={handleTogglePhoneType}
           onUpdateBusiness={handleUpdateBusiness}
           onDelete={handleDeleteBusiness}
+          onNavigateNext={handleNavigateToNextBusiness}
+          onNavigatePrev={handleNavigateToPrevBusiness}
+          currentIndex={currentBusinessIndex}
+          totalCount={filteredBusinesses.length}
         />
       )}
 
