@@ -15,6 +15,8 @@ export const UserManagement: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importData, setImportData] = useState('');
 
   useEffect(() => {
     loadUsers();
@@ -96,6 +98,20 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const handleImportUsers = () => {
+    try {
+      const userData = JSON.parse(importData);
+      const importCount = UserManager.importUsersFromData(Array.isArray(userData) ? userData : [userData]);
+      setSuccess(`Successfully imported ${importCount} users`);
+      setShowImportModal(false);
+      setImportData('');
+      loadUsers();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError('Invalid JSON format. Please check your data.');
+    }
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'superAdmin':
@@ -144,13 +160,21 @@ export const UserManagement: React.FC = () => {
               <p className="text-sm text-slate-600">Manage system users and permissions</p>
             </div>
           </div>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <Plus className="h-4 w-4" />
-            Add User
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm"
+            >
+              Import Users
+            </button>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              Add User
+            </button>
+          </div>
         </div>
       </div>
 
@@ -384,6 +408,66 @@ export const UserManagement: React.FC = () => {
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 Update User
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Users Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Import Users</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  User Data (JSON format)
+                </label>
+                <textarea
+                  value={importData}
+                  onChange={(e) => setImportData(e.target.value)}
+                  className="w-full h-40 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
+                  placeholder={`[
+  {
+    "username": "john",
+    "email": "john@example.com",
+    "role": "user"
+  },
+  {
+    "username": "admin",
+    "email": "admin@example.com", 
+    "role": "admin"
+  }
+]`}
+                />
+              </div>
+              
+              <div className="text-xs text-slate-600">
+                <p className="mb-2"><strong>Format:</strong> JSON array of user objects</p>
+                <p><strong>Required fields:</strong> username</p>
+                <p><strong>Optional fields:</strong> email, role (user/admin/superAdmin), isActive (true/false)</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportData('');
+                  setError('');
+                }}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleImportUsers}
+                disabled={!importData.trim()}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Import Users
               </button>
             </div>
           </div>
