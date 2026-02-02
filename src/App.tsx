@@ -8,6 +8,7 @@ import { TopNav } from './components/TopNav';
 import { LoginModal } from './components/LoginModal';
 import { ClientDetailsToolbar } from './components/ClientDetailsToolbar';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import LandingPage from './components/LandingPage';
 import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
 import { processImportedData, sampleData } from './utils/dataProcessors';
@@ -533,9 +534,7 @@ function App() {
   };
 
   if (!isAuthenticated) {
-    return (
-      <LoginModal isOpen={true} onClose={() => {}} onLoginSuccess={() => {}} />
-    );
+    return <LandingPage />;
   }
 
   return (
