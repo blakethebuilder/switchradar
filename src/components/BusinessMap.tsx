@@ -173,7 +173,7 @@ function MapController({
   return (
     <>
       {/* Combined Map Info & Controls - Absolute Right Edge */}
-      <div className="absolute top-4 right-0 z-[1000] flex flex-col gap-1 md:gap-2">
+      <div className="absolute top-4 right-0 z-[1000] flex flex-row gap-0">
         {/* Map Info Panel - Compact Mobile */}
         <div className="bg-white/95 backdrop-blur-md rounded-l-xl shadow-xl border-l border-t border-b border-white/40 p-1.5 md:p-3 min-w-[100px] md:min-w-[160px]">
           <div className="flex items-center gap-1 mb-1 md:mb-2">
@@ -212,8 +212,8 @@ function MapController({
           </div>
         </div>
 
-        {/* Modern Map Controls - Absolute Right Edge */}
-        <div className="bg-white/95 backdrop-blur-md rounded-l-xl shadow-xl border-l border-t border-b border-white/40 overflow-hidden w-8 md:w-12">
+        {/* Modern Map Controls - Flush Right Edge */}
+        <div className="bg-white/95 backdrop-blur-md shadow-xl border-t border-b border-r border-white/40 overflow-hidden w-8 md:w-12 flex flex-col">
           {/* Zoom Controls */}
           <div className="flex flex-col">
             <button
