@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { cloudSyncService } from '../services/cloudSync';
 import { db } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { environmentConfig } from '../config/environment';
 
 interface SyncStatus {
   type: 'idle' | 'loading' | 'success' | 'error';

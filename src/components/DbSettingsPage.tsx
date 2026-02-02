@@ -1,5 +1,5 @@
 import React from 'react';
-import { Database, ShieldCheck, X, CheckCircle2, Cloud, Wifi, WifiOff, Server } from 'lucide-react';
+import { Database, ShieldCheck, X, CheckCircle2, Wifi, WifiOff, Server } from 'lucide-react';
 import type { Business } from '../types';
 import { useAuth } from '../context/AuthContext';
 
