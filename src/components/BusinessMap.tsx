@@ -173,7 +173,7 @@ function MapController({
   return (
     <>
       {/* Combined Map Info & Controls - Right Edge Aligned */}
-      <div className="absolute top-4 right-2 md:right-4 z-[1000] flex flex-col gap-2 md:gap-3">
+      <div className="absolute top-4 right-0 z-[1000] flex flex-col gap-2 md:gap-3">
         {/* Map Info Panel - Mobile Optimized */}
         <div className="bg-white/95 backdrop-blur-md rounded-xl md:rounded-2xl shadow-xl border border-white/40 p-2 md:p-3 min-w-[140px] md:min-w-[160px]">
           <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2">
@@ -192,7 +192,7 @@ function MapController({
             <div className="flex justify-between items-center">
               <span className="text-[10px] md:text-xs text-slate-500">View:</span>
               <span className="text-[10px] md:text-xs font-bold text-indigo-600">
-                {currentZoom >= 18 ? 'Individual' : currentZoom >= 14 ? 'Spirals' : 'Clustered'}
+                {currentZoom >= 15.5 ? 'Scattered' : currentZoom >= 14 ? 'Spirals' : 'Clustered'}
               </span>
             </div>
             {droppedPin && (
@@ -793,9 +793,10 @@ export const BusinessMap = React.memo(({
           animate={false}
           animateAddingMarkers={false}
           removeOutsideVisibleBounds={false}
-          disableClusteringAtZoom={18} // Keep clustering until zoom 18, use spirals at 14+
+          disableClusteringAtZoom={16} // Scatter at zoom 15.5+ (rounds to 16)
           maxClusterRadius={80} // Reasonable clustering distance
-          spiderfyDistanceMultiplier={2} // Increase spiral spacing
+          spiderfyDistanceMultiplier={0.8} // Tighter spiral spacing
+          spiderfyOnEveryZoom={true}
           iconCreateFunction={(cluster: any) => {
             try {
               const count = cluster.getChildCount();
