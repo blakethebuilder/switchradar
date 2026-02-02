@@ -192,7 +192,7 @@ function MapController({
             <div className="flex justify-between items-center">
               <span className="text-[8px] md:text-xs text-slate-500">View:</span>
               <span className="text-[8px] md:text-xs font-bold text-indigo-600">
-                {currentZoom >= 19 ? 'Ultra Close' : currentZoom >= 15.5 ? 'Scattered' : currentZoom >= 14 ? 'Spirals' : 'Clustered'}
+                {currentZoom >= 15 ? 'Scattered' : currentZoom >= 12 ? 'Spirals' : 'Clustered'}
               </span>
             </div>
             {droppedPin && (
@@ -733,7 +733,7 @@ export const BusinessMap = React.memo(({
         worldCopyJump={true}
         maxBounds={[[-35, 16], [-22, 33]]} // Rough bounds for South Africa
         minZoom={5}
-        maxZoom={22} // Increased max zoom to prevent map breaking
+        maxZoom={18} // Prevent map breaking - limit to 18
         zoomSnap={0.5}
         zoomDelta={0.5}
         wheelPxPerZoomLevel={120}
@@ -793,15 +793,35 @@ export const BusinessMap = React.memo(({
           animate={false}
           animateAddingMarkers={false}
           removeOutsideVisibleBounds={false}
-          disableClusteringAtZoom={25} // Allow clustering at all zoom levels
+          disableClusteringAtZoom={16} // Scatter at zoom 15+ (rounds to 16)
           maxClusterRadius={(zoom: number) => {
             // Dynamic clustering - tighter at higher zoom levels
-            if (zoom >= 19) return 15; // Very tight clustering for overlapping markers
-            if (zoom >= 15) return 30; // Medium clustering
+            if (zoom >= 15) return 20; // Very tight clustering for high zoom
+            if (zoom >= 12) return 40; // Medium clustering
             return 80; // Default clustering
           }}
           spiderfyDistanceMultiplier={0.6} // Tighter spiral spacing
           spiderfyOnEveryZoom={true}
+          // Prevent cluster clicks from zooming past the limit
+          zoomToBoundsOnClick={true}
+          maxZoom={17} // Cluster clicks won't zoom past 17 (leaving room for manual zoom to 18)
+          eventHandlers={{
+            clusterclick: (cluster: any) => {
+              // Custom cluster click handler to prevent over-zooming
+              const map = cluster.target._map;
+              const currentZoom = map.getZoom();
+              
+              // If we're already at high zoom, spiderfy instead of zooming
+              if (currentZoom >= 16) {
+                cluster.target.spiderfy();
+                return;
+              }
+              
+              // Otherwise, zoom but limit to max 17
+              const targetZoom = Math.min(currentZoom + 2, 17);
+              map.setView(cluster.target.getLatLng(), targetZoom);
+            }
+          }}
           iconCreateFunction={(cluster: any) => {
             try {
               const count = cluster.getChildCount();
