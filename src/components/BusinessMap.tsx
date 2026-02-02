@@ -790,68 +790,101 @@ export const BusinessMap = React.memo(({
           chunkedLoading={false}
           spiderfyOnMaxZoom={true}
           showCoverageOnHover={false}
-          animate={false}
+          animate={true}
           animateAddingMarkers={false}
-          removeOutsideVisibleBounds={false}
-          disableClusteringAtZoom={16} // Scatter at zoom 15+ (rounds to 16)
+          removeOutsideVisibleBounds={true}
+          disableClusteringAtZoom={15} // Scatter at zoom 15+ 
           maxClusterRadius={(zoom: number) => {
-            // Dynamic clustering - tighter at higher zoom levels
-            if (zoom >= 15) return 20; // Very tight clustering for high zoom
-            if (zoom >= 12) return 40; // Medium clustering
-            return 80; // Default clustering
+            // Progressive clustering - smoother transitions
+            if (zoom <= 6) return 120;  // Very loose clustering at country level
+            if (zoom <= 8) return 100;  // Loose clustering at province level  
+            if (zoom <= 10) return 80;  // Medium clustering at city level
+            if (zoom <= 12) return 60;  // Tighter clustering at district level
+            if (zoom <= 14) return 40;  // Tight clustering at neighborhood level
+            return 25;                  // Very tight clustering before scatter
           }}
-          spiderfyDistanceMultiplier={0.6} // Tighter spiral spacing
+          spiderfyDistanceMultiplier={1.2} // Better spiral spacing
           spiderfyOnEveryZoom={true}
-          // Disable automatic zoom on cluster click - always spiderfy instead
-          zoomToBoundsOnClick={false}
+          zoomToBoundsOnClick={false} // Disable automatic zoom on cluster click
           maxZoom={17} // Cluster clicks won't zoom past 17 (leaving room for manual zoom to 18)
           eventHandlers={{
             clusterclick: (cluster: any) => {
-              // Always spiderfy on cluster click instead of zooming
               const clusterGroup = cluster.target;
               const map = clusterGroup._map;
               const currentZoom = map.getZoom();
-              
-              // Get the child count
               const childCount = clusterGroup.getChildCount();
               
-              // Always spiderfy for clusters with ≤15 markers or at zoom ≥14
-              if (childCount <= 15 || currentZoom >= 14) {
-                // Force spiderfy for better visibility - prevent default zoom behavior
+              // Prevent default behavior
+              if (cluster.originalEvent) {
                 cluster.originalEvent.preventDefault();
                 cluster.originalEvent.stopPropagation();
-                clusterGroup.spiderfy();
-                return false; // Prevent default zoom behavior
-              } else {
-                // Only zoom if we have many markers and are at low zoom
-                const targetZoom = Math.min(currentZoom + 2, 16);
-                map.setView(clusterGroup.getLatLng(), targetZoom);
               }
+              
+              // Smart clustering behavior based on zoom and count
+              if (currentZoom >= 13) {
+                // At high zoom levels, always spiderfy
+                clusterGroup.spiderfy();
+              } else if (childCount <= 10) {
+                // Small clusters always spiderfy regardless of zoom
+                clusterGroup.spiderfy();
+              } else if (currentZoom <= 10 && childCount > 50) {
+                // Large clusters at low zoom can zoom in
+                const targetZoom = Math.min(currentZoom + 3, 14);
+                map.setView(clusterGroup.getLatLng(), targetZoom);
+              } else {
+                // Medium clusters or medium zoom - spiderfy
+                clusterGroup.spiderfy();
+              }
+              
+              return false; // Prevent any default behavior
             }
           }}
           iconCreateFunction={(cluster: any) => {
             try {
               const count = cluster.getChildCount();
+              const map = cluster._group._map;
+              const currentZoom = map ? map.getZoom() : 10;
               
-              // Different sizes based on count
-              let size = 40;
+              // Dynamic sizing based on count and zoom
+              let size = 32;
               let bgColor = '#3b82f6';
+              let textColor = 'white';
+              let borderColor = 'white';
               
-              if (count >= 100) {
+              // Size based on count
+              if (count >= 1000) {
+                size = 60;
+                bgColor = '#7c2d12'; // Dark red for 1000+
+              } else if (count >= 500) {
+                size = 55;
+                bgColor = '#dc2626'; // Red for 500+
+              } else if (count >= 100) {
                 size = 50;
-                bgColor = '#dc2626'; // Red for 100+
+                bgColor = '#ea580c'; // Orange for 100+
               } else if (count >= 50) {
                 size = 45;
-                bgColor = '#ea580c'; // Orange for 50+
+                bgColor = '#d97706'; // Amber for 50+
               } else if (count >= 20) {
-                size = 42;
+                size = 40;
                 bgColor = '#ca8a04'; // Yellow for 20+
+              } else if (count >= 10) {
+                size = 36;
+                bgColor = '#16a34a'; // Green for 10+
               }
+              
+              // Adjust size slightly based on zoom for better visibility
+              if (currentZoom >= 12) {
+                size += 4;
+              } else if (currentZoom <= 8) {
+                size += 2;
+              }
+              
+              const fontSize = size > 50 ? '14px' : size > 40 ? '12px' : '11px';
               
               return L.divIcon({
                 html: `<div style="
                   background: ${bgColor};
-                  color: white;
+                  color: ${textColor};
                   border-radius: 50%;
                   width: ${size}px;
                   height: ${size}px;
@@ -859,9 +892,11 @@ export const BusinessMap = React.memo(({
                   align-items: center;
                   justify-content: center;
                   font-weight: bold;
-                  border: 3px solid white;
-                  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                  font-size: ${size > 45 ? '14px' : '12px'};
+                  border: 3px solid ${borderColor};
+                  box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+                  font-size: ${fontSize};
+                  cursor: pointer;
+                  transition: transform 0.2s ease;
                 ">${count}</div>`,
                 className: 'cluster-icon',
                 iconSize: [size, size],
@@ -870,9 +905,9 @@ export const BusinessMap = React.memo(({
             } catch (error) {
               console.error('Cluster icon error:', error);
               return L.divIcon({
-                html: '<div style="background: #6b7280; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">•</div>',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
+                html: '<div style="background: #6b7280; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold;">•</div>',
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
               });
             }
           }}
