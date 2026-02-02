@@ -731,7 +731,6 @@ export const BusinessMap = React.memo(({
         zoomControl={false}
         preferCanvas={true}
         worldCopyJump={true}
-        maxBounds={[[-35, 16], [-22, 33]]} // Rough bounds for South Africa
         minZoom={5}
         maxZoom={18} // Prevent map breaking - limit to 18
         zoomSnap={0.5}
