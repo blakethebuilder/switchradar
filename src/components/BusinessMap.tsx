@@ -266,24 +266,6 @@ function MapController({
               {isDropMode ? <X className="h-3 w-3 md:h-4 md:w-4" /> : <MapPin className="h-3 w-3 md:h-4 md:w-4" />}
             </button>
           </div>
-                if (isDropMode) {
-                  setIsDropMode(false);
-                } else {
-                  setIsDropMode(true);
-                  setDroppedPin(null);
-                  map.getContainer().focus();
-                }
-              }}
-              className={`p-2 transition-all duration-200 ${
-                isDropMode 
-                  ? 'bg-rose-500 text-white hover:bg-rose-600' 
-                  : 'text-slate-600 hover:bg-rose-50 hover:text-rose-600'
-              }`}
-              title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin (500m radius)'}
-            >
-              {isDropMode ? <X className="h-4 w-4" /> : <MapPin className="h-4 w-4" />}
-            </button>
-          </div>
         </div>
       </div>
 
