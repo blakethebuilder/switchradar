@@ -159,3 +159,4 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
     </div>
   );
 };
+export default DbSettingsPage;

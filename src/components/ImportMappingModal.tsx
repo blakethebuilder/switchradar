@@ -181,3 +181,4 @@ export const ImportMappingModal: React.FC<ImportMappingModalProps> = ({
     document.body
   );
 };
+export default ImportMappingModal;

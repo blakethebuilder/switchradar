@@ -94,3 +94,4 @@ export const RouteView: React.FC<RouteViewProps> = ({
     </div>
   );
 };
+export default RouteView;

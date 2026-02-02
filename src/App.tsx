@@ -1,26 +1,35 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Plus, X, Target } from 'lucide-react';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
-import { MarketIntelligence } from './components/MarketIntelligence';
 import { Dashboard } from './components/Dashboard';
-import { ImportModal } from './components/ImportModal';
-import { ImportMappingModal } from './components/ImportMappingModal';
 import { TopNav } from './components/TopNav';
 import { LoginModal } from './components/LoginModal';
 import { ClientDetailsToolbar } from './components/ClientDetailsToolbar';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { RouteView } from './components/RouteView';
-import { DbSettingsPage } from './components/DbSettingsPage';
-import { ManualSyncPanel } from './components/ManualSyncPanel';
-import { SeenClients } from './components/SeenClients';
 import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
 import { processImportedData, sampleData } from './utils/dataProcessors';
 import { db } from './db';
 import './App.css';
 import type { Business, ImportMapping, ViewMode } from './types';
+
+// Lazy load heavy components that aren't immediately needed
+const MarketIntelligence = lazy(() => import('./components/MarketIntelligence'));
+const ImportModal = lazy(() => import('./components/ImportModal'));
+const ImportMappingModal = lazy(() => import('./components/ImportMappingModal'));
+const RouteView = lazy(() => import('./components/RouteView'));
+const DbSettingsPage = lazy(() => import('./components/DbSettingsPage'));
+const ManualSyncPanel = lazy(() => import('./components/ManualSyncPanel'));
+const SeenClients = lazy(() => import('./components/SeenClients'));
+
+// Loading component for lazy-loaded components
+const LoadingSpinner = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+  </div>
+);
 
 
 function App() {
@@ -476,6 +485,9 @@ function App() {
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Businesses");
         XLSX.writeFile(workbook, "switchradar_export.xlsx");
+    }).catch(error => {
+        console.error('Failed to load XLSX library:', error);
+        alert('Export failed. Please try again.');
     });
   };
 
@@ -715,52 +727,60 @@ function App() {
 
             {viewMode === 'route' && (
                 <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
-                    <RouteView 
-                        routeItems={routeItems} 
-                        businesses={businesses} 
-                        onRemoveFromRoute={handleRemoveFromRoute}
-                        onClearRoute={handleClearRoute}
-                        onSelectBusiness={(b) => {
-                            setSelectedBusiness(b);
-                        }}
-                    />
+                    <Suspense fallback={<LoadingSpinner />}>
+                        <RouteView 
+                            routeItems={routeItems} 
+                            businesses={businesses} 
+                            onRemoveFromRoute={handleRemoveFromRoute}
+                            onClearRoute={handleClearRoute}
+                            onSelectBusiness={(b) => {
+                                setSelectedBusiness(b);
+                            }}
+                        />
+                    </Suspense>
                 </div>
             )}
 
             {viewMode === 'settings' && (
               <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
                 <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
-                  <ManualSyncPanel />
-                  <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
+                  <Suspense fallback={<LoadingSpinner />}>
+                    <ManualSyncPanel />
+                    <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
+                  </Suspense>
                 </div>
               </div>
             )}
 
             {viewMode === 'stats' && (
               <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8 pt-0">
-                <MarketIntelligence 
-                  businesses={filteredBusinesses} 
-                  droppedPin={droppedPin} 
-                  radiusKm={radiusKm}
-                  onProviderFilter={(provider) => {
-                    setVisibleProviders([provider]);
-                    setViewMode('map');
-                  }}
-                />
+                <Suspense fallback={<LoadingSpinner />}>
+                  <MarketIntelligence 
+                    businesses={filteredBusinesses} 
+                    droppedPin={droppedPin} 
+                    radiusKm={radiusKm}
+                    onProviderFilter={(provider) => {
+                      setVisibleProviders([provider]);
+                      setViewMode('map');
+                    }}
+                  />
+                </Suspense>
               </div>
             )}
 
             {viewMode === 'seen' && (
               <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8 pt-0">
-                <SeenClients 
-                  businesses={businesses} 
-                  onDeleteBusiness={handleDeleteBusiness}
-                  onViewOnMap={(business) => {
-                    setSelectedBusiness(business);
-                    setViewMode('map');
-                    setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
-                  }}
-                />
+                <Suspense fallback={<LoadingSpinner />}>
+                  <SeenClients 
+                    businesses={businesses} 
+                    onDeleteBusiness={handleDeleteBusiness}
+                    onViewOnMap={(business) => {
+                      setSelectedBusiness(business);
+                      setViewMode('map');
+                      setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
+                    }}
+                  />
+                </Suspense>
               </div>
             )}
           </div>
@@ -792,8 +812,10 @@ function App() {
         />
       )}
 
-      <ImportModal isOpen={isImportOpen} isImporting={isImporting} onClose={() => setIsImportOpen(false)} onFileSelected={handleFileSelected} onLoadSample={handleImportSample} errorMessage={importError} />
-      <ImportMappingModal isOpen={isMappingOpen} columns={importColumns} initialMapping={{}} onConfirm={handleConfirmMapping} onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }} />
+      <Suspense fallback={null}>
+        <ImportModal isOpen={isImportOpen} isImporting={isImporting} onClose={() => setIsImportOpen(false)} onFileSelected={handleFileSelected} onLoadSample={handleImportSample} errorMessage={importError} />
+        <ImportMappingModal isOpen={isMappingOpen} columns={importColumns} initialMapping={{}} onConfirm={handleConfirmMapping} onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }} />
+      </Suspense>
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => {}} />
     </div>
     </ErrorBoundary>

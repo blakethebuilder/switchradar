@@ -431,3 +431,4 @@ export const ManualSyncPanel: React.FC = () => {
     </div>
   );
 };
+export default ManualSyncPanel;

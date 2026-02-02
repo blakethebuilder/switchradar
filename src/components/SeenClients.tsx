@@ -470,3 +470,4 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
     </div>
   );
 };
+export default SeenClients;

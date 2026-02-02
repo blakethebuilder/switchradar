@@ -204,3 +204,4 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     document.body
   );
 };
+export default ImportModal;

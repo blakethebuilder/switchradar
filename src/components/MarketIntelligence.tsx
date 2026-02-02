@@ -316,3 +316,5 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
         </div>
     );
 };
+
+export default MarketIntelligence;
