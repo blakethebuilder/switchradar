@@ -172,63 +172,63 @@ function MapController({
 
   return (
     <>
-      {/* Combined Map Info & Controls - Right Edge Aligned */}
-      <div className="absolute top-4 right-0 z-[1000] flex flex-col gap-2 md:gap-3">
-        {/* Map Info Panel - Mobile Optimized */}
-        <div className="bg-white/95 backdrop-blur-md rounded-xl md:rounded-2xl shadow-xl border border-white/40 p-2 md:p-3 min-w-[140px] md:min-w-[160px]">
-          <div className="flex items-center gap-1 md:gap-2 mb-1 md:mb-2">
-            <Info className="h-3 w-3 md:h-4 md:w-4 text-indigo-600" />
-            <span className="text-[9px] md:text-xs font-bold text-slate-600 uppercase tracking-wider">Map Info</span>
+      {/* Combined Map Info & Controls - Absolute Right Edge */}
+      <div className="absolute top-4 right-0 z-[1000] flex flex-col gap-1 md:gap-2">
+        {/* Map Info Panel - Compact Mobile */}
+        <div className="bg-white/95 backdrop-blur-md rounded-l-xl md:rounded-2xl shadow-xl border border-white/40 p-1.5 md:p-3 min-w-[100px] md:min-w-[160px]">
+          <div className="flex items-center gap-1 mb-1 md:mb-2">
+            <Info className="h-2.5 w-2.5 md:h-4 md:w-4 text-indigo-600" />
+            <span className="text-[8px] md:text-xs font-bold text-slate-600 uppercase tracking-wider">Info</span>
           </div>
           <div className="space-y-0.5 md:space-y-1">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] md:text-xs text-slate-500">Businesses:</span>
-              <span className="text-xs md:text-sm font-bold text-slate-900">{businesses.length}</span>
+              <span className="text-[8px] md:text-xs text-slate-500">Count:</span>
+              <span className="text-[9px] md:text-sm font-bold text-slate-900">{businesses.length}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-[10px] md:text-xs text-slate-500">Zoom:</span>
-              <span className="text-xs md:text-sm font-bold text-slate-900">{currentZoom.toFixed(1)}</span>
+              <span className="text-[8px] md:text-xs text-slate-500">Zoom:</span>
+              <span className="text-[9px] md:text-sm font-bold text-slate-900">{currentZoom.toFixed(1)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-[10px] md:text-xs text-slate-500">View:</span>
-              <span className="text-[10px] md:text-xs font-bold text-indigo-600">
+              <span className="text-[8px] md:text-xs text-slate-500">View:</span>
+              <span className="text-[8px] md:text-xs font-bold text-indigo-600">
                 {currentZoom >= 15.5 ? 'Scattered' : currentZoom >= 14 ? 'Spirals' : 'Clustered'}
               </span>
             </div>
             {droppedPin && (
               <div className="pt-1 md:pt-2 border-t border-slate-200">
-                <div className="flex items-center gap-1 md:gap-2">
-                  <div className="h-1.5 w-1.5 md:h-2 md:w-2 bg-rose-500 rounded-full"></div>
-                  <span className="text-[10px] md:text-xs font-bold text-rose-600">Filter Pin Active</span>
+                <div className="flex items-center gap-1">
+                  <div className="h-1 w-1 md:h-2 md:w-2 bg-rose-500 rounded-full"></div>
+                  <span className="text-[8px] md:text-xs font-bold text-rose-600">Pin Active</span>
                 </div>
                 <button
                   onClick={() => setDroppedPin(null)}
-                  className="mt-0.5 md:mt-1 text-[10px] md:text-xs text-rose-600 hover:text-rose-700 font-medium"
+                  className="mt-0.5 text-[8px] md:text-xs text-rose-600 hover:text-rose-700 font-medium"
                 >
-                  Clear Filter
+                  Clear
                 </button>
               </div>
             )}
           </div>
         </div>
 
-        {/* Modern Map Controls - Mobile Optimized */}
-        <div className="bg-white/95 backdrop-blur-md rounded-xl md:rounded-2xl shadow-xl border border-white/40 overflow-hidden w-10 md:w-12">
+        {/* Modern Map Controls - Absolute Right Edge */}
+        <div className="bg-white/95 backdrop-blur-md rounded-l-xl md:rounded-2xl shadow-xl border border-white/40 overflow-hidden w-8 md:w-12">
           {/* Zoom Controls */}
           <div className="flex flex-col">
             <button
               onClick={() => map.zoomIn()}
-              className="p-1.5 md:p-2 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50 flex items-center justify-center"
+              className="p-1 md:p-2 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50 flex items-center justify-center"
               title="Zoom In"
             >
-              <Plus className="h-3 w-3 md:h-4 md:w-4" />
+              <Plus className="h-2.5 w-2.5 md:h-4 md:w-4" />
             </button>
             <button
               onClick={() => map.zoomOut()}
-              className="p-1.5 md:p-2 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50 flex items-center justify-center"
+              className="p-1 md:p-2 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 border-b border-slate-100/50 flex items-center justify-center"
               title="Zoom Out"
             >
-              <Minus className="h-3 w-3 md:h-4 md:w-4" />
+              <Minus className="h-2.5 w-2.5 md:h-4 md:w-4" />
             </button>
           </div>
           
@@ -241,10 +241,10 @@ function MapController({
                   map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
                 }
               }}
-              className="p-1.5 md:p-2 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-200 border-b border-slate-100/50 flex items-center justify-center"
+              className="p-1 md:p-2 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-200 border-b border-slate-100/50 flex items-center justify-center"
               title="Fit All Businesses"
             >
-              <Target className="h-3 w-3 md:h-4 md:w-4" />
+              <Target className="h-2.5 w-2.5 md:h-4 md:w-4" />
             </button>
             <button
               onClick={() => {
@@ -256,14 +256,14 @@ function MapController({
                   map.getContainer().focus();
                 }
               }}
-              className={`p-1.5 md:p-2 transition-all duration-200 flex items-center justify-center ${
+              className={`p-1 md:p-2 transition-all duration-200 flex items-center justify-center ${
                 isDropMode 
                   ? 'bg-rose-500 text-white hover:bg-rose-600' 
                   : 'text-slate-600 hover:bg-rose-50 hover:text-rose-600'
               }`}
               title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin (500m radius)'}
             >
-              {isDropMode ? <X className="h-3 w-3 md:h-4 md:w-4" /> : <MapPin className="h-3 w-3 md:h-4 md:w-4" />}
+              {isDropMode ? <X className="h-2.5 w-2.5 md:h-4 md:w-4" /> : <MapPin className="h-2.5 w-2.5 md:h-4 md:w-4" />}
             </button>
           </div>
         </div>
