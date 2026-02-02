@@ -368,7 +368,10 @@ function App() {
   };
 
   const handleSelectBusinessOnMap = useCallback((b: Business) => {
-    setSelectedBusiness(b);
+    // Use requestAnimationFrame for smoother UI updates on mobile
+    requestAnimationFrame(() => {
+      setSelectedBusiness(b);
+    });
   }, []);
 
   // Calculate distance between two coordinates (Haversine formula)
@@ -513,32 +516,32 @@ function App() {
           {businesses.length > 0 ? (
             <div className="flex-1 flex flex-col h-full relative">
             {(viewMode === 'table' || viewMode === 'stats' || viewMode === 'seen') && (
-              <div className="p-4 md:p-6 lg:p-8 pb-0">
-                <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between mb-8">
+              <div className="p-3 md:p-4 lg:p-6 xl:p-8 pb-0">
+                <div className="flex flex-col gap-4 md:gap-6 md:flex-row md:items-end md:justify-between mb-6 md:mb-8">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 mb-2">
                       <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Database Active</span>
                     </div>
-                    <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-900">
+                    <h1 className="text-xl md:text-2xl lg:text-4xl font-extrabold tracking-tight text-slate-900">
                       {lastImportName || 'Workspace Live'}
                     </h1>
                   </div>
 
-                  <div className="flex flex-col md:flex-row md:items-center gap-4 bg-white px-3 py-3 rounded-2xl shadow-sm border border-slate-100 overflow-x-auto no-scrollbar">
-                    <div className="flex flex-col items-center px-4">
+                  <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 bg-white px-3 py-3 rounded-2xl shadow-sm border border-slate-100 overflow-x-auto no-scrollbar">
+                    <div className="flex flex-col items-center px-3 md:px-4">
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Businesses</span>
-                      <span className="text-xl font-black text-slate-900">{businesses.length.toLocaleString()}</span>
+                      <span className="text-lg md:text-xl font-black text-slate-900">{businesses.length.toLocaleString()}</span>
                     </div>
-                    <div className="h-8 w-px bg-slate-100 hidden md:block" />
-                    <div className="flex flex-col items-center px-4">
+                    <div className="h-6 md:h-8 w-px bg-slate-100 hidden md:block" />
+                    <div className="flex flex-col items-center px-3 md:px-4">
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Providers</span>
-                      <span className="text-xl font-black text-slate-900">{providerCount}</span>
+                      <span className="text-lg md:text-xl font-black text-slate-900">{providerCount}</span>
                     </div>
-                    <div className="h-8 w-px bg-slate-100 hidden md:block" />
-                    <div className="flex flex-col items-center px-4">
+                    <div className="h-6 md:h-8 w-px bg-slate-100 hidden md:block" />
+                    <div className="flex flex-col items-center px-3 md:px-4">
                       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500">Selected</span>
-                      <span className="text-xl font-black text-emerald-600">{filteredBusinesses.length.toLocaleString()}</span>
+                      <span className="text-lg md:text-xl font-black text-emerald-600">{filteredBusinesses.length.toLocaleString()}</span>
                     </div>
                   </div>
                 </div>
@@ -546,8 +549,8 @@ function App() {
             )}
 
             {viewMode === 'table' && (
-              <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
-                <div className="mb-8">
+              <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8 pt-0">
+                <div className="mb-6 md:mb-8">
                   <WorkspaceFilters
                     searchTerm={searchTerm}
                     onSearchChange={setSearchTerm}
@@ -616,7 +619,7 @@ function App() {
 
             {viewMode === 'map' && (
               <div className="absolute inset-0 w-full h-full">
-                <div className="absolute top-4 left-0 right-0 z-[2000] px-4">
+                <div className="absolute top-2 md:top-4 left-0 right-0 z-[2000] px-2 md:px-4">
                   <div className="max-w-4xl mx-auto">
                     <WorkspaceFilters
                       searchTerm={searchTerm}
@@ -711,7 +714,7 @@ function App() {
             )}
 
             {viewMode === 'route' && (
-                <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
+                <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
                     <RouteView 
                         routeItems={routeItems} 
                         businesses={businesses} 
@@ -725,8 +728,8 @@ function App() {
             )}
 
             {viewMode === 'settings' && (
-              <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
-                <div className="max-w-4xl mx-auto space-y-8">
+              <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
+                <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
                   <ManualSyncPanel />
                   <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
                 </div>
@@ -734,7 +737,7 @@ function App() {
             )}
 
             {viewMode === 'stats' && (
-              <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
+              <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8 pt-0">
                 <MarketIntelligence 
                   businesses={filteredBusinesses} 
                   droppedPin={droppedPin} 
@@ -748,7 +751,7 @@ function App() {
             )}
 
             {viewMode === 'seen' && (
-              <div className="flex-1 overflow-auto p-4 md:p-6 lg:p-8 pt-0">
+              <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8 pt-0">
                 <SeenClients 
                   businesses={businesses} 
                   onDeleteBusiness={handleDeleteBusiness}

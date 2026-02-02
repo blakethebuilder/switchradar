@@ -178,62 +178,81 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
     <>
       {/* Bottom Toolbar */}
       <div className="fixed bottom-0 left-0 right-0 z-[1000] bg-white border-t border-slate-200 shadow-2xl">
-        {/* Collapsed State - Business Info Bar - Improved Layout */}
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
-            {/* Business Info - Better Organization */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+        {/* Collapsed State - Mobile-Optimized Business Info Bar */}
+        <div className="px-3 py-2 md:px-4 md:py-3">
+          <div className="flex items-center justify-between gap-2">
+            {/* Business Info - Mobile-First Layout */}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
               <div className="flex-shrink-0">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center">
-                  <Building2 className="w-5 h-5 text-indigo-600" />
+                <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-indigo-100 flex items-center justify-center">
+                  <Building2 className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />
                 </div>
               </div>
               
               <div className="flex-1 min-w-0">
-                {/* Line 1: Business Name + Notes Badge */}
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-bold text-slate-900 truncate text-sm">
-                    {business.name}
-                  </h3>
-                  {business.richNotes && business.richNotes.length > 0 && (
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 flex-shrink-0">
-                      {business.richNotes.length}
-                    </span>
-                  )}
+                {/* Mobile: Single line with name + notes */}
+                <div className="md:hidden">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-slate-900 truncate text-sm">
+                      {business.name}
+                    </h3>
+                    {business.richNotes && business.richNotes.length > 0 && (
+                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 flex-shrink-0">
+                        {business.richNotes.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 text-xs">
+                    <ProviderBadge provider={business.provider} className="scale-75 origin-left flex-shrink-0" />
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-500 truncate">{business.town}</span>
+                  </div>
                 </div>
-                
-                {/* Line 2: Category */}
-                <div className="text-xs text-slate-600 font-medium mb-1 truncate">
-                  {business.category}
-                </div>
-                
-                {/* Line 3: Provider + Phone + Location */}
-                <div className="flex items-center gap-2 text-xs">
-                  <ProviderBadge provider={business.provider} className="scale-75 origin-left flex-shrink-0" />
-                  {business.phone && (
-                    <>
-                      <span className="text-slate-400">•</span>
-                      <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                      <span className="text-slate-600 font-medium">{business.phone}</span>
-                    </>
-                  )}
-                  <span className="text-slate-400">•</span>
-                  <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
-                  <span className="text-slate-500 truncate">{business.town}</span>
+
+                {/* Desktop: Multi-line layout */}
+                <div className="hidden md:block">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-slate-900 truncate text-sm">
+                      {business.name}
+                    </h3>
+                    {business.richNotes && business.richNotes.length > 0 && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-700 flex-shrink-0">
+                        {business.richNotes.length}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="text-xs text-slate-600 font-medium mb-1 truncate">
+                    {business.category}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 text-xs">
+                    <ProviderBadge provider={business.provider} className="scale-75 origin-left flex-shrink-0" />
+                    {business.phone && (
+                      <>
+                        <span className="text-slate-400">•</span>
+                        <Phone className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                        <span className="text-slate-600 font-medium">{business.phone}</span>
+                      </>
+                    )}
+                    <span className="text-slate-400">•</span>
+                    <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                    <span className="text-slate-500 truncate">{business.town}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex items-center gap-2">
+            {/* Quick Actions - Mobile Optimized */}
+            <div className="flex items-center gap-1">
               {/* Call Button */}
               {business.phone && (
                 <a
                   href={`tel:${business.phone}`}
-                  className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                  className="p-1.5 md:p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
                   title="Call"
                 >
-                  <Phone className="w-4 h-4" />
+                  <Phone className="w-3 h-3 md:w-4 md:h-4" />
                 </a>
               )}
 
@@ -243,55 +262,55 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                   href={business.mapsLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  className="p-1.5 md:p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                   title="Open in Google Maps"
                 >
-                  <ExternalLink className="w-4 h-4" />
+                  <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
                 </a>
               ) : (
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address + ', ' + business.town + ', ' + business.province)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  className="p-1.5 md:p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
                   title="Open in Google Maps"
                 >
-                  <ExternalLink className="w-4 h-4" />
+                  <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
                 </a>
               )}
 
               {/* Add to Route Button */}
               <button
                 onClick={() => isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id)}
-                className={`p-2 rounded-lg transition-colors ${
+                className={`p-1.5 md:p-2 rounded-lg transition-colors ${
                   isInRoute
                     ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
                     : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
                 }`}
                 title={isInRoute ? "Remove from Route" : "Add to Route"}
               >
-                <Route className="w-4 h-4" />
+                <Route className="w-3 h-3 md:w-4 md:h-4" />
               </button>
 
-              {/* Navigation Controls - RESTORED */}
+              {/* Navigation Controls - Hidden on small mobile */}
               {onNavigateNext && onNavigatePrev && totalCount && totalCount > 1 && (
-                <div className="flex items-center bg-slate-50 rounded-lg overflow-hidden ml-2">
+                <div className="hidden sm:flex items-center bg-slate-50 rounded-lg overflow-hidden ml-1">
                   <button
                     onClick={onNavigatePrev}
-                    className="p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                    className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                     title="Previous Business"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-3 h-3" />
                   </button>
                   <div className="px-2 py-1 text-xs font-bold text-slate-600 bg-slate-100">
                     {currentIndex !== undefined ? `${currentIndex + 1}/${totalCount}` : 'Nav'}
                   </div>
                   <button
                     onClick={onNavigateNext}
-                    className="p-2 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                    className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                     title="Next Business"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    <ChevronRight className="w-3 h-3" />
                   </button>
                 </div>
               )}
@@ -299,19 +318,19 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
               {/* Expand Button */}
               <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                className="p-1.5 md:p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
                 title={isExpanded ? "Collapse" : "Expand"}
               >
-                {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                {isExpanded ? <ChevronDown className="w-3 h-3 md:w-4 md:h-4" /> : <ChevronUp className="w-3 h-3 md:w-4 md:h-4" />}
               </button>
               
               {/* Close Button */}
               <button
                 onClick={onClose}
-                className="p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                className="p-1.5 md:p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
                 title="Close"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3 h-3 md:w-4 md:h-4" />
               </button>
             </div>
           </div>
