@@ -1,6 +1,7 @@
 import React from 'react';
-import { Database, ShieldCheck, X, CheckCircle2, Cloud } from 'lucide-react';
+import { Database, ShieldCheck, X, CheckCircle2, Cloud, Wifi, WifiOff, Server } from 'lucide-react';
 import type { Business } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface DbSettingsPageProps {
   businesses: Business[];
@@ -8,10 +9,20 @@ interface DbSettingsPageProps {
 }
 
 export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onClose }) => {
+  const { user, isAuthenticated } = useAuth();
   const totalBusinesses = businesses.length;
   const providers = new Set(businesses.map(b => b.provider)).size;
   const towns = new Set(businesses.map(b => b.town)).size;
   const categories = new Set(businesses.map(b => b.category)).size;
+
+  // Determine database source
+  const getDatabaseSource = () => {
+    if (totalBusinesses === 0) return 'Empty';
+    // You could add logic here to detect if data came from cloud vs local import
+    return 'Local Import';
+  };
+
+  const databaseSource = getDatabaseSource();
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-5xl mx-auto">
@@ -37,7 +48,7 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
         {/* Active Dataset Card */}
         <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Cloud className="h-32 w-32 text-indigo-600" />
+            <Database className="h-32 w-32 text-indigo-600" />
           </div>
           
           <div className="relative z-10">
@@ -69,14 +80,18 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
 
               <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                <span className="text-sm font-bold text-slate-600">This dataset is currently loaded in your workspace.</span>
+                <div>
+                  <span className="text-sm font-bold text-slate-600">Database Source: </span>
+                  <span className="text-sm font-black text-slate-900">{databaseSource}</span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Actions / Control Panel */}
+        {/* Database Status & Cloud Connection */}
         <div className="flex flex-col gap-4">
+          {/* Local Security */}
           <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-200">
             <div className="flex items-center gap-3 mb-2">
               <ShieldCheck className="h-6 w-6 text-slate-200" />
@@ -85,6 +100,58 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
             <div className="text-lg font-bold mb-4">Your data is stored locally and securely in your browser.</div>
             <div className="text-xs font-medium text-slate-100 opacity-80">
               Storage Mode: Offline / Private
+            </div>
+          </div>
+
+          {/* Cloud Connection Status */}
+          <div className={`rounded-[2rem] p-6 shadow-xl shadow-slate-200 ${
+            isAuthenticated 
+              ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white' 
+              : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600'
+          }`}>
+            <div className="flex items-center gap-3 mb-2">
+              {isAuthenticated ? (
+                <>
+                  <Wifi className="h-6 w-6" />
+                  <span className="text-xs font-black uppercase tracking-widest opacity-80">Cloud Connected</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-6 w-6" />
+                  <span className="text-xs font-black uppercase tracking-widest opacity-80">Cloud Disconnected</span>
+                </>
+              )}
+            </div>
+            <div className="text-lg font-bold mb-2">
+              {isAuthenticated ? `Signed in as ${user?.username}` : 'Not connected to cloud'}
+            </div>
+            <div className="text-xs font-medium opacity-80">
+              {isAuthenticated 
+                ? 'Manual sync available in Settings' 
+                : 'Sign in to enable cloud sync features'
+              }
+            </div>
+          </div>
+
+          {/* Database Info */}
+          <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100">
+            <div className="flex items-center gap-3 mb-4">
+              <Server className="h-6 w-6 text-indigo-600" />
+              <span className="text-xs font-black uppercase tracking-widest text-slate-500">Database Info</span>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-slate-600">Type:</span>
+                <span className="font-bold text-slate-900">IndexedDB (Browser)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Status:</span>
+                <span className="font-bold text-emerald-600">Active</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-600">Last Updated:</span>
+                <span className="font-bold text-slate-900">{new Date().toLocaleDateString()}</span>
+              </div>
             </div>
           </div>
         </div>

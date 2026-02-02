@@ -29,21 +29,34 @@ export const ManualSyncPanel: React.FC = () => {
   const fetchCloudStats = async () => {
     if (!token) return;
     
+    setSyncStatus({ type: 'loading', message: 'Fetching cloud statistics...' });
+    
     try {
-      const response = await fetch('/api/sync/status', {
+      const apiUrl = environmentConfig.getApiUrl();
+      const statusUrl = apiUrl ? `${apiUrl}/api/sync/status` : '/api/sync/status';
+      
+      const response = await fetch(statusUrl, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (response.ok) {
         const data = await response.json();
         setCloudStats({
-          totalBusinesses: data.currentData.businesses,
-          lastSync: data.user.lastSync,
-          storageUsed: data.currentData.estimatedStorageMB
+          totalBusinesses: data.currentData?.businesses || 0,
+          lastSync: data.user?.lastSync || null,
+          storageUsed: data.currentData?.estimatedStorageMB || 0
         });
+        setSyncStatus({ type: 'success', message: 'Cloud statistics updated' });
+      } else {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
     } catch (error) {
       console.error('Failed to fetch cloud stats:', error);
+      setSyncStatus({ 
+        type: 'error', 
+        message: 'Failed to fetch cloud statistics. Check your connection and try again.',
+        details: error
+      });
     }
   };
 
@@ -311,7 +324,7 @@ export const ManualSyncPanel: React.FC = () => {
               disabled={syncStatus.type === 'loading'}
               className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 disabled:opacity-50"
             >
-              Refresh
+              {syncStatus.type === 'loading' ? 'Loading...' : 'Refresh'}
             </button>
           </div>
           {cloudStats ? (

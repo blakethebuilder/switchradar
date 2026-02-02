@@ -506,11 +506,7 @@ function App() {
           onClearData={handleClearAll}
           totalCount={businesses.length}
           lastImportName={lastImportName}
-          isSyncing={false}
           onLoginClick={() => setIsLoginOpen(true)}
-          onClearCloudData={async () => {}}
-          onPushToCloud={() => {}}
-          onPullFromCloud={() => {}}
         />
         
         <main className="flex-1 flex flex-col overflow-hidden relative">

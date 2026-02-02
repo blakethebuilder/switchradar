@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, Cloud, User as UserIcon, LogOut, Menu, X, CloudUpload, Route, Settings, Eye } from 'lucide-react';
+import { Database, Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, User as UserIcon, LogOut, Menu, X, Route, Settings, Eye } from 'lucide-react';
 import type { ViewMode } from '../types';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,10 +12,6 @@ interface TopNavProps {
   totalCount: number;
   lastImportName?: string;
   onLoginClick: () => void;
-  isSyncing?: boolean;
-  onClearCloudData?: () => Promise<void>;
-  onPushToCloud?: () => void;
-  onPullFromCloud?: () => void;
 }
 
 export const TopNav = ({
@@ -27,10 +23,6 @@ export const TopNav = ({
   totalCount,
   lastImportName,
   onLoginClick,
-  isSyncing,
-  onClearCloudData,
-  onPushToCloud,
-  onPullFromCloud,
 }: TopNavProps) => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -215,38 +207,16 @@ export const TopNav = ({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-black text-slate-900">{user?.username}</p>
-                  <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Cloud Connected</p>
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Local Mode</p>
                 </div>
-                {isSyncing && <Cloud className="h-4 w-4 text-indigo-500 animate-pulse" />}
-              </div>
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <button
-                  onClick={() => { onPushToCloud?.(); setIsMenuOpen(false); }}
-                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 text-xs font-bold"
-                >
-                  <CloudUpload className="h-4 w-4" />
-                  Push
-                </button>
-                <button
-                  onClick={() => { onPullFromCloud?.(); setIsMenuOpen(false); }}
-                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 text-xs font-bold"
-                >
-                  <Download className="h-4 w-4" />
-                  Pull
-                </button>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  onClick={async () => {
-                    if (window.confirm('WARNING: This will wipe all data from your Cloud Workspace. Local data will remain. Continue?')) {
-                      await onClearCloudData?.();
-                      setIsMenuOpen(false);
-                    }
-                  }}
-                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-rose-600 text-xs font-bold"
+                  onClick={() => { onViewModeChange('settings'); setIsMenuOpen(false); }}
+                  className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-slate-200 text-slate-600 hover:text-indigo-600 text-xs font-bold"
                 >
-                  <Trash2 className="h-4 w-4" />
-                  Clear Cloud
+                  <Settings className="h-4 w-4" />
+                  Settings
                 </button>
                 <button onClick={() => { logout(); setIsMenuOpen(false); }} className="flex items-center justify-center gap-2 p-3 rounded-xl bg-white border border-slate-200 text-slate-600 text-xs font-bold">
                   <LogOut className="h-4 w-4" />
@@ -260,7 +230,7 @@ export const TopNav = ({
               className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-900 text-white font-bold"
             >
               <UserIcon className="h-4 w-4" />
-              Connect To Cloud
+              Sign In
             </button>
           )}
 

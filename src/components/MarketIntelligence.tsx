@@ -232,7 +232,7 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({ business
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <div className="h-3 w-3 rounded-full shadow-sm" style={{ backgroundColor: getProviderColor(network.name) }} />
-                                            <span className="text-xs font-bold text-slate-900 uppercase tracking-tight truncate max-w-[80px] group-hover:text-indigo-600 transition-colors">{network.name}</span>
+                                            <span className="text-xs font-bold text-slate-900 uppercase tracking-tight truncate max-w-[80px] group-hover:text-indigo-600 transition-colors" style={{ color: network.name.toLowerCase().includes('telkom') ? '#1e293b' : undefined }}>{network.name}</span>
                                         </div>
                                         <span className="text-lg font-black text-slate-900 group-hover:text-indigo-600 transition-colors">{network.pct}%</span>
                                     </div>

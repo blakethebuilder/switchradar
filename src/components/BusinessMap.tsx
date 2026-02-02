@@ -22,7 +22,6 @@ function MapController({
   droppedPin,
   onMultiSelect,
   onMapReady,
-  mapInstance,
   currentZoom,
   setCurrentZoom,
   // @ts-ignore - selectedBusinessIds is used in memoizedMarkers
@@ -37,7 +36,6 @@ function MapController({
   droppedPin: { lat: number, lng: number } | null,
   onMultiSelect?: (businesses: Business[]) => void,
   onMapReady?: (map: L.Map) => void,
-  mapInstance: L.Map | null,
   currentZoom: number,
   setCurrentZoom: Dispatch<SetStateAction<number>>,
   selectedBusinessIds?: string[]
@@ -751,7 +749,6 @@ export const BusinessMap = React.memo(({
           droppedPin={droppedPin}
           onMultiSelect={onMultiSelect}
           onMapReady={handleMapReady}
-          mapInstance={mapInstance}
           currentZoom={currentZoom}
           setCurrentZoom={setCurrentZoom}
           selectedBusinessIds={selectedBusinessIds}
