@@ -527,9 +527,15 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <input
                         type="text"
                         value={business.metadata?.lengthWithCurrentProvider || ''}
-                        onChange={(e) => handleUpdateTextMetadata('lengthWithCurrentProvider', e.target.value)}
+                        onChange={(e) => {
+                          console.log('Length input changed:', e.target.value);
+                          handleUpdateTextMetadata('lengthWithCurrentProvider', e.target.value);
+                        }}
+                        onFocus={() => console.log('Length input focused')}
                         placeholder="e.g., 2 years, 6 months"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
+                        disabled={false}
+                        readOnly={false}
                       />
                     </div>
 
@@ -539,9 +545,15 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <input
                         type="text"
                         value={business.metadata?.ispProvider || ''}
-                        onChange={(e) => handleUpdateTextMetadata('ispProvider', e.target.value)}
+                        onChange={(e) => {
+                          console.log('ISP input changed:', e.target.value);
+                          handleUpdateTextMetadata('ispProvider', e.target.value);
+                        }}
+                        onFocus={() => console.log('ISP input focused')}
                         placeholder="e.g., Telkom, Vodacom, MTN"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
+                        disabled={false}
+                        readOnly={false}
                       />
                     </div>
 
@@ -551,9 +563,15 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <input
                         type="text"
                         value={business.metadata?.pabxProvider || ''}
-                        onChange={(e) => handleUpdateTextMetadata('pabxProvider', e.target.value)}
+                        onChange={(e) => {
+                          console.log('PABX input changed:', e.target.value);
+                          handleUpdateTextMetadata('pabxProvider', e.target.value);
+                        }}
+                        onFocus={() => console.log('PABX input focused')}
                         placeholder="e.g., Panasonic, Avaya, Cisco"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
+                        disabled={false}
+                        readOnly={false}
                       />
                     </div>
 
