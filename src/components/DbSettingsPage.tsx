@@ -1,7 +1,8 @@
-import React from 'react';
-import { Database, ShieldCheck, X, CheckCircle2, Wifi, WifiOff, Server } from 'lucide-react';
+import React, { useState } from 'react';
+import { Database, ShieldCheck, X, CheckCircle2, Wifi, WifiOff, Server, Users } from 'lucide-react';
 import type { Business } from '../types';
 import { useAuth } from '../context/AuthContext';
+import UserManagement from './UserManagement';
 
 interface DbSettingsPageProps {
   businesses: Business[];
@@ -9,7 +10,8 @@ interface DbSettingsPageProps {
 }
 
 export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onClose }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isSuperAdmin } = useAuth();
+  const [activeTab, setActiveTab] = useState<'database' | 'users'>('database');
   const totalBusinesses = businesses.length;
   const providers = new Set(businesses.map(b => b.provider)).size;
   const towns = new Set(businesses.map(b => b.town)).size;
@@ -32,8 +34,8 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
             <Database className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Local Database Manager</h1>
-            <p className="text-sm font-medium text-slate-400">Manage your active datasets and workspace</p>
+            <h1 className="text-2xl font-black text-slate-900">Settings & Management</h1>
+            <p className="text-sm font-medium text-slate-400">Manage your database and system users</p>
           </div>
         </div>
         <button 
@@ -44,7 +46,36 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Tab Navigation */}
+      <div className="flex gap-1 mb-8 bg-slate-100 p-1 rounded-xl">
+        <button
+          onClick={() => setActiveTab('database')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+            activeTab === 'database'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+          }`}
+        >
+          <Database className="h-4 w-4" />
+          Database
+        </button>
+        {isSuperAdmin && (
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              activeTab === 'users'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            Users
+          </button>
+        )}
+      </div>
+
+      {activeTab === 'database' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Active Dataset Card */}
         <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -156,6 +187,11 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
           </div>
         </div>
       </div>
+      )}
+
+      {activeTab === 'users' && isSuperAdmin && (
+        <UserManagement />
+      )}
     </div>
   );
 };

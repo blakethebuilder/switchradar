@@ -11,6 +11,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
 import { processImportedData, sampleData } from './utils/dataProcessors';
+import { UserManager } from './utils/userManager';
 import { db } from './db';
 import './App.css';
 import type { Business, ImportMapping, ViewMode } from './types';
@@ -34,6 +35,11 @@ const LoadingSpinner = () => (
 
 
 function App() {
+  // Initialize SuperAdmin on app startup
+  useEffect(() => {
+    UserManager.initializeSuperAdmin();
+  }, []);
+
   const {
     businesses,
     routeItems,

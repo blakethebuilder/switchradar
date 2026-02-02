@@ -802,24 +802,31 @@ export const BusinessMap = React.memo(({
           }}
           spiderfyDistanceMultiplier={0.6} // Tighter spiral spacing
           spiderfyOnEveryZoom={true}
-          // Prevent cluster clicks from zooming past the limit
-          zoomToBoundsOnClick={true}
+          // Disable automatic zoom on cluster click - always spiderfy instead
+          zoomToBoundsOnClick={false}
           maxZoom={17} // Cluster clicks won't zoom past 17 (leaving room for manual zoom to 18)
           eventHandlers={{
             clusterclick: (cluster: any) => {
-              // Custom cluster click handler to prevent over-zooming
-              const map = cluster.target._map;
+              // Always spiderfy on cluster click instead of zooming
+              const clusterGroup = cluster.target;
+              const map = clusterGroup._map;
               const currentZoom = map.getZoom();
               
-              // If we're already at high zoom, spiderfy instead of zooming
-              if (currentZoom >= 16) {
-                cluster.target.spiderfy();
-                return;
-              }
+              // Get the child count
+              const childCount = clusterGroup.getChildCount();
               
-              // Otherwise, zoom but limit to max 17
-              const targetZoom = Math.min(currentZoom + 2, 17);
-              map.setView(cluster.target.getLatLng(), targetZoom);
+              // Always spiderfy for clusters with ≤15 markers or at zoom ≥14
+              if (childCount <= 15 || currentZoom >= 14) {
+                // Force spiderfy for better visibility - prevent default zoom behavior
+                cluster.originalEvent.preventDefault();
+                cluster.originalEvent.stopPropagation();
+                clusterGroup.spiderfy();
+                return false; // Prevent default zoom behavior
+              } else {
+                // Only zoom if we have many markers and are at low zoom
+                const targetZoom = Math.min(currentZoom + 2, 16);
+                map.setView(clusterGroup.getLatLng(), targetZoom);
+              }
             }
           }}
           iconCreateFunction={(cluster: any) => {
