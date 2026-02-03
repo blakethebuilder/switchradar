@@ -51,18 +51,29 @@ class ServerDataService {
 
   async saveBusinesses(businesses: Business[], token: string): Promise<ServerDataResult> {
     try {
+      console.log('saveBusinesses called with:', {
+        businessCount: businesses.length,
+        tokenPresent: !!token,
+        apiUrl: this.getApiUrl('/api/businesses/sync')
+      });
+
       const response = await fetch(this.getApiUrl('/api/businesses/sync'), {
         method: 'POST',
         headers: this.getAuthHeaders(token),
         body: JSON.stringify({ businesses })
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('Response error text:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('Response result:', result);
       
       return {
         success: true,

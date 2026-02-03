@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { serverDataService } from '../services/serverData';
 import { db } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { environmentConfig } from '../config/environment';
 
 interface DatabaseStats {
   local: {
@@ -33,7 +34,10 @@ export const ManualSyncPanel: React.FC = () => {
   useEffect(() => {
     updateLocalStats();
     if (isAuthenticated) {
+      console.log('User authenticated, checking server connection...');
       checkServerConnection();
+    } else {
+      console.log('User not authenticated, skipping server connection check');
     }
   }, [localBusinesses, localRoutes, isAuthenticated]);
 
@@ -51,8 +55,13 @@ export const ManualSyncPanel: React.FC = () => {
   const checkServerConnection = async () => {
     if (!token) return;
     
+    console.log('Checking server connection...');
+    console.log('API URL:', environmentConfig.getApiUrl());
+    
     try {
       const result = await serverDataService.getBusinesses(token);
+      console.log('Server connection result:', result);
+      
       setStats(prev => ({
         ...prev,
         server: {
@@ -62,6 +71,7 @@ export const ManualSyncPanel: React.FC = () => {
         }
       }));
     } catch (error) {
+      console.error('Server connection error:', error);
       setStats(prev => ({
         ...prev,
         server: { ...prev.server, connected: false }
@@ -77,16 +87,26 @@ export const ManualSyncPanel: React.FC = () => {
   const uploadToServer = async () => {
     if (!token || localBusinesses.length === 0) return;
     
+    console.log('Starting upload to server...');
+    console.log('Token:', token ? 'Present' : 'Missing');
+    console.log('Local businesses count:', localBusinesses.length);
+    console.log('API URL:', environmentConfig.getApiUrl());
+    
     setLoading(true);
     try {
+      console.log('Calling serverDataService.saveBusinesses...');
       const result = await serverDataService.saveBusinesses(localBusinesses, token);
+      console.log('Upload result:', result);
+      
       if (result.success) {
         showStatus('success', `Uploaded ${localBusinesses.length} businesses to server`);
         await checkServerConnection();
       } else {
+        console.error('Upload failed:', result.error);
         showStatus('error', result.error || 'Upload failed');
       }
     } catch (error) {
+      console.error('Upload error:', error);
       showStatus('error', 'Network error during upload');
     } finally {
       setLoading(false);
