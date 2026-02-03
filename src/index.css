@@ -166,22 +166,75 @@
   .leaflet-container {
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
+    /* Enable hardware acceleration */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    -webkit-perspective: 1000;
+    perspective: 1000;
   }
   
   .custom-marker,
   .custom-cluster-icon {
     will-change: transform;
+    /* Optimize for mobile rendering */
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
   }
   
-  /* Reduce animations on mobile */
+  /* Reduce animations on mobile for better performance */
   .marker-cluster-small,
   .marker-cluster-medium,
   .marker-cluster-large {
     transition: none !important;
   }
   
+  /* Optimize spiderfy animations for mobile */
+  .leaflet-cluster-anim .leaflet-marker-icon,
+  .leaflet-cluster-anim .leaflet-marker-shadow {
+    transition: transform 0.2s ease-out !important; /* Faster on mobile */
+  }
+  
   /* Optimize scrolling */
   .custom-scrollbar {
     -webkit-overflow-scrolling: touch;
   }
+}
+
+/* Tablet optimizations */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .leaflet-container {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+  
+  /* Slightly reduced spiral animations for tablets */
+  .leaflet-cluster-anim .leaflet-marker-icon,
+  .leaflet-cluster-anim .leaflet-marker-shadow {
+    transition: transform 0.25s ease-out !important;
+  }
+}
+
+/* Enhanced cluster icon performance */
+.cluster-icon {
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.cluster-icon:hover {
+  transform: scale(1.05) !important;
+}
+
+/* Dropped pin marker optimizations */
+.dropped-pin-marker {
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* Fallback marker optimizations */
+.fallback-marker {
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }
