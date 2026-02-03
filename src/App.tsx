@@ -17,6 +17,15 @@ import { processImportedData, sampleData } from './utils/dataProcessors';
 import './App.css';
 import type { Business, ImportMapping, ViewMode } from './types';
 
+// Debug log to verify code is running
+console.log('🚀 APP: App.tsx loaded at', new Date().toISOString());
+console.log('🔧 APP: Environment check:', {
+  isDev: import.meta.env.DEV,
+  mode: import.meta.env.MODE,
+  apiUrl: import.meta.env.VITE_API_URL,
+  hostname: window.location.hostname
+});
+
 // Lazy load heavy components that aren't immediately needed
 const MarketIntelligence = lazy(() => import('./components/MarketIntelligence'));
 const ImportModal = lazy(() => import('./components/ImportModal'));
@@ -36,6 +45,7 @@ const LoadingSpinner = () => (
 
 
 function App() {
+  console.log('🚀 APP: App component rendering at', new Date().toISOString());
 
   const {
     businesses,
@@ -78,6 +88,13 @@ function App() {
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
 
   const { isAuthenticated, token } = useAuth();
+  
+  console.log('🔐 APP: Auth status check:', {
+    isAuthenticated,
+    tokenPresent: !!token,
+    tokenLength: token?.length,
+    timestamp: new Date().toISOString()
+  });
 
   // Force map re-render when switching to map view
   useEffect(() => {

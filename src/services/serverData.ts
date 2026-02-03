@@ -21,6 +21,24 @@ class ServerDataService {
     return apiUrl ? `${apiUrl}${endpoint}` : endpoint;
   }
 
+  private handleAuthError(response: Response): void {
+    if (response.status === 401) {
+      console.warn('🔐 Authentication failed - token may be invalid. Clearing stored credentials.');
+      
+      // Show a user-friendly message
+      const message = 'Your session has expired. Please logout and login again to continue.';
+      
+      // Try to show a toast notification if available, otherwise use alert
+      if (window.confirm(`${message}\n\nClick OK to logout now, or Cancel to logout manually.`)) {
+        // Clear invalid tokens from localStorage
+        localStorage.removeItem('sr_token');
+        localStorage.removeItem('sr_user');
+        // Reload the page to force re-authentication
+        window.location.reload();
+      }
+    }
+  }
+
   private async makeRequest(url: string, options: RequestInit, retries = 3): Promise<Response> {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
@@ -37,6 +55,10 @@ class ServerDataService {
         
         clearTimeout(timeoutId);
         console.log(`📥 Response: ${response.status} ${response.statusText}`);
+        
+        // Handle authentication errors
+        this.handleAuthError(response);
+        
         return response;
         
       } catch (error) {

@@ -9,7 +9,7 @@ const APIAlignmentService = require('./services/apiAlignment');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-const JWT_SECRET = process.env.JWT_SECRET || 'switchradar_secret_key';
+const JWT_SECRET = process.env.JWT_SECRET || '10WLkV5qHvXMgADdHm78e6DlBdH8SC4kmFUBSWaEDIQ';
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increase JSON payload limit
@@ -87,9 +87,12 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
+    console.log('🔐 Login attempt for username:', username);
+    
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
+        console.log('❌ Login failed: Invalid credentials for', username);
         return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -99,15 +102,24 @@ app.post('/api/auth/login', async (req, res) => {
         role = 'admin';
     }
 
-    const token = jwt.sign({ userId: user.id, username: user.username, role }, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ 
+    console.log('🎫 Generating JWT token with secret:', JWT_SECRET.substring(0, 10) + '...');
+    const tokenPayload = { userId: user.id, username: user.username, role };
+    console.log('📦 Token payload:', tokenPayload);
+    
+    const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: '24h' });
+    console.log('✅ Token generated successfully:', token.substring(0, 20) + '...');
+    
+    const response = { 
         token, 
         userId: user.id, 
         username: user.username,
         role,
         email: username.toLowerCase() === 'blake' ? 'blake@smartintegrateco.za' : `${username.toLowerCase()}@switchradar.com`,
         createdAt: user.created_at
-    });
+    };
+    
+    console.log('📤 Login response:', { ...response, token: token.substring(0, 20) + '...' });
+    res.json(response);
 });
 
 // Route Planner Routes
