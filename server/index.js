@@ -134,7 +134,131 @@ app.post('/api/route/sync', auth, (req, res) => {
     res.json({ message: 'Route sync successful' });
 });
 
-// Workspace Control Routes
+// Dataset Management Routes
+app.get('/api/datasets', auth, (req, res) => {
+    try {
+        const userId = req.userData.userId;
+        const { role } = req.userData;
+        
+        let datasets;
+        if (role === 'admin') {
+            // Admins can see all datasets
+            datasets = db.prepare(`
+                SELECT d.*, u.username as created_by_name,
+                       COUNT(l.id) as business_count
+                FROM datasets d
+                LEFT JOIN users u ON d.created_by = u.id
+                LEFT JOIN leads l ON d.id = l.dataset_id
+                WHERE d.is_active = 1
+                GROUP BY d.id
+                ORDER BY d.created_at DESC
+            `).all();
+        } else {
+            // Regular users can only see datasets they have permission for
+            datasets = db.prepare(`
+                SELECT d.*, u.username as created_by_name,
+                       COUNT(l.id) as business_count,
+                       dp.permission_level
+                FROM datasets d
+                LEFT JOIN users u ON d.created_by = u.id
+                LEFT JOIN dataset_permissions dp ON d.id = dp.dataset_id AND dp.user_id = ?
+                LEFT JOIN leads l ON d.id = l.dataset_id
+                WHERE d.is_active = 1 AND (d.created_by = ? OR dp.user_id = ?)
+                GROUP BY d.id
+                ORDER BY d.created_at DESC
+            `).all(userId, userId, userId);
+        }
+        
+        res.json({
+            datasets,
+            userRole: role,
+            canCreateDatasets: role === 'admin'
+        });
+    } catch (error) {
+        console.error('Failed to fetch datasets:', error);
+        res.status(500).json({ message: 'Failed to fetch datasets', error: error.message });
+    }
+});
+
+app.post('/api/datasets', auth, (req, res) => {
+    try {
+        const { name, description, town, province } = req.body;
+        const userId = req.userData.userId;
+        const { role } = req.userData;
+        
+        if (role !== 'admin') {
+            return res.status(403).json({ message: 'Only admins can create datasets' });
+        }
+        
+        if (!name || !town) {
+            return res.status(400).json({ message: 'Dataset name and town are required' });
+        }
+        
+        const result = db.prepare(`
+            INSERT INTO datasets (name, description, town, province, created_by)
+            VALUES (?, ?, ?, ?, ?)
+        `).run(name, description, town, province, userId);
+        
+        // Grant admin permission to creator
+        db.prepare(`
+            INSERT INTO dataset_permissions (dataset_id, user_id, permission_level, granted_by)
+            VALUES (?, ?, 'admin', ?)
+        `).run(result.lastInsertRowid, userId, userId);
+        
+        res.status(201).json({
+            message: 'Dataset created successfully',
+            datasetId: result.lastInsertRowid,
+            name,
+            town,
+            province
+        });
+    } catch (error) {
+        console.error('Failed to create dataset:', error);
+        res.status(500).json({ message: 'Failed to create dataset', error: error.message });
+    }
+});
+
+// Grant dataset access to user
+app.post('/api/datasets/:datasetId/permissions', auth, (req, res) => {
+    try {
+        const { datasetId } = req.params;
+        const { userId: targetUserId, permissionLevel = 'read' } = req.body;
+        const grantedBy = req.userData.userId;
+        const { role } = req.userData;
+        
+        if (role !== 'admin') {
+            return res.status(403).json({ message: 'Only admins can grant dataset permissions' });
+        }
+        
+        // Check if dataset exists
+        const dataset = db.prepare('SELECT * FROM datasets WHERE id = ? AND is_active = 1').get(datasetId);
+        if (!dataset) {
+            return res.status(404).json({ message: 'Dataset not found' });
+        }
+        
+        // Check if user exists
+        const user = db.prepare('SELECT * FROM users WHERE id = ?').get(targetUserId);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        // Grant or update permission
+        db.prepare(`
+            INSERT OR REPLACE INTO dataset_permissions (dataset_id, user_id, permission_level, granted_by)
+            VALUES (?, ?, ?, ?)
+        `).run(datasetId, targetUserId, permissionLevel, grantedBy);
+        
+        res.json({
+            message: 'Permission granted successfully',
+            datasetId,
+            userId: targetUserId,
+            permissionLevel
+        });
+    } catch (error) {
+        console.error('Failed to grant dataset permission:', error);
+        res.status(500).json({ message: 'Failed to grant permission', error: error.message });
+    }
+});
 app.delete('/api/workspace', auth, (req, res) => {
     const userId = req.userData.userId;
     const deleteLeads = db.prepare('DELETE FROM leads WHERE userId = ?');
@@ -154,7 +278,7 @@ app.delete('/api/workspace', auth, (req, res) => {
     }
 });
 
-// Business Routes with enhanced filtering and pagination
+// Business Routes with enhanced filtering and multi-dataset support
 app.get('/api/businesses', auth, (req, res) => {
     try {
         const { 
@@ -166,40 +290,79 @@ app.get('/api/businesses', auth, (req, res) => {
             town = '',
             status = '',
             phoneType = 'all',
+            datasets = '', // Comma-separated dataset IDs
             lat,
             lng,
             radius
         } = req.query;
         
         const offset = (parseInt(page) - 1) * parseInt(limit);
+        const userId = req.userData.userId;
+        const { role } = req.userData;
+        
+        // Build dataset filter
+        let datasetFilter = '';
+        let datasetParams = [];
+        
+        if (datasets && datasets.trim()) {
+            const datasetIds = datasets.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            if (datasetIds.length > 0) {
+                if (role === 'admin') {
+                    // Admins can access any dataset
+                    datasetFilter = `AND l.dataset_id IN (${datasetIds.map(() => '?').join(',')})`;
+                    datasetParams = datasetIds;
+                } else {
+                    // Regular users need permission
+                    datasetFilter = `AND l.dataset_id IN (
+                        SELECT dp.dataset_id FROM dataset_permissions dp 
+                        WHERE dp.user_id = ? AND dp.dataset_id IN (${datasetIds.map(() => '?').join(',')})
+                    )`;
+                    datasetParams = [userId, ...datasetIds];
+                }
+            }
+        } else if (role !== 'admin') {
+            // If no specific datasets requested, show user's accessible datasets
+            datasetFilter = `AND l.dataset_id IN (
+                SELECT dp.dataset_id FROM dataset_permissions dp WHERE dp.user_id = ?
+                UNION
+                SELECT d.id FROM datasets d WHERE d.created_by = ?
+            )`;
+            datasetParams = [userId, userId];
+        }
         
         // Build dynamic query
-        let whereClause = 'WHERE userId = ?';
-        let params = [req.userData.userId];
+        let whereClause = 'WHERE 1=1';
+        let params = [];
+        
+        // Add dataset filter
+        if (datasetFilter) {
+            whereClause += ` ${datasetFilter}`;
+            params.push(...datasetParams);
+        }
         
         if (search) {
-            whereClause += ' AND (name LIKE ? OR address LIKE ? OR phone LIKE ?)';
+            whereClause += ' AND (l.name LIKE ? OR l.address LIKE ? OR l.phone LIKE ?)';
             const searchTerm = `%${search}%`;
             params.push(searchTerm, searchTerm, searchTerm);
         }
         
         if (category) {
-            whereClause += ' AND category = ?';
+            whereClause += ' AND l.category = ?';
             params.push(category);
         }
         
         if (provider) {
-            whereClause += ' AND provider = ?';
+            whereClause += ' AND l.provider = ?';
             params.push(provider);
         }
         
         if (town) {
-            whereClause += ' AND town = ?';
+            whereClause += ' AND l.town = ?';
             params.push(town);
         }
         
         if (status) {
-            whereClause += ' AND status = ?';
+            whereClause += ' AND l.status = ?';
             params.push(status);
         }
         
@@ -207,31 +370,49 @@ app.get('/api/businesses', auth, (req, res) => {
         if (lat && lng && radius) {
             whereClause += ` AND (
                 6371 * acos(
-                    cos(radians(?)) * cos(radians(lat)) * 
-                    cos(radians(lng) - radians(?)) + 
-                    sin(radians(?)) * sin(radians(lat))
+                    cos(radians(?)) * cos(radians(l.lat)) * 
+                    cos(radians(l.lng) - radians(?)) + 
+                    sin(radians(?)) * sin(radians(l.lat))
                 )
             ) <= ?`;
             params.push(parseFloat(lat), parseFloat(lng), parseFloat(lat), parseFloat(radius));
         }
         
         // Get total count for pagination
-        const countQuery = `SELECT COUNT(*) as total FROM leads ${whereClause}`;
+        const countQuery = `
+            SELECT COUNT(*) as total 
+            FROM leads l 
+            LEFT JOIN datasets d ON l.dataset_id = d.id 
+            ${whereClause}
+        `;
         const totalResult = db.prepare(countQuery).get(...params);
         const total = totalResult.total;
         
-        // Get paginated results
-        const dataQuery = `SELECT * FROM leads ${whereClause} ORDER BY name LIMIT ? OFFSET ?`;
+        // Get paginated results with dataset info
+        const dataQuery = `
+            SELECT l.*, d.name as dataset_name, d.town as dataset_town, d.province as dataset_province
+            FROM leads l 
+            LEFT JOIN datasets d ON l.dataset_id = d.id 
+            ${whereClause} 
+            ORDER BY l.name 
+            LIMIT ? OFFSET ?
+        `;
         const businesses = db.prepare(dataQuery).all(...params, parseInt(limit), offset);
         
-        console.log(`✅ Fetched ${businesses.length} businesses for user ${req.userData.userId} (${req.userData.username})`);
+        console.log(`✅ Fetched ${businesses.length} businesses for user ${req.userData.userId} (${req.userData.username}) from ${datasets || 'all accessible'} datasets`);
         
         res.json({
             data: businesses.map(business => ({
                 ...business,
                 coordinates: { lat: business.lat, lng: business.lng },
                 notes: JSON.parse(business.notes || '[]'),
-                metadata: JSON.parse(business.metadata || '{}')
+                metadata: JSON.parse(business.metadata || '{}'),
+                dataset: {
+                    id: business.dataset_id,
+                    name: business.dataset_name,
+                    town: business.dataset_town,
+                    province: business.dataset_province
+                }
             })),
             pagination: {
                 page: parseInt(page),
@@ -244,7 +425,8 @@ app.get('/api/businesses', auth, (req, res) => {
             summary: {
                 totalBusinesses: total,
                 currentPage: parseInt(page),
-                showing: Math.min(parseInt(limit), total - offset)
+                showing: Math.min(parseInt(limit), total - offset),
+                datasetsQueried: datasets || 'all accessible'
             }
         });
     } catch (error) {

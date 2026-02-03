@@ -16,15 +16,26 @@ class EnvironmentConfigManager {
   }
 
   private loadConfig(): EnvironmentConfig {
-    // In production, if no VITE_API_URL is set, use relative paths (Nginx will proxy)
-    // In development, default to localhost:5001
+    // Check if we're in production by looking at the hostname
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    
+    // In production, use relative paths (Nginx will proxy)
+    // In development, use localhost:5001
     const apiUrl = import.meta.env.VITE_API_URL || 
-                   (import.meta.env.DEV ? 'http://localhost:5001' : '');
+                   (isProduction ? '' : 'http://localhost:5001');
+    
+    console.log('Environment config:', {
+      hostname: window.location.hostname,
+      isProduction,
+      isDev: import.meta.env.DEV,
+      apiUrl,
+      envApiUrl: import.meta.env.VITE_API_URL
+    });
     
     return {
       apiUrl,
       isDevelopment: import.meta.env.DEV || false,
-      enableCloudSync: true, // Always enable - will work with relative URLs in production
+      enableCloudSync: true,
       syncIntervalMs: 30000, // 30 seconds
       maxRetryAttempts: 3,
       fallbackToLocal: true

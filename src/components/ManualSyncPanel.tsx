@@ -45,8 +45,10 @@ export const ManualSyncPanel: React.FC = () => {
   const checkServerConnection = async () => {
     if (!token) return;
     
-    console.log('Checking server connection...');
+    console.log('🔍 Checking server connection...');
     console.log('API URL:', environmentConfig.getApiUrl());
+    console.log('Current hostname:', window.location.hostname);
+    console.log('Is development:', environmentConfig.getConfig().isDevelopment);
     
     try {
       const connected = await serverDataService.testConnection();
@@ -60,12 +62,17 @@ export const ManualSyncPanel: React.FC = () => {
           lastSync: connected ? new Date().toISOString() : null
         }
       }));
+      
+      if (!connected) {
+        showStatus('error', 'Cannot connect to server. Check your internet connection.');
+      }
     } catch (error) {
       console.error('Server connection error:', error);
       setStats(prev => ({
         ...prev,
         server: { ...prev.server, connected: false }
       }));
+      showStatus('error', `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -270,6 +277,17 @@ export const ManualSyncPanel: React.FC = () => {
 
         <div className="mt-4 p-3 bg-slate-50 rounded-lg">
           <p className="text-sm text-slate-600">
+            <strong>Connection Info:</strong> 
+            {environmentConfig.getConfig().isDevelopment ? (
+              <span className="text-blue-600"> Development Mode - Using localhost:5001</span>
+            ) : (
+              <span className="text-green-600"> Production Mode - Using relative URLs</span>
+            )}
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            API URL: {environmentConfig.getApiUrl() || 'Relative paths'}
+          </p>
+          <p className="text-sm text-slate-600 mt-2">
             <strong>Note:</strong> Data is automatically synced with the server. 
             Use the import tools to add new datasets, and the refresh button to get the latest data.
           </p>

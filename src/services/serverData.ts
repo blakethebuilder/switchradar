@@ -21,10 +21,45 @@ class ServerDataService {
     return apiUrl ? `${apiUrl}${endpoint}` : endpoint;
   }
 
+  private async makeRequest(url: string, options: RequestInit, retries = 3): Promise<Response> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`🌐 Attempt ${attempt}/${retries} - ${options.method || 'GET'} ${url}`);
+        
+        // Create abort controller for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        
+        const response = await fetch(url, {
+          ...options,
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        console.log(`📥 Response: ${response.status} ${response.statusText}`);
+        return response;
+        
+      } catch (error) {
+        console.error(`❌ Attempt ${attempt} failed:`, error);
+        
+        if (attempt === retries) {
+          throw error;
+        }
+        
+        // Wait before retry (exponential backoff)
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        console.log(`⏳ Retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw new Error('All retry attempts failed');
+  }
+
   // Business Operations
   async getBusinesses(token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/businesses'), {
+      const response = await this.makeRequest(this.getApiUrl('/api/businesses'), {
         headers: this.getAuthHeaders(token)
       });
 
@@ -81,7 +116,7 @@ class ServerDataService {
 
       console.log('🌐 Making fetch request to:', this.getApiUrl('/api/businesses/sync'));
       
-      const response = await fetch(this.getApiUrl('/api/businesses/sync'), {
+      const response = await this.makeRequest(this.getApiUrl('/api/businesses/sync'), {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody)
@@ -151,7 +186,7 @@ class ServerDataService {
         console.log(`📤 Uploading chunk ${i + 1}/${chunks.length} (${chunk.length} businesses)...`);
         
         try {
-          const response = await fetch(this.getApiUrl('/api/businesses/sync'), {
+          const response = await this.makeRequest(this.getApiUrl('/api/businesses/sync'), {
             method: 'POST',
             headers: this.getAuthHeaders(token),
             body: JSON.stringify({ 
@@ -412,15 +447,33 @@ class ServerDataService {
     }
   }
 
-  // Connection test
+  // Connection test with detailed diagnostics
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(this.getApiUrl('/api/auth/ping'), {
-        method: 'GET'
+      const apiUrl = this.getApiUrl('/api/auth/ping');
+      console.log('🔍 Testing connection to:', apiUrl);
+      
+      // Create abort controller for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(apiUrl, {
+        method: 'GET',
+        signal: controller.signal
       });
       
-      return response.ok;
-    } catch {
+      clearTimeout(timeoutId);
+      const isConnected = response.ok;
+      console.log(`🌐 Connection test result: ${isConnected ? '✅ Connected' : '❌ Failed'}`);
+      
+      if (isConnected) {
+        const data = await response.json();
+        console.log('📡 Server response:', data);
+      }
+      
+      return isConnected;
+    } catch (error) {
+      console.error('🚨 Connection test failed:', error);
       return false;
     }
   }

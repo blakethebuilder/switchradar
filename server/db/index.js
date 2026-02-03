@@ -22,9 +22,37 @@ db.exec(`
     storage_used_mb REAL DEFAULT 0
   );
 
+  CREATE TABLE IF NOT EXISTS datasets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    description TEXT,
+    town TEXT,
+    province TEXT,
+    created_by INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    business_count INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT 1,
+    FOREIGN KEY(created_by) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS dataset_permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    dataset_id INTEGER,
+    user_id INTEGER,
+    permission_level TEXT DEFAULT 'read', -- 'read', 'write', 'admin'
+    granted_by INTEGER,
+    granted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(dataset_id) REFERENCES datasets(id),
+    FOREIGN KEY(user_id) REFERENCES users(id),
+    FOREIGN KEY(granted_by) REFERENCES users(id),
+    UNIQUE(dataset_id, user_id)
+  );
+
   CREATE TABLE IF NOT EXISTS leads (
     id TEXT PRIMARY KEY,
     userId INTEGER,
+    dataset_id INTEGER,
     name TEXT,
     address TEXT,
     phone TEXT,
@@ -43,7 +71,8 @@ db.exec(`
     metadata TEXT,
     last_modified DATETIME DEFAULT CURRENT_TIMESTAMP,
     sync_status TEXT DEFAULT 'synced',
-    FOREIGN KEY(userId) REFERENCES users(id)
+    FOREIGN KEY(userId) REFERENCES users(id),
+    FOREIGN KEY(dataset_id) REFERENCES datasets(id)
   );
 
   CREATE TABLE IF NOT EXISTS routes (
@@ -70,14 +99,18 @@ db.exec(`
 
 // Create performance indexes
 db.exec(`
-  CREATE INDEX IF NOT EXISTS idx_leads_user_name ON leads(userId, name);
-  CREATE INDEX IF NOT EXISTS idx_leads_user_provider ON leads(userId, provider);
-  CREATE INDEX IF NOT EXISTS idx_leads_user_category ON leads(userId, category);
-  CREATE INDEX IF NOT EXISTS idx_leads_user_town ON leads(userId, town);
-  CREATE INDEX IF NOT EXISTS idx_leads_user_status ON leads(userId, status);
+  CREATE INDEX IF NOT EXISTS idx_leads_user_dataset ON leads(userId, dataset_id);
+  CREATE INDEX IF NOT EXISTS idx_leads_dataset_name ON leads(dataset_id, name);
+  CREATE INDEX IF NOT EXISTS idx_leads_dataset_provider ON leads(dataset_id, provider);
+  CREATE INDEX IF NOT EXISTS idx_leads_dataset_category ON leads(dataset_id, category);
+  CREATE INDEX IF NOT EXISTS idx_leads_dataset_town ON leads(dataset_id, town);
+  CREATE INDEX IF NOT EXISTS idx_leads_dataset_status ON leads(dataset_id, status);
   CREATE INDEX IF NOT EXISTS idx_leads_coordinates ON leads(lat, lng);
-  CREATE INDEX IF NOT EXISTS idx_leads_search ON leads(userId, name, address, phone);
+  CREATE INDEX IF NOT EXISTS idx_leads_search ON leads(dataset_id, name, address, phone);
   CREATE INDEX IF NOT EXISTS idx_routes_user_order ON routes(userId, "order");
+  CREATE INDEX IF NOT EXISTS idx_datasets_user ON datasets(created_by);
+  CREATE INDEX IF NOT EXISTS idx_datasets_town ON datasets(town, province);
+  CREATE INDEX IF NOT EXISTS idx_dataset_permissions_user ON dataset_permissions(user_id);
 `);
 
 console.log('Database initialized successfully');
