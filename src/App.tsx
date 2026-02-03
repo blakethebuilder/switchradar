@@ -56,6 +56,7 @@ function App() {
     setDroppedPin,
     radiusKm,
     setRadiusKm,
+    loading,
     dbError,
     handleDatabaseReset,
     refetch
@@ -365,15 +366,16 @@ function App() {
       
       // Refresh data from server to update the UI
       console.log('Server import - Refreshing data from server...');
-      const refreshResult = await refetch(); // This will update the businesses state
-      console.log('Server import - Refresh result:', refreshResult);
-      
-      // Wait a moment for the UI to update
-      await new Promise(resolve => setTimeout(resolve, 500));
+      try {
+        await refetch(); // Force refresh the data
+        console.log('Server import - Data refresh successful');
+      } catch (refreshError) {
+        console.error('Server import - Data refresh failed:', refreshError);
+        // Don't throw here, import was successful even if refresh failed
+      }
       
       console.log('Server import - Import completed successfully');
       console.log('✅ Import successful! Businesses should now be visible in the UI.');
-      console.log('Current businesses count after import:', businesses.length);
       
     } catch (error) {
       console.error('Server import - Error applying businesses:', error);
@@ -615,7 +617,14 @@ function App() {
         />
         
         <main className="flex-1 flex flex-col overflow-hidden relative">
-          {businesses.length > 0 ? (
+          {loading ? (
+            <div className="flex-1 flex items-center justify-center">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <p className="text-slate-600">Loading businesses...</p>
+              </div>
+            </div>
+          ) : businesses.length > 0 ? (
             <div className="flex-1 flex flex-col h-full relative">
             {(viewMode === 'table' || viewMode === 'stats' || viewMode === 'seen') && (
               <div className="p-3 md:p-4 lg:p-6 xl:p-8 pb-0">
