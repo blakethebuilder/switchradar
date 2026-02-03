@@ -43,7 +43,34 @@ seedDefaultUsers();
 
 // Auth Routes
 app.get('/api/auth/ping', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    res.json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        server: 'SwitchRadar API',
+        version: '1.0.0'
+    });
+});
+
+// Test database connection
+app.get('/api/health', (req, res) => {
+    try {
+        // Test database connection
+        const testQuery = db.prepare('SELECT COUNT(*) as count FROM users').get();
+        res.json({
+            status: 'healthy',
+            database: 'connected',
+            userCount: testQuery.count,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Health check failed:', error);
+        res.status(500).json({
+            status: 'unhealthy',
+            database: 'disconnected',
+            error: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
 });
 
 app.post('/api/auth/register', async (req, res) => {
@@ -129,94 +156,106 @@ app.delete('/api/workspace', auth, (req, res) => {
 
 // Business Routes with enhanced filtering and pagination
 app.get('/api/businesses', auth, (req, res) => {
-    const { 
-        page = 1, 
-        limit = 1000, 
-        search = '', 
-        category = '', 
-        provider = '', 
-        town = '',
-        status = '',
-        phoneType = 'all',
-        lat,
-        lng,
-        radius
-    } = req.query;
-    
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    
-    // Build dynamic query
-    let whereClause = 'WHERE userId = ?';
-    let params = [req.userData.userId];
-    
-    if (search) {
-        whereClause += ' AND (name LIKE ? OR address LIKE ? OR phone LIKE ?)';
-        const searchTerm = `%${search}%`;
-        params.push(searchTerm, searchTerm, searchTerm);
-    }
-    
-    if (category) {
-        whereClause += ' AND category = ?';
-        params.push(category);
-    }
-    
-    if (provider) {
-        whereClause += ' AND provider = ?';
-        params.push(provider);
-    }
-    
-    if (town) {
-        whereClause += ' AND town = ?';
-        params.push(town);
-    }
-    
-    if (status) {
-        whereClause += ' AND status = ?';
-        params.push(status);
-    }
-    
-    // Distance filtering using Haversine formula in SQLite
-    if (lat && lng && radius) {
-        whereClause += ` AND (
-            6371 * acos(
-                cos(radians(?)) * cos(radians(lat)) * 
-                cos(radians(lng) - radians(?)) + 
-                sin(radians(?)) * sin(radians(lat))
-            )
-        ) <= ?`;
-        params.push(parseFloat(lat), parseFloat(lng), parseFloat(lat), parseFloat(radius));
-    }
-    
-    // Get total count for pagination
-    const countQuery = `SELECT COUNT(*) as total FROM leads ${whereClause}`;
-    const totalResult = db.prepare(countQuery).get(...params);
-    const total = totalResult.total;
-    
-    // Get paginated results
-    const dataQuery = `SELECT * FROM leads ${whereClause} ORDER BY name LIMIT ? OFFSET ?`;
-    const businesses = db.prepare(dataQuery).all(...params, parseInt(limit), offset);
-    
-    res.json({
-        data: businesses.map(business => ({
-            ...business,
-            coordinates: { lat: business.lat, lng: business.lng },
-            notes: JSON.parse(business.notes || '[]'),
-            metadata: JSON.parse(business.metadata || '{}')
-        })),
-        pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total,
-            totalPages: Math.ceil(total / parseInt(limit)),
-            hasNext: offset + parseInt(limit) < total,
-            hasPrev: parseInt(page) > 1
-        },
-        summary: {
-            totalBusinesses: total,
-            currentPage: parseInt(page),
-            showing: Math.min(parseInt(limit), total - offset)
+    try {
+        const { 
+            page = 1, 
+            limit = 1000, 
+            search = '', 
+            category = '', 
+            provider = '', 
+            town = '',
+            status = '',
+            phoneType = 'all',
+            lat,
+            lng,
+            radius
+        } = req.query;
+        
+        const offset = (parseInt(page) - 1) * parseInt(limit);
+        
+        // Build dynamic query
+        let whereClause = 'WHERE userId = ?';
+        let params = [req.userData.userId];
+        
+        if (search) {
+            whereClause += ' AND (name LIKE ? OR address LIKE ? OR phone LIKE ?)';
+            const searchTerm = `%${search}%`;
+            params.push(searchTerm, searchTerm, searchTerm);
         }
-    });
+        
+        if (category) {
+            whereClause += ' AND category = ?';
+            params.push(category);
+        }
+        
+        if (provider) {
+            whereClause += ' AND provider = ?';
+            params.push(provider);
+        }
+        
+        if (town) {
+            whereClause += ' AND town = ?';
+            params.push(town);
+        }
+        
+        if (status) {
+            whereClause += ' AND status = ?';
+            params.push(status);
+        }
+        
+        // Distance filtering using Haversine formula in SQLite
+        if (lat && lng && radius) {
+            whereClause += ` AND (
+                6371 * acos(
+                    cos(radians(?)) * cos(radians(lat)) * 
+                    cos(radians(lng) - radians(?)) + 
+                    sin(radians(?)) * sin(radians(lat))
+                )
+            ) <= ?`;
+            params.push(parseFloat(lat), parseFloat(lng), parseFloat(lat), parseFloat(radius));
+        }
+        
+        // Get total count for pagination
+        const countQuery = `SELECT COUNT(*) as total FROM leads ${whereClause}`;
+        const totalResult = db.prepare(countQuery).get(...params);
+        const total = totalResult.total;
+        
+        // Get paginated results
+        const dataQuery = `SELECT * FROM leads ${whereClause} ORDER BY name LIMIT ? OFFSET ?`;
+        const businesses = db.prepare(dataQuery).all(...params, parseInt(limit), offset);
+        
+        console.log(`✅ Fetched ${businesses.length} businesses for user ${req.userData.userId} (${req.userData.username})`);
+        
+        res.json({
+            data: businesses.map(business => ({
+                ...business,
+                coordinates: { lat: business.lat, lng: business.lng },
+                notes: JSON.parse(business.notes || '[]'),
+                metadata: JSON.parse(business.metadata || '{}')
+            })),
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                totalPages: Math.ceil(total / parseInt(limit)),
+                hasNext: offset + parseInt(limit) < total,
+                hasPrev: parseInt(page) > 1
+            },
+            summary: {
+                totalBusinesses: total,
+                currentPage: parseInt(page),
+                showing: Math.min(parseInt(limit), total - offset)
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error fetching businesses:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch businesses', 
+            error: error.message,
+            userId: req.userData?.userId,
+            username: req.userData?.username
+        });
+    }
 });
 
 // Enhanced business sync with better error handling and chunked upload support
@@ -464,15 +503,15 @@ app.delete('/api/users/:userId/businesses', auth, (req, res) => {
     }
 });
 
-// Get aggregated statistics
+// Get aggregated statistics for current user's workspace
 app.get('/api/stats', auth, (req, res) => {
     try {
         const userId = req.userData.userId;
         
-        // Get total counts
+        // Get total counts for this user
         const totalBusinesses = db.prepare('SELECT COUNT(*) as count FROM leads WHERE userId = ?').get(userId).count;
         
-        // Get provider breakdown
+        // Get provider breakdown for this user
         const providerStats = db.prepare(`
             SELECT provider, COUNT(*) as count 
             FROM leads 
@@ -481,7 +520,7 @@ app.get('/api/stats', auth, (req, res) => {
             ORDER BY count DESC
         `).all(userId);
         
-        // Get category breakdown
+        // Get category breakdown for this user
         const categoryStats = db.prepare(`
             SELECT category, COUNT(*) as count 
             FROM leads 
@@ -490,7 +529,7 @@ app.get('/api/stats', auth, (req, res) => {
             ORDER BY count DESC
         `).all(userId);
         
-        // Get town breakdown
+        // Get town breakdown for this user
         const townStats = db.prepare(`
             SELECT town, COUNT(*) as count 
             FROM leads 
@@ -500,7 +539,7 @@ app.get('/api/stats', auth, (req, res) => {
             LIMIT 20
         `).all(userId);
         
-        // Get status breakdown
+        // Get status breakdown for this user
         const statusStats = db.prepare(`
             SELECT status, COUNT(*) as count 
             FROM leads 
@@ -509,15 +548,61 @@ app.get('/api/stats', auth, (req, res) => {
         `).all(userId);
         
         res.json({
+            userId,
+            username: req.userData.username,
             totalBusinesses,
             providerStats,
             categoryStats,
             townStats,
-            statusStats
+            statusStats,
+            workspaceInfo: {
+                isPersonalWorkspace: true,
+                canViewOtherWorkspaces: req.userData.role === 'admin'
+            }
         });
     } catch (error) {
         console.error('Stats fetch error:', error);
         res.status(500).json({ message: 'Failed to fetch statistics', error: error.message });
+    }
+});
+
+// Admin-only: Get all workspaces overview
+app.get('/api/workspaces', auth, (req, res) => {
+    const { role } = req.userData;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    try {
+        const workspaces = db.prepare(`
+            SELECT 
+                u.id as userId,
+                u.username,
+                u.created_at,
+                u.last_sync,
+                COUNT(l.id) as businessCount,
+                COUNT(DISTINCT l.provider) as providerCount,
+                COUNT(DISTINCT l.town) as townCount,
+                COUNT(DISTINCT l.category) as categoryCount,
+                MIN(l.importedAt) as firstImport,
+                MAX(l.importedAt) as lastImport
+            FROM users u
+            LEFT JOIN leads l ON u.id = l.userId
+            GROUP BY u.id, u.username, u.created_at, u.last_sync
+            ORDER BY businessCount DESC
+        `).all();
+        
+        res.json({
+            workspaces: workspaces.map(workspace => ({
+                ...workspace,
+                storageUsedMB: (workspace.businessCount * 0.002).toFixed(2), // Rough estimate
+                isActive: workspace.businessCount > 0
+            }))
+        });
+    } catch (error) {
+        console.error('Workspaces fetch error:', error);
+        res.status(500).json({ message: 'Failed to fetch workspaces', error: error.message });
     }
 });
 

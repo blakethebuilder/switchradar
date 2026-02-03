@@ -18,6 +18,7 @@ export const useBusinessData = () => {
     const fetchBusinesses = async (forceRefresh = false) => {
         if (!token || !isAuthenticated) {
             setBusinesses([]);
+            setError(null);
             return;
         }
 
@@ -34,11 +35,17 @@ export const useBusinessData = () => {
             if (result.success) {
                 setBusinesses(result.data || []);
                 setLastFetch(new Date());
+                setError(null); // Clear any previous errors
             } else {
-                setError(result.error || 'Failed to fetch businesses');
+                // Don't set error for empty data - just log it
+                console.warn('Failed to fetch businesses:', result.error);
+                setBusinesses([]); // Set empty array instead of error
+                setError(null); // Don't show error to user for data loading failures
             }
         } catch (err) {
-            setError('Network error fetching businesses');
+            console.error('Network error fetching businesses:', err);
+            setBusinesses([]); // Set empty array instead of error
+            setError(null); // Don't show error to user for network failures
         } finally {
             setLoading(false);
         }

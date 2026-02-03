@@ -425,7 +425,32 @@ class ServerDataService {
     }
   }
 
-  // Get server statistics
+  // Health check with detailed info
+  async healthCheck(): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/health'), {
+        method: 'GET'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const health = await response.json();
+      return {
+        success: true,
+        data: health
+      };
+    } catch (error) {
+      console.error('Health check failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Health check failed'
+      };
+    }
+  }
+
+  // Get server statistics for current user's workspace
   async getStats(token: string): Promise<ServerDataResult> {
     try {
       const response = await fetch(this.getApiUrl('/api/stats'), {
@@ -447,6 +472,32 @@ class ServerDataService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch stats'
+      };
+    }
+  }
+
+  // Admin-only: Get all workspaces overview
+  async getWorkspaces(token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/workspaces'), {
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const workspaces = await response.json();
+
+      return {
+        success: true,
+        data: workspaces
+      };
+    } catch (error) {
+      console.error('Failed to fetch workspaces:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch workspaces'
       };
     }
   }

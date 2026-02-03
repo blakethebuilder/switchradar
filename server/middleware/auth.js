@@ -2,11 +2,21 @@ const jwt = require('jsonwebtoken');
 
 module.exports = (req, res, next) => {
     try {
-        const token = req.headers.authorization.split(' ')[1];
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(401).json({ message: 'No authorization header provided' });
+        }
+
+        const token = authHeader.split(' ')[1];
+        if (!token) {
+            return res.status(401).json({ message: 'No token provided' });
+        }
+
         const decoded = jwt.verify(token, process.env.JWT_SECRET || 'switchradar_secret_key');
         req.userData = decoded;
         next();
     } catch (error) {
-        return res.status(401).json({ message: 'Auth failed' });
+        console.error('Auth middleware error:', error.message);
+        return res.status(401).json({ message: 'Auth failed', error: error.message });
     }
 };
