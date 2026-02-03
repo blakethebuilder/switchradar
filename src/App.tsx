@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Plus, X, Target } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
@@ -151,91 +152,129 @@ function App() {
   const providerCount = useMemo(() => availableProviders.length, [availableProviders]);
 
   const handleFileSelected = (file: File) => {
-    console.log('Mobile import - File selected:', file.name, file.size, file.type);
+    console.log('Server import - File selected:', file.name, file.size, file.type);
     setPendingFileName(file.name);
     setImportError(''); // Clear any previous errors
     setIsImporting(true); // Start loading immediately after file selection
     
+    // Validate file size (50MB limit)
+    const maxSize = 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setImportError('File is too large. Maximum size is 50MB.');
+      setIsImporting(false);
+      return;
+    }
+    
+    // Validate file type
+    const validExtensions = ['.csv', '.xlsx', '.xls', '.json'];
+    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!validExtensions.includes(fileExtension)) {
+      setImportError(`Unsupported file type: ${fileExtension}. Please use CSV, Excel, or JSON files.`);
+      setIsImporting(false);
+      return;
+    }
+    
     const reader = new FileReader();
     reader.onerror = (error) => {
-      console.error('Mobile import - FileReader error:', error);
-      setImportError('Failed to read file. Please try again.');
+      console.error('Server import - FileReader error:', error);
+      setImportError('Failed to read file. The file may be corrupted or in an unsupported format.');
       setIsImporting(false);
     };
     
     reader.onload = (e) => {
       try {
         const data = e.target?.result;
-        console.log('Mobile import - File read successfully, data type:', typeof data);
+        console.log('Server import - File read successfully, data type:', typeof data, 'size:', data?.toString().length || 0);
+        
+        if (!data) {
+          setImportError('File appears to be empty or corrupted.');
+          setIsImporting(false);
+          return;
+        }
         
         if (file.name.endsWith('.json')) {
           try {
             const json = JSON.parse(data as string);
             const rows = Array.isArray(json) ? json : [json];
-            console.log('Mobile import - JSON parsed, rows:', rows.length);
+            console.log('Server import - JSON parsed, rows:', rows.length);
             
             if (rows.length === 0) {
-              setImportError('JSON file is empty or invalid.');
+              setImportError('JSON file is empty or contains no data.');
+              setIsImporting(false);
+              return;
+            }
+            
+            // Validate JSON structure
+            if (rows.length > 0 && typeof rows[0] !== 'object') {
+              setImportError('JSON file must contain an array of objects or a single object.');
               setIsImporting(false);
               return;
             }
             
             setImportRows(rows);
             setImportColumns(Object.keys(rows[0] || {}));
-            setIsImporting(false); // Stop loading before opening mapping modal
+            setIsImporting(false);
             setIsMappingOpen(true);
             setIsImportOpen(false);
           } catch (error) {
-            console.error('Mobile import - JSON parse error:', error);
-            setImportError('Invalid JSON file format.');
+            console.error('Server import - JSON parse error:', error);
+            setImportError('Invalid JSON file format. Please check the file structure.');
             setIsImporting(false);
           }
         } else {
           // Excel/CSV files
-          console.log('Mobile import - Processing Excel/CSV file');
+          console.log('Server import - Processing Excel/CSV file');
           
-          // Use dynamic import with better error handling for mobile
-          import('xlsx').then(XLSX => {
-            try {
-              console.log('Mobile import - XLSX library loaded');
-              const workbook = XLSX.read(data, { type: 'array' });
-              console.log('Mobile import - Workbook read, sheets:', workbook.SheetNames);
-              
-              const sheetName = workbook.SheetNames[0];
-              if (!sheetName) {
-                setImportError('No sheets found in the file.');
-                setIsImporting(false);
-                return;
-              }
-              
-              const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]) as Record<string, unknown>[];
-              console.log('Mobile import - Sheet parsed, rows:', rows.length);
-              
-              if (rows.length === 0) {
-                setImportError('The spreadsheet appears to be empty.');
-                setIsImporting(false);
-                return;
-              }
-              
-              setImportRows(rows as any[]);
-              setImportColumns(Object.keys(rows[0] || {}));
-              setIsImporting(false); // Stop loading before opening mapping modal
-              setIsMappingOpen(true);
-              setIsImportOpen(false);
-            } catch (error) {
-              console.error('Mobile import - XLSX processing error:', error);
-              setImportError('Failed to process spreadsheet. Please check the file format.');
+          try {
+            console.log('Server import - XLSX library available');
+            const workbook = XLSX.read(data, { type: 'array' });
+            console.log('Server import - Workbook read, sheets:', workbook.SheetNames);
+            
+            const sheetName = workbook.SheetNames[0];
+            if (!sheetName) {
+              setImportError('No sheets found in the file. Please check the Excel file.');
               setIsImporting(false);
+              return;
             }
-          }).catch((error) => {
-            console.error('Mobile import - XLSX library load error:', error);
-            setImportError('Failed to load Excel parser. Please try refreshing the page.');
+            
+            const worksheet = workbook.Sheets[sheetName];
+            if (!worksheet) {
+              setImportError('Selected sheet is empty or corrupted.');
+              setIsImporting(false);
+              return;
+            }
+            
+            const rows = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+            console.log('Server import - Sheet parsed, rows:', rows.length);
+            
+            if (rows.length === 0) {
+              setImportError('The spreadsheet appears to be empty. Please check that it contains data.');
+              setIsImporting(false);
+              return;
+            }
+            
+            // Validate that we have columns
+            const columns = Object.keys(rows[0] || {});
+            if (columns.length === 0) {
+              setImportError('No columns found in the spreadsheet. Please check the file format.');
+              setIsImporting(false);
+              return;
+            }
+            
+            setImportRows(rows as any[]);
+            setImportColumns(columns);
             setIsImporting(false);
-          });
+            setIsMappingOpen(true);
+            setIsImportOpen(false);
+          } catch (error) {
+            console.error('Server import - XLSX processing error:', error);
+            setImportError(`Failed to process spreadsheet: ${error instanceof Error ? error.message : 'Unknown error'}. Please check the file format.`);
+            setIsImporting(false);
+          }
         }
       } catch (error) {
-        console.error('Mobile import - General file processing error:', error);
-        setImportError('Failed to process file. Please try again.');
+        console.error('Server import - General file processing error:', error);
+        setImportError(`Failed to process file: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsImporting(false);
       }
     };
@@ -248,7 +287,7 @@ function App() {
         reader.readAsArrayBuffer(file);
       }
     } catch (error) {
-      console.error('Mobile import - File read initiation error:', error);
+      console.error('Server import - File read initiation error:', error);
       setImportError('Failed to start reading file. Please try again.');
       setIsImporting(false);
     }
