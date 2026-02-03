@@ -55,13 +55,13 @@ export const ImportMappingModal: React.FC<ImportMappingModalProps> = ({
       email: initialMapping.email || guessMappingValue(columns, ['email']),
       website: initialMapping.website || guessMappingValue(columns, ['website', 'url', 'site']),
       provider: initialMapping.provider || guessMappingValue(columns, ['provider', 'network']),
-      category: initialMapping.category || guessMappingValue(columns, ['category', 'type', 'industry']),
+      category: initialMapping.category || guessMappingValue(columns, ['category', 'type_of_business', 'type', 'industry']),
       town: initialMapping.town || guessMappingValue(columns, ['town', 'city', 'suburb']),
       province: initialMapping.province || guessMappingValue(columns, ['province', 'state', 'region']),
       lat: initialMapping.lat || guessMappingValue(columns, ['lat', 'latitude']),
       lng: initialMapping.lng || guessMappingValue(columns, ['lng', 'lon', 'longitude']),
       status: initialMapping.status || guessMappingValue(columns, ['status']),
-      mapsLink: initialMapping.mapsLink || guessMappingValue(columns, ['maps', 'link', 'url', 'address'])
+      mapsLink: initialMapping.mapsLink || guessMappingValue(columns, ['maps_address', 'maps', 'link', 'url'])
     };
   }, [columns, initialMapping]);
 
