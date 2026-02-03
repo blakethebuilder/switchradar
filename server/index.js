@@ -17,6 +17,31 @@ app.use(express.json());
 // Initialize API Alignment Service
 const apiAlignment = new APIAlignmentService(app);
 
+// Seed default users for authentication
+const seedDefaultUsers = async () => {
+    const defaultUsers = [
+        { username: 'blake', password: 'Smart@2026!' },
+        { username: 'Sean', password: 'Smart@2026!' },
+        { username: 'Jarred', password: 'Smart@2026!' }
+    ];
+    
+    for (const user of defaultUsers) {
+        try {
+            const existing = db.prepare('SELECT * FROM users WHERE username = ?').get(user.username);
+            if (!existing) {
+                const hashedPassword = await bcrypt.hash(user.password, 10);
+                db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(user.username, hashedPassword);
+                console.log(`✓ Seeded user: ${user.username}`);
+            }
+        } catch (err) {
+            console.error(`✗ Error seeding user ${user.username}:`, err.message);
+        }
+    }
+};
+
+// Seed users on startup
+seedDefaultUsers();
+
 // Auth Routes
 app.get('/api/auth/ping', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
