@@ -6,6 +6,7 @@ interface User {
   createdAt: string;
   lastLogin?: string;
   isActive: boolean;
+  token?: string; // Add token property for authentication
 }
 
 const USERS_STORAGE_KEY = 'sr_users';

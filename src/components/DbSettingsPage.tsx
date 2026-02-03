@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, X, CheckCircle2, Wifi, WifiOff, Server, Users, UserCheck, MapPin, Trash2, Plus, Download, Upload, Eye, Settings } from 'lucide-react';
+import { Database, X, CheckCircle2, Wifi, WifiOff, Server, Users, UserCheck, MapPin, Trash2, Plus, Upload, Eye, Settings } from 'lucide-react';
 import type { Business } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { serverDataService } from '../services/serverData';
@@ -20,7 +20,7 @@ interface TownData {
 }
 
 export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onClose }) => {
-  const { user, isAuthenticated, isAdmin } = useAuth();
+  const { user, token, isAuthenticated, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'towns' | 'users' | 'userdata' | 'database'>('overview');
   const [townData, setTownData] = useState<TownData[]>([]);
   const [selectedTowns, setSelectedTowns] = useState<string[]>([]);
@@ -73,8 +73,8 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
       // Filter out businesses from selected towns
       const remainingBusinesses = businesses.filter(b => !selectedTowns.includes(b.town || 'Unknown'));
       
-      if (user?.token) {
-        const result = await serverDataService.saveBusinesses(remainingBusinesses, user.token);
+      if (token) {
+        const result = await serverDataService.saveBusinesses(remainingBusinesses, token);
         if (result.success) {
           setSelectedTowns([]);
           // Refresh would happen via parent component

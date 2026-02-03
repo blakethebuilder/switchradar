@@ -806,11 +806,6 @@ export const BusinessMap = React.memo(({
           const isMobile = window.innerWidth < 768;
           return isMobile ? 80 : 120;
         })()}
-        // Performance optimizations
-        renderer={L.canvas({ padding: 0.5 })} // Use canvas renderer for better performance
-        updateWhenIdle={true} // Only update when map is idle
-        updateWhenZooming={false} // Don't update during zoom for smoother experience
-        keepInView={true} // Keep markers in view during pan
         {...mapOptions} // Apply interaction locks
       >
         <MapController 
@@ -834,8 +829,6 @@ export const BusinessMap = React.memo(({
           maxZoom={18}
           tileSize={256}
           zoomOffset={0}
-          updateWhenIdle={true}
-          updateWhenZooming={false}
           keepBuffer={2} // Keep 2 screens worth of tiles in memory
           // Responsive tile loading
           detectRetina={true}
