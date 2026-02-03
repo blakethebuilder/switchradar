@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Database, ShieldCheck, X, CheckCircle2, Wifi, WifiOff, Server, Users, UserCheck, AlertTriangle } from 'lucide-react';
+import { Database, ShieldCheck, X, CheckCircle2, Wifi, WifiOff, Server, Users, UserCheck } from 'lucide-react';
 import type { Business } from '../types';
 import { useAuth } from '../context/AuthContext';
 import UserManagement from './UserManagement';
 import UserDataManagement from './UserDataManagement';
+import ManualSyncPanel from './ManualSyncPanel';
 
 interface DbSettingsPageProps {
   businesses: Business[];
@@ -89,118 +90,130 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
       </div>
 
       {activeTab === 'database' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Active Dataset Card */}
-        <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
-          <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Database className="h-32 w-32 text-indigo-600" />
-          </div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="flex h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
-              <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">Active Workspace Data</h2>
+        <div className="space-y-6">
+          {/* Database Overview */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Active Dataset Card */}
+            <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group">
+              <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                <Database className="h-32 w-32 text-indigo-600" />
+              </div>
+              
+              <div className="relative z-10">
+                <div className="flex items-center gap-3 mb-6">
+                  <span className="flex h-3 w-3 rounded-full bg-emerald-500 animate-pulse" />
+                  <h2 className="text-sm font-black uppercase tracking-widest text-slate-500">Current Workspace Data</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <div className="text-4xl font-black text-slate-900 mb-1">{totalBusinesses.toLocaleString()}</div>
+                    <div className="text-sm font-bold text-slate-400">Total Businesses Available</div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <div className="text-2xl font-black text-indigo-600 mb-1">{providers}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Providers</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <div className="text-2xl font-black text-indigo-600 mb-1">{towns}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Towns</div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <div className="text-2xl font-black text-indigo-600 mb-1">{categories}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Categories</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    <div>
+                      <span className="text-sm font-bold text-slate-600">Database Source: </span>
+                      <span className="text-sm font-black text-slate-900">{databaseSource}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <div className="text-4xl font-black text-slate-900 mb-1">{totalBusinesses.toLocaleString()}</div>
-                <div className="text-sm font-bold text-slate-400">Total Businesses Available</div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div className="text-2xl font-black text-indigo-600 mb-1">{providers}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Providers</div>
+            {/* Database Status & Cloud Connection */}
+            <div className="flex flex-col gap-4">
+              {/* Local Security */}
+              <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <ShieldCheck className="h-6 w-6 text-slate-200" />
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-200">Local Security</span>
                 </div>
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div className="text-2xl font-black text-indigo-600 mb-1">{towns}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Towns</div>
-                </div>
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <div className="text-2xl font-black text-indigo-600 mb-1">{categories}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Categories</div>
+                <div className="text-lg font-bold mb-4">Your data is stored locally and securely in your browser.</div>
+                <div className="text-xs font-medium text-slate-100 opacity-80">
+                  Storage Mode: Offline / Private
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                <div>
-                  <span className="text-sm font-bold text-slate-600">Database Source: </span>
-                  <span className="text-sm font-black text-slate-900">{databaseSource}</span>
+              {/* Cloud Connection Status */}
+              <div className={`rounded-[2rem] p-6 shadow-xl shadow-slate-200 ${
+                isAuthenticated 
+                  ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white' 
+                  : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600'
+              }`}>
+                <div className="flex items-center gap-3 mb-2">
+                  {isAuthenticated ? (
+                    <>
+                      <Wifi className="h-6 w-6" />
+                      <span className="text-xs font-black uppercase tracking-widest opacity-80">Cloud Connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="h-6 w-6" />
+                      <span className="text-xs font-black uppercase tracking-widest opacity-80">Cloud Disconnected</span>
+                    </>
+                  )}
+                </div>
+                <div className="text-lg font-bold mb-2">
+                  {isAuthenticated ? `Signed in as ${user?.username}` : 'Not connected to cloud'}
+                </div>
+                <div className="text-xs font-medium opacity-80">
+                  {isAuthenticated 
+                    ? 'Server database available for sync' 
+                    : 'Sign in to enable cloud sync features'
+                  }
+                </div>
+              </div>
+
+              {/* Database Info */}
+              <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100">
+                <div className="flex items-center gap-3 mb-4">
+                  <Server className="h-6 w-6 text-indigo-600" />
+                  <span className="text-xs font-black uppercase tracking-widest text-slate-500">Database Info</span>
+                </div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Local Type:</span>
+                    <span className="font-bold text-slate-900">IndexedDB (Browser)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Server Type:</span>
+                    <span className="font-bold text-slate-900">SQLite (Better-SQLite3)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Status:</span>
+                    <span className="font-bold text-emerald-600">Active</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Last Updated:</span>
+                    <span className="font-bold text-slate-900">{new Date().toLocaleDateString()}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Database Controls */}
+          {isAuthenticated && (
+            <ManualSyncPanel />
+          )}
         </div>
-
-        {/* Database Status & Cloud Connection */}
-        <div className="flex flex-col gap-4">
-          {/* Local Security */}
-          <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-200">
-            <div className="flex items-center gap-3 mb-2">
-              <ShieldCheck className="h-6 w-6 text-slate-200" />
-              <span className="text-xs font-black uppercase tracking-widest text-slate-200">Local Security</span>
-            </div>
-            <div className="text-lg font-bold mb-4">Your data is stored locally and securely in your browser.</div>
-            <div className="text-xs font-medium text-slate-100 opacity-80">
-              Storage Mode: Offline / Private
-            </div>
-          </div>
-
-          {/* Cloud Connection Status */}
-          <div className={`rounded-[2rem] p-6 shadow-xl shadow-slate-200 ${
-            isAuthenticated 
-              ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-white' 
-              : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600'
-          }`}>
-            <div className="flex items-center gap-3 mb-2">
-              {isAuthenticated ? (
-                <>
-                  <Wifi className="h-6 w-6" />
-                  <span className="text-xs font-black uppercase tracking-widest opacity-80">Cloud Connected</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="h-6 w-6" />
-                  <span className="text-xs font-black uppercase tracking-widest opacity-80">Cloud Disconnected</span>
-                </>
-              )}
-            </div>
-            <div className="text-lg font-bold mb-2">
-              {isAuthenticated ? `Signed in as ${user?.username}` : 'Not connected to cloud'}
-            </div>
-            <div className="text-xs font-medium opacity-80">
-              {isAuthenticated 
-                ? 'Manual sync available in Settings' 
-                : 'Sign in to enable cloud sync features'
-              }
-            </div>
-          </div>
-
-          {/* Database Info */}
-          <div className="bg-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 border border-slate-100">
-            <div className="flex items-center gap-3 mb-4">
-              <Server className="h-6 w-6 text-indigo-600" />
-              <span className="text-xs font-black uppercase tracking-widest text-slate-500">Database Info</span>
-            </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-slate-600">Type:</span>
-                <span className="font-bold text-slate-900">IndexedDB (Browser)</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Status:</span>
-                <span className="font-bold text-emerald-600">Active</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-600">Last Updated:</span>
-                <span className="font-bold text-slate-900">{new Date().toLocaleDateString()}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
       )}
 
       {activeTab === 'users' && isAdmin && (
