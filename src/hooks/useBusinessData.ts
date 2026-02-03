@@ -1,60 +1,77 @@
 import { useMemo, useState, useEffect } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db, resetDatabase } from '../db';
+import { useAuth } from '../context/AuthContext';
+import { serverDataService } from '../services/serverData';
 import { filterBusinesses, clearFilterCaches } from '../utils/dataProcessors';
 import { useDebounce } from './useDebounce';
 import { PerformanceMonitor } from '../utils/performance';
+import type { Business, RouteItem } from '../types';
 
 export const useBusinessData = () => {
-    const [dbError, setDbError] = useState<string | null>(null);
-    const [isDbReady, setIsDbReady] = useState(false);
+    const { token, isAuthenticated } = useAuth();
+    const [businesses, setBusinesses] = useState<Business[]>([]);
+    const [routeItems, setRouteItems] = useState<RouteItem[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [lastFetch, setLastFetch] = useState<Date | null>(null);
 
-    // Wait for database to be ready - only check once
-    useEffect(() => {
-        let mounted = true;
-        
-        const checkDb = async () => {
-            try {
-                if (db && mounted) {
-                    await db.businesses.limit(1).toArray();
-                    if (mounted) {
-                        setIsDbReady(true);
-                        setDbError(null);
-                    }
-                }
-            } catch (error) {
-                console.error('Database not ready:', error);
-                if (mounted) {
-                    setDbError('Database initialization failed');
-                    setIsDbReady(false);
-                }
+    // Fetch businesses from server
+    const fetchBusinesses = async (forceRefresh = false) => {
+        if (!token || !isAuthenticated) {
+            setBusinesses([]);
+            return;
+        }
+
+        // Don't refetch if we have recent data (unless forced)
+        if (!forceRefresh && lastFetch && Date.now() - lastFetch.getTime() < 30000) {
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
+
+        try {
+            const result = await serverDataService.getBusinesses(token);
+            if (result.success) {
+                setBusinesses(result.data || []);
+                setLastFetch(new Date());
+            } else {
+                setError(result.error || 'Failed to fetch businesses');
             }
-        };
-        
-        checkDb();
-        
-        return () => {
-            mounted = false;
-        };
-    }, []); // Only run once on mount
-
-    const businesses = useLiveQuery(() => {
-        try {
-            return db?.businesses?.toArray() || [];
-        } catch (error) {
-            console.error('Error fetching businesses:', error);
-            return [];
+        } catch (err) {
+            setError('Network error fetching businesses');
+        } finally {
+            setLoading(false);
         }
-    }) || [];
+    };
 
-    const routeItems = useLiveQuery(() => {
-        try {
-            return db?.route?.orderBy('order').toArray() || [];
-        } catch (error) {
-            console.error('Error fetching routes:', error);
-            return [];
+    // Fetch routes from server
+    const fetchRoutes = async () => {
+        if (!token || !isAuthenticated) {
+            setRouteItems([]);
+            return;
         }
-    }) || [];
+
+        try {
+            const result = await serverDataService.getRoutes(token);
+            if (result.success) {
+                setRouteItems(result.data || []);
+            }
+        } catch (err) {
+            console.error('Failed to fetch routes:', err);
+        }
+    };
+
+    // Auto-fetch on mount and auth changes
+    useEffect(() => {
+        if (isAuthenticated && token) {
+            fetchBusinesses();
+            fetchRoutes();
+        } else {
+            setBusinesses([]);
+            setRouteItems([]);
+            setError(null);
+        }
+    }, [token, isAuthenticated]);
 
     const [searchInput, setSearchInput] = useState('');
     const searchTerm = useDebounce(searchInput, 300);
@@ -105,17 +122,6 @@ export const useBusinessData = () => {
         });
     }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
 
-    // Database reset function
-    const handleDatabaseReset = async () => {
-        try {
-            await resetDatabase();
-            setIsDbReady(true);
-            setDbError(null);
-        } catch (error) {
-            setDbError('Failed to reset database');
-        }
-    };
-
     return {
         businesses,
         routeItems,
@@ -139,9 +145,12 @@ export const useBusinessData = () => {
         totalBusinesses: businesses.length,
         filteredCount: filteredBusinesses.length,
         isLargeDataset: businesses.length > 1000,
-        // Database status
-        isDbReady: isDbReady && !dbError,
-        dbError,
-        handleDatabaseReset
+        // Server status
+        loading,
+        error,
+        lastFetch,
+        refetch: () => fetchBusinesses(true),
+        isDbReady: isAuthenticated && !error,
+        dbError: error
     };
 };

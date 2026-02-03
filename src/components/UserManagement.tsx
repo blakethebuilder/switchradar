@@ -1,35 +1,56 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Trash2, Shield, User as UserIcon, Mail, Calendar, CheckCircle, XCircle } from 'lucide-react';
-import { UserManager, type User } from '../utils/userManager';
+import { serverDataService } from '../services/serverData';
 import { useAuth } from '../context/AuthContext';
 
+interface ServerUser {
+  id: number;
+  username: string;
+  created_at: string;
+  last_sync: string | null;
+  total_businesses: number;
+  storage_used_mb: number;
+}
+
 export const UserManagement: React.FC = () => {
-  const { user: currentUser, isAdmin } = useAuth();
-  const [users, setUsers] = useState<User[]>([]);
+  const { user: currentUser, isAdmin, token } = useAuth();
+  const [users, setUsers] = useState<ServerUser[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     username: '',
-    email: '',
-    role: 'user' as 'admin' | 'user'
+    password: ''
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (isAdmin && token) {
+      loadUsers();
+    }
+  }, [isAdmin, token]);
 
-  const loadUsers = () => {
+  const loadUsers = async () => {
+    if (!token) return;
+    
+    setLoading(true);
     try {
-      const allUsers = UserManager.getUsers();
-      setUsers(allUsers);
+      const result = await serverDataService.getUsers(token);
+      if (result.success) {
+        setUsers(result.data || []);
+      } else {
+        setError(result.error || 'Failed to load users');
+      }
     } catch (error) {
       setError('Failed to load users');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleAddUser = async () => {
+    if (!token) return;
+    
     try {
       setError('');
       
@@ -38,79 +59,55 @@ export const UserManagement: React.FC = () => {
         return;
       }
 
-      UserManager.addUser({
-        username: newUser.username.trim(),
-        email: newUser.email.trim() || undefined,
-        role: newUser.role
-      });
+      if (!newUser.password.trim()) {
+        setError('Password is required');
+        return;
+      }
 
-      setSuccess(`User "${newUser.username}" created successfully`);
-      setNewUser({ username: '', email: '', role: 'user' });
-      setIsAddModalOpen(false);
-      loadUsers();
+      setLoading(true);
+      const result = await serverDataService.createUser(newUser.username.trim(), newUser.password, token);
       
-      setTimeout(() => setSuccess(''), 3000);
+      if (result.success) {
+        setSuccess(`User "${newUser.username}" created successfully`);
+        setNewUser({ username: '', password: '' });
+        setIsAddModalOpen(false);
+        await loadUsers();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.error || 'Failed to create user');
+      }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to create user');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleUpdateUser = async () => {
-    if (!editingUser) return;
-
-    try {
-      setError('');
-      
-      UserManager.updateUser(editingUser.id, {
-        username: editingUser.username,
-        email: editingUser.email,
-        role: editingUser.role,
-        isActive: editingUser.isActive
-      });
-
-      setSuccess(`User "${editingUser.username}" updated successfully`);
-      setEditingUser(null);
-      loadUsers();
-      
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to update user');
-    }
-  };
-
-  const handleDeleteUser = async (userId: number) => {
+  const handleDeleteUser = async (userId: number, username: string) => {
+    if (!token) return;
+    
     if (userId === currentUser?.id) {
       setError('Cannot delete your own account');
       return;
     }
 
-    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+    if (window.confirm(`Are you sure you want to delete user "${username}" and all their data? This action cannot be undone.`)) {
       try {
-        UserManager.deleteUser(userId);
-        setSuccess('User deleted successfully');
-        loadUsers();
-        setTimeout(() => setSuccess(''), 3000);
+        setLoading(true);
+        const result = await serverDataService.deleteUser(userId, token);
+        
+        if (result.success) {
+          setSuccess(`User "${username}" deleted successfully`);
+          await loadUsers();
+          setTimeout(() => setSuccess(''), 3000);
+        } else {
+          setError(result.error || 'Failed to delete user');
+        }
       } catch (error) {
         setError(error instanceof Error ? error.message : 'Failed to delete user');
+      } finally {
+        setLoading(false);
       }
-    }
-  };
-
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return <Shield className="h-4 w-4 text-blue-600" />;
-      default:
-        return <UserIcon className="h-4 w-4 text-slate-600" />;
-    }
-  };
-
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      default:
-        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
@@ -137,12 +134,13 @@ export const UserManagement: React.FC = () => {
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900">User Management</h2>
-              <p className="text-sm text-slate-600">Manage system users and permissions</p>
+              <p className="text-sm text-slate-600">Manage system users and their access</p>
             </div>
           </div>
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             <Plus className="h-4 w-4" />
             Add User
@@ -166,7 +164,10 @@ export const UserManagement: React.FC = () => {
       {/* Users List */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">Users ({users.length})</h3>
+          <h3 className="text-lg font-semibold text-slate-900">
+            System Users ({users.length})
+            {loading && <span className="text-sm text-slate-500 ml-2">Loading...</span>}
+          </h3>
         </div>
         
         <div className="divide-y divide-slate-200">
@@ -175,7 +176,11 @@ export const UserManagement: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
-                    {getRoleIcon(user.role)}
+                    {user.username.toLowerCase() === 'blake' ? (
+                      <Shield className="h-4 w-4 text-blue-600" />
+                    ) : (
+                      <UserIcon className="h-4 w-4 text-slate-600" />
+                    )}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -183,61 +188,46 @@ export const UserManagement: React.FC = () => {
                       {user.id === currentUser?.id && (
                         <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">You</span>
                       )}
+                      {user.username.toLowerCase() === 'blake' && (
+                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Admin</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 mt-1">
-                      {user.email && (
-                        <div className="flex items-center gap-1 text-sm text-slate-600">
-                          <Mail className="h-3 w-3" />
-                          {user.email}
-                        </div>
-                      )}
                       <div className="flex items-center gap-1 text-sm text-slate-600">
                         <Calendar className="h-3 w-3" />
-                        {new Date(user.createdAt).toLocaleDateString()}
+                        Joined {new Date(user.created_at).toLocaleDateString()}
                       </div>
+                      {user.last_sync && (
+                        <div className="flex items-center gap-1 text-sm text-slate-600">
+                          <CheckCircle className="h-3 w-3 text-green-600" />
+                          Last sync {new Date(user.last_sync).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-4 mt-1 text-xs text-slate-500">
+                      <span>{user.total_businesses || 0} businesses</span>
+                      <span>{user.storage_used_mb?.toFixed(1) || '0.0'} MB used</span>
                     </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${getRoleBadge(user.role)}`}>
-                    {getRoleIcon(user.role)}
-                    {user.role}
-                  </span>
-                  
-                  <div className="flex items-center gap-1">
-                    {user.isActive ? (
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                    ) : (
-                      <XCircle className="h-4 w-4 text-red-600" />
-                    )}
-                  </div>
-                  
-                  <div className="flex items-center gap-1">
+                <div className="flex items-center gap-2">
+                  {user.id !== currentUser?.id && user.username.toLowerCase() !== 'blake' && (
                     <button
-                      onClick={() => setEditingUser(user)}
-                      className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                      title="Edit User"
+                      onClick={() => handleDeleteUser(user.id, user.username)}
+                      disabled={loading}
+                      className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Delete User"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
-                    
-                    {user.id !== currentUser?.id && (
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete User"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
           ))}
           
-          {users.length === 0 && (
+          {users.length === 0 && !loading && (
             <div className="p-8 text-center">
               <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
               <p className="text-slate-600">No users found</p>
@@ -261,30 +251,20 @@ export const UserManagement: React.FC = () => {
                   onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                   placeholder="Enter username"
+                  disabled={loading}
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
                 <input
-                  type="email"
-                  value={newUser.email}
-                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  type="password"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  placeholder="Enter email (optional)"
+                  placeholder="Enter password"
+                  disabled={loading}
                 />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-                <select
-                  value={newUser.role}
-                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                </select>
               </div>
             </div>
             
@@ -292,92 +272,20 @@ export const UserManagement: React.FC = () => {
               <button
                 onClick={() => {
                   setIsAddModalOpen(false);
-                  setNewUser({ username: '', email: '', role: 'user' });
+                  setNewUser({ username: '', password: '' });
                   setError('');
                 }}
-                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                disabled={loading}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddUser}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                disabled={loading || !newUser.username.trim() || !newUser.password.trim()}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add User
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit User Modal */}
-      {editingUser && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Edit User</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Username *</label>
-                <input
-                  type="text"
-                  value={editingUser.username}
-                  onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={editingUser.email || ''}
-                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
-                <select
-                  value={editingUser.role}
-                  onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value as any })}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  disabled={editingUser.id === currentUser?.id} // Can't change own role
-                >
-                  <option value="user">User</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  checked={editingUser.isActive}
-                  onChange={(e) => setEditingUser({ ...editingUser, isActive: e.target.checked })}
-                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
-                  disabled={editingUser.id === currentUser?.id} // Can't deactivate own account
-                />
-                <label htmlFor="isActive" className="text-sm font-medium text-slate-700">Active</label>
-              </div>
-            </div>
-            
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setEditingUser(null);
-                  setError('');
-                }}
-                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdateUser}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-              >
-                Update User
+                {loading ? 'Creating...' : 'Add User'}
               </button>
             </div>
           </div>

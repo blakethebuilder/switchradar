@@ -38,36 +38,21 @@ export const UserDataManagement: React.FC = () => {
     if (!token) return;
     
     try {
-      // This would need a new server endpoint to get all users' stats
-      // For now, we'll simulate it
-      const mockStats: UserDataStats[] = [
-        {
-          userId: 1,
-          username: 'blake',
-          businessCount: 1250,
-          routeCount: 15,
-          lastSync: '2026-02-03T10:30:00Z',
-          storageUsed: 2.4
-        },
-        {
-          userId: 2,
-          username: 'Sean',
-          businessCount: 890,
-          routeCount: 8,
-          lastSync: '2026-02-02T16:45:00Z',
-          storageUsed: 1.8
-        },
-        {
-          userId: 3,
-          username: 'Jarred',
-          businessCount: 456,
-          routeCount: 3,
-          lastSync: '2026-02-01T09:15:00Z',
-          storageUsed: 0.9
-        }
-      ];
-      
-      setUserStats(mockStats);
+      const result = await serverDataService.getUsers(token);
+      if (result.success) {
+        const users = result.data || [];
+        const stats: UserDataStats[] = users.map(user => ({
+          userId: user.id,
+          username: user.username,
+          businessCount: user.total_businesses || 0,
+          routeCount: 0, // Would need separate endpoint for routes
+          lastSync: user.last_sync || new Date().toISOString(),
+          storageUsed: user.storage_used_mb || 0
+        }));
+        setUserStats(stats);
+      } else {
+        setError(result.error || 'Failed to load user statistics');
+      }
     } catch (err) {
       setError('Failed to load user statistics');
     }
@@ -77,10 +62,7 @@ export const UserDataManagement: React.FC = () => {
     if (!token) return;
     
     try {
-      // This would need a server endpoint to get businesses for a specific user
-      // For now, we'll use the current user's businesses as a demo
-      console.log('Loading businesses for user:', businessUserId);
-      const result = await serverDataService.getBusinesses(token);
+      const result = await serverDataService.getUserBusinesses(businessUserId, token);
       if (result.success) {
         setSelectedUserBusinesses(result.data || []);
       } else {

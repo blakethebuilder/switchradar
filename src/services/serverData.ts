@@ -50,30 +50,58 @@ class ServerDataService {
   }
 
   async saveBusinesses(businesses: Business[], token: string): Promise<ServerDataResult> {
+    console.log('🚀 saveBusinesses called with:', {
+      businessCount: businesses.length,
+      tokenPresent: !!token,
+      tokenLength: token?.length,
+      apiUrl: this.getApiUrl('/api/businesses/sync'),
+      firstBusinessSample: businesses[0] ? {
+        id: businesses[0].id,
+        name: businesses[0].name,
+        hasCoordinates: !!businesses[0].coordinates
+      } : null
+    });
+
+    // If dataset is large (>1000 businesses), use chunked upload
+    if (businesses.length > 1000) {
+      console.log('📦 Large dataset detected, using chunked upload...');
+      return this.saveBusinessesChunked(businesses, token);
+    }
+
     try {
-      console.log('saveBusinesses called with:', {
-        businessCount: businesses.length,
-        tokenPresent: !!token,
-        apiUrl: this.getApiUrl('/api/businesses/sync')
+      const headers = this.getAuthHeaders(token);
+      console.log('📤 Request headers:', {
+        'Content-Type': headers['Content-Type'],
+        'Authorization': headers['Authorization'] ? 'Bearer [PRESENT]' : 'MISSING'
       });
 
+      const requestBody = { businesses };
+      const bodySize = JSON.stringify(requestBody).length;
+      console.log('📦 Request body size:', bodySize, 'characters', (bodySize / 1024 / 1024).toFixed(2), 'MB');
+
+      console.log('🌐 Making fetch request to:', this.getApiUrl('/api/businesses/sync'));
+      
       const response = await fetch(this.getApiUrl('/api/businesses/sync'), {
         method: 'POST',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ businesses })
+        headers,
+        body: JSON.stringify(requestBody)
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response ok:', response.ok);
+      console.log('📥 Response received:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries())
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Response error text:', errorText);
+        console.error('❌ Response error text:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Response result:', result);
+      console.log('✅ Response result:', result);
       
       return {
         success: true,
@@ -81,10 +109,109 @@ class ServerDataService {
         count: businesses.length
       };
     } catch (error) {
-      console.error('Failed to save businesses:', error);
+      console.error('💥 saveBusinesses error:', error);
+      console.error('Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to save businesses'
+      };
+    }
+  }
+
+  private async saveBusinessesChunked(businesses: Business[], token: string, chunkSize: number = 500): Promise<ServerDataResult> {
+    console.log(`🔄 Starting chunked upload: ${businesses.length} businesses in chunks of ${chunkSize}`);
+    
+    const chunks = [];
+    for (let i = 0; i < businesses.length; i += chunkSize) {
+      chunks.push(businesses.slice(i, i + chunkSize));
+    }
+    
+    console.log(`📦 Created ${chunks.length} chunks`);
+    
+    try {
+      // Clear existing data first
+      console.log('🗑️ Clearing existing server data...');
+      const clearResult = await this.clearWorkspace(token);
+      if (!clearResult.success) {
+        console.warn('⚠️ Failed to clear workspace, continuing anyway:', clearResult.error);
+      }
+      
+      let totalSuccess = 0;
+      let totalErrors = 0;
+      const allErrors: any[] = [];
+      
+      // Upload chunks sequentially to avoid overwhelming the server
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        console.log(`📤 Uploading chunk ${i + 1}/${chunks.length} (${chunk.length} businesses)...`);
+        
+        try {
+          const response = await fetch(this.getApiUrl('/api/businesses/sync'), {
+            method: 'POST',
+            headers: this.getAuthHeaders(token),
+            body: JSON.stringify({ 
+              businesses: chunk,
+              isChunked: true,
+              chunkIndex: i,
+              totalChunks: chunks.length,
+              clearFirst: false // We already cleared above
+            })
+          });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Chunk ${i + 1} failed: HTTP ${response.status}: ${errorText}`);
+          }
+          
+          const result = await response.json();
+          totalSuccess += result.successCount || chunk.length;
+          totalErrors += result.errorCount || 0;
+          if (result.errors) {
+            allErrors.push(...result.errors);
+          }
+          
+          console.log(`✅ Chunk ${i + 1}/${chunks.length} completed: ${result.successCount || chunk.length} success, ${result.errorCount || 0} errors`);
+          
+          // Small delay between chunks to be nice to the server
+          if (i < chunks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          
+        } catch (error) {
+          console.error(`❌ Chunk ${i + 1} failed:`, error);
+          totalErrors += chunk.length;
+          allErrors.push({
+            chunk: i + 1,
+            error: error instanceof Error ? error.message : String(error)
+          });
+        }
+      }
+      
+      console.log(`🎉 Chunked upload completed: ${totalSuccess} success, ${totalErrors} errors`);
+      
+      return {
+        success: totalErrors < businesses.length, // Success if at least some businesses were uploaded
+        data: {
+          message: 'Chunked upload completed',
+          totalReceived: businesses.length,
+          successCount: totalSuccess,
+          errorCount: totalErrors,
+          errors: allErrors,
+          chunksProcessed: chunks.length
+        },
+        count: totalSuccess
+      };
+      
+    } catch (error) {
+      console.error('💥 Chunked upload failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Chunked upload failed'
       };
     }
   }
@@ -320,6 +447,168 @@ class ServerDataService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch stats'
+      };
+    }
+  }
+
+  // User Management (Admin only)
+  async getUsers(token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/users'), {
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const users = await response.json();
+
+      return {
+        success: true,
+        data: users,
+        count: users.length
+      };
+    } catch (error) {
+      console.error('Failed to fetch users:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch users'
+      };
+    }
+  }
+
+  async createUser(username: string, password: string, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/users'), {
+        method: 'POST',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify({ username, password })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to create user:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create user'
+      };
+    }
+  }
+
+  async deleteUser(userId: number, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/users/${userId}`), {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to delete user:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete user'
+      };
+    }
+  }
+
+  async getUserBusinesses(userId: number, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/users/${userId}/businesses`), {
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const businesses = await response.json();
+
+      return {
+        success: true,
+        data: businesses,
+        count: businesses.length
+      };
+    } catch (error) {
+      console.error('Failed to fetch user businesses:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch user businesses'
+      };
+    }
+  }
+
+  async deleteUserBusiness(userId: number, businessId: string, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/users/${userId}/businesses/${businessId}`), {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to delete user business:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete user business'
+      };
+    }
+  }
+
+  async clearUserBusinesses(userId: number, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/users/${userId}/businesses`), {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to clear user businesses:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to clear user businesses'
       };
     }
   }

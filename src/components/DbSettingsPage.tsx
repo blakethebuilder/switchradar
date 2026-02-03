@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Database, ShieldCheck, X, CheckCircle2, Wifi, WifiOff, Server, Users, UserCheck } from 'lucide-react';
+import { Database, X, CheckCircle2, Wifi, WifiOff, Server, Users, UserCheck } from 'lucide-react';
 import type { Business } from '../types';
 import { useAuth } from '../context/AuthContext';
 import UserManagement from './UserManagement';
@@ -139,15 +139,15 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
 
             {/* Database Status & Cloud Connection */}
             <div className="flex flex-col gap-4">
-              {/* Local Security */}
-              <div className="bg-gradient-to-br from-slate-600 to-slate-700 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-200">
+              {/* Server-First Architecture */}
+              <div className="bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-[2rem] p-6 text-white shadow-xl shadow-slate-200">
                 <div className="flex items-center gap-3 mb-2">
-                  <ShieldCheck className="h-6 w-6 text-slate-200" />
-                  <span className="text-xs font-black uppercase tracking-widest text-slate-200">Local Security</span>
+                  <Server className="h-6 w-6 text-indigo-200" />
+                  <span className="text-xs font-black uppercase tracking-widest text-indigo-200">Server-First</span>
                 </div>
-                <div className="text-lg font-bold mb-4">Your data is stored locally and securely in your browser.</div>
-                <div className="text-xs font-medium text-slate-100 opacity-80">
-                  Storage Mode: Offline / Private
+                <div className="text-lg font-bold mb-4">All data stored securely on the server for massive scale.</div>
+                <div className="text-xs font-medium text-indigo-100 opacity-80">
+                  Storage Mode: Server SQLite / Multi-User
                 </div>
               </div>
 
@@ -189,20 +189,20 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Local Type:</span>
-                    <span className="font-bold text-slate-900">IndexedDB (Browser)</span>
+                    <span className="text-slate-600">Architecture:</span>
+                    <span className="font-bold text-slate-900">Server-First</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Server Type:</span>
-                    <span className="font-bold text-slate-900">SQLite (Better-SQLite3)</span>
+                    <span className="text-slate-600">Database:</span>
+                    <span className="font-bold text-slate-900">SQLite (Server)</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">Status:</span>
-                    <span className="font-bold text-emerald-600">Active</span>
+                    <span className="font-bold text-emerald-600">Connected</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600">Last Updated:</span>
-                    <span className="font-bold text-slate-900">{new Date().toLocaleDateString()}</span>
+                    <span className="text-slate-600">Capacity:</span>
+                    <span className="font-bold text-slate-900">Unlimited</span>
                   </div>
                 </div>
               </div>

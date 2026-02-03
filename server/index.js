@@ -12,7 +12,8 @@ const PORT = process.env.PORT || 5001;
 const JWT_SECRET = process.env.JWT_SECRET || 'switchradar_secret_key';
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Increase JSON payload limit
+app.use(express.urlencoded({ limit: '50mb', extended: true })); // Increase URL-encoded payload limit
 
 // Initialize API Alignment Service
 const apiAlignment = new APIAlignmentService(app);
@@ -218,13 +219,24 @@ app.get('/api/businesses', auth, (req, res) => {
     });
 });
 
-// Enhanced business sync with better error handling and progress tracking
+// Enhanced business sync with better error handling and chunked upload support
 app.post('/api/businesses/sync', auth, (req, res) => {
-    const { businesses } = req.body;
+    console.log('=== BUSINESS SYNC REQUEST RECEIVED ===');
+    console.log('User ID:', req.userData.userId);
+    console.log('Username:', req.userData.username);
+    console.log('Request body keys:', Object.keys(req.body));
+    
+    const { businesses, isChunked, chunkIndex, totalChunks, clearFirst } = req.body;
     const userId = req.userData.userId;
 
     if (!businesses || !Array.isArray(businesses)) {
+        console.log('❌ Invalid businesses data:', typeof businesses, Array.isArray(businesses));
         return res.status(400).json({ message: 'Invalid businesses data' });
+    }
+
+    console.log('✅ Received', businesses.length, 'businesses for sync');
+    if (isChunked) {
+        console.log(`📦 Chunked upload: chunk ${chunkIndex + 1}/${totalChunks}`);
     }
 
     const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
@@ -234,9 +246,11 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     `);
 
     const transaction = db.transaction((businessesToSync) => {
-        // Clear existing data for this user
-        const deleteResult = deleteStmt.run(userId);
-        console.log(`Cleared ${deleteResult.changes} existing businesses for user ${userId}`);
+        // Only clear existing data on first chunk or non-chunked uploads
+        if (!isChunked || (isChunked && chunkIndex === 0) || clearFirst !== false) {
+            const deleteResult = deleteStmt.run(userId);
+            console.log(`🗑️ Cleared ${deleteResult.changes} existing businesses for user ${userId}`);
+        }
         
         let successCount = 0;
         let errorCount = 0;
@@ -261,10 +275,11 @@ app.post('/api/businesses/sync', auth, (req, res) => {
                     businessName: business.name,
                     error: error.message
                 });
-                console.error(`Failed to sync business ${business.id}:`, error);
+                console.error(`❌ Failed to sync business ${business.id}:`, error);
             }
         }
         
+        console.log(`✅ Sync completed: ${successCount} success, ${errorCount} errors`);
         return { successCount, errorCount, errors };
     });
 
@@ -274,21 +289,178 @@ app.post('/api/businesses/sync', auth, (req, res) => {
         // Update user's last sync timestamp
         db.prepare('UPDATE users SET last_sync = CURRENT_TIMESTAMP WHERE id = ?').run(userId);
         
+        console.log('🎉 Business sync transaction completed successfully');
+        
         res.json({ 
-            message: 'Business sync completed', 
+            message: isChunked ? `Chunk ${chunkIndex + 1}/${totalChunks} sync completed` : 'Business sync completed',
             totalReceived: businesses.length,
             successCount: result.successCount,
             errorCount: result.errorCount,
             errors: result.errors,
-            timestamp: new Date().toISOString()
+            timestamp: new Date().toISOString(),
+            isChunked,
+            chunkIndex,
+            totalChunks
         });
     } catch (error) {
-        console.error('Business sync transaction error:', error);
+        console.error('💥 Business sync transaction error:', error);
         res.status(500).json({ 
             message: 'Business sync failed', 
             error: error.message,
             totalReceived: businesses.length
         });
+    }
+});
+
+// User Management Routes (Admin only)
+app.get('/api/users', auth, (req, res) => {
+    const { role } = req.userData;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    try {
+        const users = db.prepare(`
+            SELECT id, username, created_at, last_sync, total_businesses, storage_used_mb
+            FROM users 
+            ORDER BY created_at DESC
+        `).all();
+        
+        res.json(users);
+    } catch (error) {
+        console.error('Failed to fetch users:', error);
+        res.status(500).json({ message: 'Failed to fetch users' });
+    }
+});
+
+app.post('/api/users', auth, (req, res) => {
+    const { role } = req.userData;
+    const { username, password } = req.body;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    if (!username || !password) {
+        return res.status(400).json({ message: 'Username and password required' });
+    }
+    
+    try {
+        const hashedPassword = bcrypt.hashSync(password, 10);
+        const result = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hashedPassword);
+        
+        res.status(201).json({ 
+            message: 'User created successfully',
+            userId: result.lastInsertRowid,
+            username 
+        });
+    } catch (error) {
+        if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+            res.status(400).json({ message: 'Username already exists' });
+        } else {
+            console.error('Failed to create user:', error);
+            res.status(500).json({ message: 'Failed to create user' });
+        }
+    }
+});
+
+app.delete('/api/users/:userId', auth, (req, res) => {
+    const { role, userId: currentUserId } = req.userData;
+    const { userId } = req.params;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    if (parseInt(userId) === currentUserId) {
+        return res.status(400).json({ message: 'Cannot delete your own account' });
+    }
+    
+    try {
+        // Delete user's data first
+        db.prepare('DELETE FROM leads WHERE userId = ?').run(userId);
+        db.prepare('DELETE FROM routes WHERE userId = ?').run(userId);
+        
+        // Delete user
+        const result = db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+        
+        if (result.changes === 0) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        res.json({ message: 'User and all associated data deleted successfully' });
+    } catch (error) {
+        console.error('Failed to delete user:', error);
+        res.status(500).json({ message: 'Failed to delete user' });
+    }
+});
+
+app.get('/api/users/:userId/businesses', auth, (req, res) => {
+    const { role } = req.userData;
+    const { userId } = req.params;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    try {
+        const businesses = db.prepare('SELECT * FROM leads WHERE userId = ? ORDER BY name').all(userId);
+        
+        const formattedBusinesses = businesses.map(business => ({
+            ...business,
+            coordinates: { lat: business.lat, lng: business.lng },
+            notes: JSON.parse(business.notes || '[]'),
+            metadata: JSON.parse(business.metadata || '{}')
+        }));
+        
+        res.json(formattedBusinesses);
+    } catch (error) {
+        console.error('Failed to fetch user businesses:', error);
+        res.status(500).json({ message: 'Failed to fetch user businesses' });
+    }
+});
+
+app.delete('/api/users/:userId/businesses/:businessId', auth, (req, res) => {
+    const { role } = req.userData;
+    const { userId, businessId } = req.params;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    try {
+        const result = db.prepare('DELETE FROM leads WHERE userId = ? AND id = ?').run(userId, businessId);
+        
+        if (result.changes === 0) {
+            return res.status(404).json({ message: 'Business not found' });
+        }
+        
+        res.json({ message: 'Business deleted successfully' });
+    } catch (error) {
+        console.error('Failed to delete business:', error);
+        res.status(500).json({ message: 'Failed to delete business' });
+    }
+});
+
+app.delete('/api/users/:userId/businesses', auth, (req, res) => {
+    const { role } = req.userData;
+    const { userId } = req.params;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    try {
+        const result = db.prepare('DELETE FROM leads WHERE userId = ?').run(userId);
+        
+        res.json({ 
+            message: 'All user businesses deleted successfully',
+            deletedCount: result.changes 
+        });
+    } catch (error) {
+        console.error('Failed to delete user businesses:', error);
+        res.status(500).json({ message: 'Failed to delete user businesses' });
     }
 });
 
