@@ -11,6 +11,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
 import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
+import { serverDataService } from './services/serverData';
 import { processImportedData, sampleData } from './utils/dataProcessors';
 import { UserManager } from './utils/userManager';
 import { db } from './db';
@@ -82,7 +83,8 @@ function App() {
     radiusKm,
     setRadiusKm,
     dbError,
-    handleDatabaseReset
+    handleDatabaseReset,
+    refetch
   } = useBusinessData();
 
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -100,7 +102,7 @@ function App() {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [mapTarget, setMapTarget] = useState<{ center: [number, number], zoom: number } | null>(null);
 
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, token } = useAuth();
 
   // Force map re-render when switching to map view
   useEffect(() => {
@@ -304,58 +306,55 @@ function App() {
   };
 
   const applyNewBusinesses = async (items: Business[], sourceName: string) => {
-    console.log('Mobile import - Applying new businesses:', items.length, 'items');
-    console.log('Mobile import - Source name:', sourceName);
+    console.log('Server import - Applying new businesses:', items.length, 'items');
+    console.log('Server import - Source name:', sourceName);
     
     try {
       const providers = Array.from(new Set(items.map(b => b.provider))).filter(Boolean);
-      console.log('Mobile import - Providers found:', providers);
+      console.log('Server import - Providers found:', providers);
       
-      // Clear existing data
-      console.log('Mobile import - Clearing existing businesses...');
-      await db.businesses.clear();
-      
-      // Add new businesses in smaller batches for mobile
-      console.log('Mobile import - Adding new businesses...');
-      const batchSize = 100; // Smaller batches for mobile
-      for (let i = 0; i < items.length; i += batchSize) {
-        const batch = items.slice(i, i + batchSize);
-        await db.businesses.bulkAdd(batch);
-        console.log(`Mobile import - Added batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(items.length/batchSize)}`);
-        
-        // Small delay between batches to prevent blocking
-        if (i + batchSize < items.length) {
-          await new Promise(resolve => setTimeout(resolve, 10));
-        }
+      // Check if user is authenticated
+      if (!token || !isAuthenticated) {
+        throw new Error('You must be logged in to import data');
       }
+      
+      // Send data to server instead of IndexedDB
+      console.log('Server import - Sending data to server...');
+      const result = await serverDataService.saveBusinesses(items, token);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to save data to server');
+      }
+      
+      console.log('Server import - Data saved to server successfully:', result);
       
       // Update UI state
       setVisibleProviders(providers);
       setLastImportName(sourceName);
       
-      console.log('Mobile import - Import applied successfully');
+      // Refresh data from server to update the UI
+      console.log('Server import - Refreshing data from server...');
+      await refetch(); // This will update the businesses state
       
-      // Verify the data was actually saved
-      const count = await db.businesses.count();
-      console.log('Mobile import - Verification: businesses in DB:', count);
-      
-      if (count === 0) {
-        throw new Error('Data was not saved to database');
-      }
+      console.log('Server import - Import completed successfully');
       
     } catch (error) {
-      console.error('Mobile import - Error applying businesses:', error);
+      console.error('Server import - Error applying businesses:', error);
       throw error;
     }
   };
 
   const handleImportSample = async () => {
     setIsImporting(true);
-    setTimeout(async () => {
+    try {
       await applyNewBusinesses(sampleData, 'Global Sample Dataset');
-      setIsImporting(false);
       setIsImportOpen(false);
-    }, 1000);
+    } catch (error) {
+      console.error('Sample import error:', error);
+      setImportError(`Failed to import sample data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   const handleToggleProvider = useCallback((provider: string) => {
@@ -384,17 +383,54 @@ function App() {
   }, [availableProviders, setHasUserInteracted]);
 
   const handleAddToRoute = async (businessId: string) => {
-    const maxOrder = Math.max(...routeItems.map(i => i.order), 0);
-    await db.route.add({ businessId, order: maxOrder + 1, addedAt: new Date() });
+    if (!token) return;
+    
+    try {
+      const maxOrder = Math.max(...routeItems.map(i => i.order), 0);
+      const newRouteItem = { businessId, order: maxOrder + 1, addedAt: new Date() };
+      
+      // Save to server
+      const result = await serverDataService.saveRoutes([...routeItems, newRouteItem], token);
+      if (result.success) {
+        // Refresh routes from server
+        await refetch();
+      }
+    } catch (error) {
+      console.error('Failed to add to route:', error);
+    }
   };
 
   const handleRemoveFromRoute = async (businessId: string) => {
-    await db.route.where('businessId').equals(businessId).delete();
+    if (!token) return;
+    
+    try {
+      const updatedRoutes = routeItems.filter(item => item.businessId !== businessId);
+      
+      // Save to server
+      const result = await serverDataService.saveRoutes(updatedRoutes, token);
+      if (result.success) {
+        // Refresh routes from server
+        await refetch();
+      }
+    } catch (error) {
+      console.error('Failed to remove from route:', error);
+    }
   };
   
   const handleClearRoute = async () => {
-    await db.route.clear();
-    setSelectedBusiness(null);
+    if (!token) return;
+    
+    try {
+      // Save empty routes to server
+      const result = await serverDataService.saveRoutes([], token);
+      if (result.success) {
+        setSelectedBusiness(null);
+        // Refresh routes from server
+        await refetch();
+      }
+    } catch (error) {
+      console.error('Failed to clear route:', error);
+    }
   };
 
   const handleDeleteBusiness = async (id: string) => {
