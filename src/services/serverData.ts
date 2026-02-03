@@ -85,36 +85,31 @@ class ServerDataService {
   }
 
   async saveBusinesses(businesses: Business[], token: string): Promise<ServerDataResult> {
-    console.log('🚀 saveBusinesses called with:', {
-      businessCount: businesses.length,
-      tokenPresent: !!token,
-      tokenLength: token?.length,
-      apiUrl: this.getApiUrl('/api/businesses/sync'),
-      firstBusinessSample: businesses[0] ? {
-        id: businesses[0].id,
-        name: businesses[0].name,
-        hasCoordinates: !!businesses[0].coordinates
-      } : null
-    });
+    console.log('🚀 API: saveBusinesses called');
+    console.log('📊 API: Business count:', businesses.length);
+    console.log('🔐 API: Token present:', !!token, 'length:', token?.length);
+    console.log('🌐 API: API URL:', this.getApiUrl('/api/businesses/sync'));
+    console.log('📊 API: First business sample:', businesses[0] ? {
+      id: businesses[0].id,
+      name: businesses[0].name,
+      hasCoordinates: !!businesses[0].coordinates
+    } : null);
 
     // If dataset is large (>1000 businesses), use chunked upload
     if (businesses.length > 1000) {
-      console.log('📦 Large dataset detected, using chunked upload...');
+      console.log('📦 API: Large dataset detected, using chunked upload...');
       return this.saveBusinessesChunked(businesses, token);
     }
 
     try {
       const headers = this.getAuthHeaders(token);
-      console.log('📤 Request headers:', {
-        'Content-Type': headers['Content-Type'],
-        'Authorization': headers['Authorization'] ? 'Bearer [PRESENT]' : 'MISSING'
-      });
+      console.log('📤 API: Request headers prepared');
 
       const requestBody = { businesses };
       const bodySize = JSON.stringify(requestBody).length;
-      console.log('📦 Request body size:', bodySize, 'characters', (bodySize / 1024 / 1024).toFixed(2), 'MB');
+      console.log('📦 API: Request body size:', bodySize, 'characters', (bodySize / 1024 / 1024).toFixed(2), 'MB');
 
-      console.log('🌐 Making fetch request to:', this.getApiUrl('/api/businesses/sync'));
+      console.log('🌐 API: Making fetch request...');
       
       const response = await this.makeRequest(this.getApiUrl('/api/businesses/sync'), {
         method: 'POST',
@@ -122,21 +117,20 @@ class ServerDataService {
         body: JSON.stringify(requestBody)
       });
 
-      console.log('📥 Response received:', {
+      console.log('📥 API: Response received:', {
         status: response.status,
         statusText: response.statusText,
-        ok: response.ok,
-        headers: Object.fromEntries(response.headers.entries())
+        ok: response.ok
       });
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Response error text:', errorText);
+        console.error('❌ API: Response error text:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('✅ Response result:', result);
+      console.log('✅ API: Response result:', result);
       
       return {
         success: true,
@@ -144,8 +138,8 @@ class ServerDataService {
         count: businesses.length
       };
     } catch (error) {
-      console.error('💥 saveBusinesses error:', error);
-      console.error('Error details:', {
+      console.error('💥 API: saveBusinesses error:', error);
+      console.error('API Error details:', {
         name: error instanceof Error ? error.name : 'Unknown',
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined

@@ -16,7 +16,11 @@ export const useBusinessData = () => {
 
     // Fetch businesses from server
     const fetchBusinesses = async (forceRefresh = false) => {
+        console.log('🚀 FETCH: fetchBusinesses called, forceRefresh:', forceRefresh);
+        console.log('🔐 FETCH: Auth status - token present:', !!token, 'isAuthenticated:', isAuthenticated);
+        
         if (!token || !isAuthenticated) {
+            console.log('❌ FETCH: No auth, clearing businesses');
             setBusinesses([]);
             setError(null);
             return;
@@ -24,29 +28,35 @@ export const useBusinessData = () => {
 
         // Don't refetch if we have recent data (unless forced)
         if (!forceRefresh && lastFetch && Date.now() - lastFetch.getTime() < 30000) {
+            console.log('⏭️ FETCH: Skipping fetch, recent data available');
             return;
         }
 
+        console.log('🚀 FETCH: Starting data fetch from server');
         setLoading(true);
         setError(null);
 
         try {
             const result = await serverDataService.getBusinesses(token);
+            console.log('📥 FETCH: Server response:', result);
+            
             if (result.success) {
+                console.log('✅ FETCH: Success, businesses count:', result.data?.length || 0);
                 setBusinesses(result.data || []);
                 setLastFetch(new Date());
                 setError(null); // Clear any previous errors
             } else {
                 // Don't set error for empty data - just log it
-                console.warn('Failed to fetch businesses:', result.error);
+                console.warn('⚠️ FETCH: Failed to fetch businesses:', result.error);
                 setBusinesses([]); // Set empty array instead of error
                 setError(null); // Don't show error to user for data loading failures
             }
         } catch (err) {
-            console.error('Network error fetching businesses:', err);
+            console.error('❌ FETCH: Network error fetching businesses:', err);
             setBusinesses([]); // Set empty array instead of error
             setError(null); // Don't show error to user for network failures
         } finally {
+            console.log('🏁 FETCH: Fetch completed, setting loading to false');
             setLoading(false);
         }
     };

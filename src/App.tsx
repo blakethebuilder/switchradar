@@ -277,9 +277,10 @@ function App() {
   };
 
   const handleConfirmMapping = async (mapping: ImportMapping) => {
-    console.log('Server import - handleConfirmMapping called with:', mapping);
-    console.log('Server import - importRows length:', importRows?.length);
-    console.log('Server import - importColumns:', importColumns);
+    console.log('🚀 IMPORT STEP 4: handleConfirmMapping called');
+    console.log('📋 IMPORT STEP 4: Mapping:', mapping);
+    console.log('📊 IMPORT STEP 4: Import rows length:', importRows?.length);
+    console.log('📊 IMPORT STEP 4: Import columns:', importColumns);
     
     setIsMappingOpen(false);
     setIsImporting(true);
@@ -289,42 +290,48 @@ function App() {
     await new Promise(resolve => setTimeout(resolve, 100));
     
     try {
-      console.log('Server import - Processing import with mapping:', mapping);
-      console.log('Server import - Import rows sample:', importRows?.slice(0, 2));
+      console.log('🚀 IMPORT STEP 5: Processing import with mapping');
+      console.log('📊 IMPORT STEP 5: Import rows sample:', importRows?.slice(0, 2));
       
       if (!importRows || importRows.length === 0) {
+        console.log('❌ IMPORT STEP 5: No data to import');
         throw new Error('No data to import');
       }
       
       // Check if mapping has required fields
       if (!mapping.name) {
+        console.log('❌ IMPORT STEP 5: Business name mapping missing');
         throw new Error('Business name mapping is required');
       }
       
+      console.log('🚀 IMPORT STEP 6: Processing imported data');
       const processed = processImportedData(importRows, mapping);
-      console.log('Server import - Processed businesses count:', processed.length);
-      console.log('Server import - Processed businesses sample:', processed.slice(0, 2));
+      console.log('✅ IMPORT STEP 6: Processed businesses count:', processed.length);
+      console.log('📊 IMPORT STEP 6: Processed businesses sample:', processed.slice(0, 2));
       
       if (processed.length === 0) {
+        console.log('❌ IMPORT STEP 6: No businesses processed');
         throw new Error('No businesses were processed from the data. Please check your field mappings.');
       }
       
       // Validate processed data
       const validBusinesses = processed.filter(b => b.name && b.name.trim() !== '');
-      console.log('Server import - Valid businesses count:', validBusinesses.length);
+      console.log('✅ IMPORT STEP 6: Valid businesses count:', validBusinesses.length);
       
       if (validBusinesses.length === 0) {
+        console.log('❌ IMPORT STEP 6: No valid businesses found');
         throw new Error('No valid businesses found. Please check that the name field is mapped correctly.');
       }
       
+      console.log('🚀 IMPORT STEP 7: Calling applyNewBusinesses');
       await applyNewBusinesses(validBusinesses, pendingFileName);
-      console.log('Server import - Import completed successfully');
+      console.log('✅ IMPORT STEP 7: applyNewBusinesses completed successfully');
       
       // Close import modal on success
       setIsImportOpen(false);
       
     } catch (error) {
-      console.error('Server import - Import error:', error);
+      console.error('❌ IMPORT STEP 4-7: Import error:', error);
       setImportError(`Failed to process data: ${error instanceof Error ? error.message : 'Unknown error'}`);
       // Reopen import modal to show error
       setIsImportOpen(true);
@@ -338,58 +345,74 @@ function App() {
   };
 
   const applyNewBusinesses = async (items: Business[], sourceName: string) => {
-    console.log('Server import - Applying new businesses:', items.length, 'items');
-    console.log('Server import - Source name:', sourceName);
+    console.log('🚀 IMPORT STEP 8: applyNewBusinesses called');
+    console.log('📊 IMPORT STEP 8: Items count:', items.length);
+    console.log('📊 IMPORT STEP 8: Source name:', sourceName);
+    console.log('🔐 IMPORT STEP 8: Auth check - token present:', !!token, 'isAuthenticated:', isAuthenticated);
     
     try {
       const providers = Array.from(new Set(items.map(b => b.provider))).filter(Boolean);
-      console.log('Server import - Providers found:', providers);
+      console.log('📊 IMPORT STEP 8: Providers found:', providers);
       
       // Check if user is authenticated
       if (!token || !isAuthenticated) {
+        console.log('❌ IMPORT STEP 8: User not authenticated');
         throw new Error('You must be logged in to import data');
       }
       
       // Send data to server instead of IndexedDB
-      console.log('Server import - Sending data to server...');
+      console.log('🚀 IMPORT STEP 9: Sending data to server...');
+      console.log('📊 IMPORT STEP 9: Sample business data:', items[0]);
+      
       const result = await serverDataService.saveBusinesses(items, token);
+      console.log('📥 IMPORT STEP 9: Server response:', result);
       
       if (!result.success) {
+        console.log('❌ IMPORT STEP 9: Server save failed:', result.error);
         throw new Error(result.error || 'Failed to save data to server');
       }
       
-      console.log('Server import - Data saved to server successfully:', result);
+      console.log('✅ IMPORT STEP 9: Data saved to server successfully');
       
       // Update UI state
+      console.log('🚀 IMPORT STEP 10: Updating UI state');
       setVisibleProviders(providers);
       setLastImportName(sourceName);
+      console.log('✅ IMPORT STEP 10: UI state updated');
       
       // Refresh data from server to update the UI
-      console.log('Server import - Refreshing data from server...');
+      console.log('🚀 IMPORT STEP 11: Refreshing data from server...');
+      console.log('📊 IMPORT STEP 11: Current businesses count before refresh:', businesses.length);
+      
       try {
         await refetch(); // Force refresh the data
-        console.log('Server import - Data refresh successful');
+        console.log('✅ IMPORT STEP 11: Data refresh completed');
       } catch (refreshError) {
-        console.error('Server import - Data refresh failed:', refreshError);
+        console.error('❌ IMPORT STEP 11: Data refresh failed:', refreshError);
         // Don't throw here, import was successful even if refresh failed
       }
       
-      console.log('Server import - Import completed successfully');
-      console.log('✅ Import successful! Businesses should now be visible in the UI.');
+      console.log('🎉 IMPORT COMPLETE: Import process finished successfully');
+      console.log('📊 IMPORT COMPLETE: Final businesses count:', businesses.length);
       
     } catch (error) {
-      console.error('Server import - Error applying businesses:', error);
+      console.error('❌ IMPORT STEP 8-11: Error in applyNewBusinesses:', error);
       throw error;
     }
   };
 
   const handleImportSample = async () => {
+    console.log('🚀 SAMPLE IMPORT: Starting sample data import');
+    console.log('📊 SAMPLE IMPORT: Sample data:', sampleData.length, 'businesses');
+    console.log('🔐 SAMPLE IMPORT: Auth status - isAuthenticated:', isAuthenticated, 'token present:', !!token);
+    
     setIsImporting(true);
     try {
       await applyNewBusinesses(sampleData, 'Global Sample Dataset');
+      console.log('✅ SAMPLE IMPORT: Sample import completed successfully');
       setIsImportOpen(false);
     } catch (error) {
-      console.error('Sample import error:', error);
+      console.error('❌ SAMPLE IMPORT: Sample import error:', error);
       setImportError(`Failed to import sample data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsImporting(false);
