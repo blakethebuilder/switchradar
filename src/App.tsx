@@ -294,9 +294,9 @@ function App() {
   };
 
   const handleConfirmMapping = async (mapping: ImportMapping) => {
-    console.log('Mobile import - handleConfirmMapping called with:', mapping);
-    console.log('Mobile import - importRows length:', importRows?.length);
-    console.log('Mobile import - importColumns:', importColumns);
+    console.log('Server import - handleConfirmMapping called with:', mapping);
+    console.log('Server import - importRows length:', importRows?.length);
+    console.log('Server import - importColumns:', importColumns);
     
     setIsMappingOpen(false);
     setIsImporting(true);
@@ -306,8 +306,8 @@ function App() {
     await new Promise(resolve => setTimeout(resolve, 100));
     
     try {
-      console.log('Mobile import - Processing import with mapping:', mapping);
-      console.log('Mobile import - Import rows sample:', importRows?.slice(0, 2));
+      console.log('Server import - Processing import with mapping:', mapping);
+      console.log('Server import - Import rows sample:', importRows?.slice(0, 2));
       
       if (!importRows || importRows.length === 0) {
         throw new Error('No data to import');
@@ -319,8 +319,8 @@ function App() {
       }
       
       const processed = processImportedData(importRows, mapping);
-      console.log('Mobile import - Processed businesses count:', processed.length);
-      console.log('Mobile import - Processed businesses sample:', processed.slice(0, 2));
+      console.log('Server import - Processed businesses count:', processed.length);
+      console.log('Server import - Processed businesses sample:', processed.slice(0, 2));
       
       if (processed.length === 0) {
         throw new Error('No businesses were processed from the data. Please check your field mappings.');
@@ -328,19 +328,29 @@ function App() {
       
       // Validate processed data
       const validBusinesses = processed.filter(b => b.name && b.name.trim() !== '');
-      console.log('Mobile import - Valid businesses count:', validBusinesses.length);
+      console.log('Server import - Valid businesses count:', validBusinesses.length);
       
       if (validBusinesses.length === 0) {
         throw new Error('No valid businesses found. Please check that the name field is mapped correctly.');
       }
       
       await applyNewBusinesses(validBusinesses, pendingFileName);
-      console.log('Mobile import - Import completed successfully');
+      console.log('Server import - Import completed successfully');
+      
+      // Close import modal on success
+      setIsImportOpen(false);
+      
     } catch (error) {
-      console.error('Mobile import - Import error:', error);
+      console.error('Server import - Import error:', error);
       setImportError(`Failed to process data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Reopen import modal to show error
+      setIsImportOpen(true);
     } finally {
       setIsImporting(false);
+      // Clear import data
+      setImportRows([]);
+      setImportColumns([]);
+      setPendingFileName('');
     }
   };
 
@@ -373,9 +383,15 @@ function App() {
       
       // Refresh data from server to update the UI
       console.log('Server import - Refreshing data from server...');
-      await refetch(); // This will update the businesses state
+      const refreshResult = await refetch(); // This will update the businesses state
+      console.log('Server import - Refresh result:', refreshResult);
+      
+      // Wait a moment for the UI to update
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       console.log('Server import - Import completed successfully');
+      console.log('✅ Import successful! Businesses should now be visible in the UI.');
+      console.log('Current businesses count after import:', businesses.length);
       
     } catch (error) {
       console.error('Server import - Error applying businesses:', error);
