@@ -50,3 +50,29 @@ export const throttle = <T extends (...args: any[]) => any>(
     }
   };
 };
+// Debounce function for map operations that should wait for user to stop interacting
+export const debounce = <T extends (...args: any[]) => any>(
+  func: T,
+  delay: number
+): ((...args: Parameters<T>) => void) => {
+  let timeoutId: NodeJS.Timeout;
+  return function(this: any, ...args: Parameters<T>) {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func.apply(this, args), delay);
+  };
+};
+
+// Request animation frame throttle for smooth UI updates
+export const rafThrottle = <T extends (...args: any[]) => any>(
+  func: T
+): ((...args: Parameters<T>) => void) => {
+  let rafId: number | null = null;
+  return function(this: any, ...args: Parameters<T>) {
+    if (rafId === null) {
+      rafId = requestAnimationFrame(() => {
+        func.apply(this, args);
+        rafId = null;
+      });
+    }
+  };
+};

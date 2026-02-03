@@ -493,6 +493,19 @@ export const BusinessMap = React.memo(({
   const [mapError, setMapError] = useState<string | null>(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [currentZoom, setCurrentZoom] = useState(6);
+  const [markersLoaded, setMarkersLoaded] = useState(false); // New state for lazy marker loading
+
+  // Lazy load markers after map is ready for better initial performance
+  useEffect(() => {
+    if (mapInstance && !markersLoaded && businesses.length > 0) {
+      // Delay marker loading slightly to let map render first
+      const timer = setTimeout(() => {
+        setMarkersLoaded(true);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [mapInstance, markersLoaded, businesses.length]);
 
   // Handle map invalidation when fullScreen changes
   useEffect(() => {
@@ -624,8 +637,13 @@ export const BusinessMap = React.memo(({
     tap: mapInteractive,
   }), [mapInteractive]);
 
-  // CRITICAL PERFORMANCE OPTIMIZATION: Memoize markers with stable dependencies
+  // CRITICAL PERFORMANCE OPTIMIZATION: Memoize markers with stable dependencies and chunked processing
   const memoizedMarkers = React.useMemo(() => {
+    // Don't create markers until they should be loaded
+    if (!markersLoaded) {
+      return [];
+    }
+    
     PerformanceMonitor.startTimer('create-markers');
     
     // Return empty array if no businesses
@@ -637,9 +655,10 @@ export const BusinessMap = React.memo(({
     const validMarkers: React.ReactElement[] = [];
     const selectedSet = new Set([selectedBusinessId, ...selectedBusinessIds].filter(Boolean));
     
-    // Process businesses in chunks to prevent blocking
-    const processChunk = (startIndex: number, chunkSize: number = 100) => {
-      const endIndex = Math.min(startIndex + chunkSize, businesses.length);
+    // Enhanced chunked processing for better performance
+    const CHUNK_SIZE = 50; // Smaller chunks for smoother rendering
+    const processChunk = (startIndex: number) => {
+      const endIndex = Math.min(startIndex + CHUNK_SIZE, businesses.length);
       
       for (let i = startIndex; i < endIndex; i++) {
         const business = businesses[i];
@@ -671,31 +690,36 @@ export const BusinessMap = React.memo(({
 
           if (!icon) continue;
 
-          // Throttled click handler to prevent rapid-fire clicks
+          // Enhanced throttled click handlers with better performance
           const throttledClick = throttle((e: L.LeafletMouseEvent) => {
             try {
               e.originalEvent?.stopPropagation();
-              onBusinessSelect?.(business);
+              // Use requestAnimationFrame for smoother UI updates
+              requestAnimationFrame(() => {
+                onBusinessSelect?.(business);
+              });
             } catch (error) {
               console.error('Error in marker click handler:', error);
             }
-          }, 200);
+          }, 150); // Slightly faster response
 
           const throttledDoubleClick = throttle((e: L.LeafletMouseEvent) => {
             try {
               e.originalEvent?.stopPropagation();
-              onBusinessSelect?.(business);
-              // Auto-expand the customer details toolbar
-              setTimeout(() => {
-                const expandButton = document.querySelector('[title="Expand"]') as HTMLButtonElement;
-                if (expandButton) {
-                  expandButton.click();
-                }
-              }, 100);
+              requestAnimationFrame(() => {
+                onBusinessSelect?.(business);
+                // Auto-expand the customer details toolbar
+                setTimeout(() => {
+                  const expandButton = document.querySelector('[title="Expand"]') as HTMLButtonElement;
+                  if (expandButton) {
+                    expandButton.click();
+                  }
+                }, 100);
+              });
             } catch (error) {
               console.error('Error in marker double-click handler:', error);
             }
-          }, 300);
+          }, 250);
 
           const marker = (
             <Marker
@@ -718,14 +742,17 @@ export const BusinessMap = React.memo(({
       }
     };
 
-    // Process all businesses
-    processChunk(0, businesses.length);
+    // Process all businesses in chunks
+    for (let i = 0; i < businesses.length; i += CHUNK_SIZE) {
+      processChunk(i);
+    }
 
     console.log(`Performance: Created ${validMarkers.length} markers out of ${businesses.length} businesses`);
     PerformanceMonitor.endTimer('create-markers');
     return validMarkers;
   }, [
     // CRITICAL: Only depend on essential data that actually affects marker rendering
+    markersLoaded, // Include markersLoaded in dependencies
     businesses.length, // Only re-render if count changes
     selectedBusinessId, 
     selectedBusinessIds.join(','), // Stable string representation
@@ -739,11 +766,18 @@ export const BusinessMap = React.memo(({
       }`}>
       
       {/* Loading overlay */}
-      {isMapLoading && (
+      {(isMapLoading || !markersLoaded) && (
         <div className="absolute inset-0 z-[3000] bg-slate-100 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p className="text-slate-600 font-medium">Loading map...</p>
+            <p className="text-slate-600 font-medium">
+              {isMapLoading ? 'Loading map...' : 'Loading markers...'}
+            </p>
+            {!isMapLoading && !markersLoaded && businesses.length > 0 && (
+              <p className="text-slate-500 text-sm mt-2">
+                Preparing {businesses.length} business locations
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -756,10 +790,27 @@ export const BusinessMap = React.memo(({
         preferCanvas={true}
         worldCopyJump={true}
         minZoom={5}
-        maxZoom={18} // Prevent map breaking - limit to 18
+        maxZoom={(() => {
+          // Responsive max zoom based on device
+          const isMobile = window.innerWidth < 768;
+          const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+          
+          if (isMobile) return 17;    // Limit mobile zoom to prevent performance issues
+          if (isTablet) return 18;    // Slightly higher for tablets
+          return 18;                  // Full zoom for desktop
+        })()} 
         zoomSnap={0.5}
         zoomDelta={0.5}
-        wheelPxPerZoomLevel={120}
+        wheelPxPerZoomLevel={(() => {
+          // Smoother zoom on mobile devices
+          const isMobile = window.innerWidth < 768;
+          return isMobile ? 80 : 120;
+        })()}
+        // Performance optimizations
+        renderer={L.canvas({ padding: 0.5 })} // Use canvas renderer for better performance
+        updateWhenIdle={true} // Only update when map is idle
+        updateWhenZooming={false} // Don't update during zoom for smoother experience
+        keepInView={true} // Keep markers in view during pan
         {...mapOptions} // Apply interaction locks
       >
         <MapController 
@@ -779,6 +830,17 @@ export const BusinessMap = React.memo(({
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          // Performance optimizations
+          maxZoom={18}
+          tileSize={256}
+          zoomOffset={0}
+          updateWhenIdle={true}
+          updateWhenZooming={false}
+          keepBuffer={2} // Keep 2 screens worth of tiles in memory
+          // Responsive tile loading
+          detectRetina={true}
+          // Faster loading
+          crossOrigin={true}
         />
 
         {droppedPin && (
@@ -809,134 +871,169 @@ export const BusinessMap = React.memo(({
           </>
         )}
 
-        <MarkerClusterGroup
-          chunkedLoading={false}
-          spiderfyOnMaxZoom={true}
-          showCoverageOnHover={false}
-          animate={true}
-          animateAddingMarkers={false}
-          removeOutsideVisibleBounds={true}
-          disableClusteringAtZoom={15} // Scatter at zoom 15+ 
-          maxClusterRadius={(zoom: number) => {
-            // Progressive clustering - smoother transitions
-            if (zoom <= 6) return 120;  // Very loose clustering at country level
-            if (zoom <= 8) return 100;  // Loose clustering at province level  
-            if (zoom <= 10) return 80;  // Medium clustering at city level
-            if (zoom <= 12) return 60;  // Tighter clustering at district level
-            if (zoom <= 14) return 40;  // Tight clustering at neighborhood level
-            return 25;                  // Very tight clustering before scatter
-          }}
-          spiderfyDistanceMultiplier={1.2} // Better spiral spacing
-          spiderfyOnEveryZoom={true}
-          zoomToBoundsOnClick={false} // Disable automatic zoom on cluster click
-          maxZoom={17} // Cluster clicks won't zoom past 17 (leaving room for manual zoom to 18)
-          eventHandlers={{
-            clusterclick: (cluster: any) => {
-              const clusterGroup = cluster.target;
-              const map = clusterGroup._map;
-              const currentZoom = map.getZoom();
-              const childCount = clusterGroup.getChildCount();
+        {markersLoaded && (
+          <MarkerClusterGroup
+            chunkedLoading={true} // Enable chunked loading for better performance
+            spiderfyOnMaxZoom={true}
+            showCoverageOnHover={false}
+            animate={true}
+            animateAddingMarkers={false}
+            removeOutsideVisibleBounds={true}
+            disableClusteringAtZoom={16} // Scatter at zoom 16+ (was 15)
+            maxClusterRadius={(zoom: number) => {
+              // Responsive clustering based on device type
+              const isMobile = window.innerWidth < 768;
+              const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
               
-              // Prevent default behavior
-              if (cluster.originalEvent) {
-                cluster.originalEvent.preventDefault();
-                cluster.originalEvent.stopPropagation();
+              // Base radius adjustments for different devices
+              const mobileMultiplier = 0.8; // Smaller clusters on mobile
+              const tabletMultiplier = 0.9; // Slightly smaller on tablet
+              const baseMultiplier = isMobile ? mobileMultiplier : isTablet ? tabletMultiplier : 1.0;
+              
+              // Progressive clustering with device-aware sizing
+              if (zoom <= 6) return Math.round(100 * baseMultiplier);  // Country level
+              if (zoom <= 8) return Math.round(85 * baseMultiplier);   // Province level  
+              if (zoom <= 10) return Math.round(70 * baseMultiplier);  // City level
+              if (zoom <= 12) return Math.round(55 * baseMultiplier);  // District level
+              if (zoom <= 14) return Math.round(40 * baseMultiplier);  // Neighborhood level
+              if (zoom <= 15) return Math.round(30 * baseMultiplier);  // Street level
+              return Math.round(20 * baseMultiplier);                  // Very tight before scatter
+            }}
+            spiderfyDistanceMultiplier={(() => {
+              // Responsive spiral sizing
+              const isMobile = window.innerWidth < 768;
+              const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+              
+              if (isMobile) return 0.8;  // Smaller spirals on mobile
+              if (isTablet) return 0.9;  // Medium spirals on tablet
+              return 1.0;                // Full size on desktop
+            })()} 
+            spiderfyOnEveryZoom={true}
+            zoomToBoundsOnClick={false} // Disable automatic zoom on cluster click
+            maxZoom={17} // Cluster clicks won't zoom past 17
+            eventHandlers={{
+              clusterclick: (cluster: any) => {
+                const clusterGroup = cluster.target;
+                const map = clusterGroup._map;
+                const currentZoom = map.getZoom();
+                const childCount = clusterGroup.getChildCount();
+                
+                // Prevent default behavior
+                if (cluster.originalEvent) {
+                  cluster.originalEvent.preventDefault();
+                  cluster.originalEvent.stopPropagation();
+                }
+                
+                // Enhanced progressive zoom behavior
+                if (currentZoom <= 8) {
+                  // At very low zoom (overview), first click zooms in for better overview
+                  const targetZoom = Math.min(currentZoom + 2, 10);
+                  map.setView(clusterGroup.getLatLng(), targetZoom, { 
+                    animate: true, 
+                    duration: 0.8 
+                  });
+                } else if (currentZoom <= 10 && childCount > 20) {
+                  // Medium zoom with many businesses - zoom in to start scattering
+                  const targetZoom = Math.min(currentZoom + 2, 13);
+                  map.setView(clusterGroup.getLatLng(), targetZoom, { 
+                    animate: true, 
+                    duration: 0.6 
+                  });
+                } else if (currentZoom >= 14 || childCount <= 8) {
+                  // High zoom or small clusters - always spiderfy
+                  clusterGroup.spiderfy();
+                } else {
+                  // Medium zoom, medium cluster size - spiderfy with condensed layout
+                  clusterGroup.spiderfy();
+                }
+                
+                return false; // Prevent any default behavior
               }
-              
-              // Smart clustering behavior based on zoom and count
-              if (currentZoom >= 13) {
-                // At high zoom levels, always spiderfy
-                clusterGroup.spiderfy();
-              } else if (childCount <= 10) {
-                // Small clusters always spiderfy regardless of zoom
-                clusterGroup.spiderfy();
-              } else if (currentZoom <= 10 && childCount > 50) {
-                // Large clusters at low zoom can zoom in
-                const targetZoom = Math.min(currentZoom + 3, 14);
-                map.setView(clusterGroup.getLatLng(), targetZoom);
-              } else {
-                // Medium clusters or medium zoom - spiderfy
-                clusterGroup.spiderfy();
+            }}
+            iconCreateFunction={(cluster: any) => {
+              try {
+                const count = cluster.getChildCount();
+                const map = cluster._group._map;
+                const currentZoom = map ? map.getZoom() : 10;
+                
+                // Responsive sizing based on device and count
+                const isMobile = window.innerWidth < 768;
+                const isTablet = window.innerWidth >= 768 && window.innerWidth < 1024;
+                
+                let size = 32;
+                let bgColor = '#3b82f6';
+                let textColor = 'white';
+                let borderColor = 'white';
+                
+                // Size based on count with device adjustments
+                const sizeMultiplier = isMobile ? 0.85 : isTablet ? 0.92 : 1.0;
+                
+                if (count >= 1000) {
+                  size = Math.round(60 * sizeMultiplier);
+                  bgColor = '#7c2d12'; // Dark red for 1000+
+                } else if (count >= 500) {
+                  size = Math.round(55 * sizeMultiplier);
+                  bgColor = '#dc2626'; // Red for 500+
+                } else if (count >= 100) {
+                  size = Math.round(50 * sizeMultiplier);
+                  bgColor = '#ea580c'; // Orange for 100+
+                } else if (count >= 50) {
+                  size = Math.round(45 * sizeMultiplier);
+                  bgColor = '#d97706'; // Amber for 50+
+                } else if (count >= 20) {
+                  size = Math.round(40 * sizeMultiplier);
+                  bgColor = '#ca8a04'; // Yellow for 20+
+                } else if (count >= 10) {
+                  size = Math.round(36 * sizeMultiplier);
+                  bgColor = '#16a34a'; // Green for 10+
+                } else {
+                  size = Math.round(32 * sizeMultiplier);
+                }
+                
+                // Adjust size slightly based on zoom for better visibility
+                if (currentZoom >= 12) {
+                  size += Math.round(4 * sizeMultiplier);
+                } else if (currentZoom <= 8) {
+                  size += Math.round(2 * sizeMultiplier);
+                }
+                
+                const fontSize = size > 50 ? '14px' : size > 40 ? '12px' : size > 35 ? '11px' : '10px';
+                
+                return L.divIcon({
+                  html: `<div style="
+                    background: ${bgColor};
+                    color: ${textColor};
+                    border-radius: 50%;
+                    width: ${size}px;
+                    height: ${size}px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    border: 3px solid ${borderColor};
+                    box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+                    font-size: ${fontSize};
+                    cursor: pointer;
+                    transition: transform 0.2s ease;
+                  ">${count}</div>`,
+                  className: 'cluster-icon',
+                  iconSize: [size, size],
+                  iconAnchor: [size/2, size/2]
+                });
+              } catch (error) {
+                console.error('Cluster icon error:', error);
+                const fallbackSize = window.innerWidth < 768 ? 28 : 32;
+                return L.divIcon({
+                  html: `<div style="background: #6b7280; color: white; border-radius: 50%; width: ${fallbackSize}px; height: ${fallbackSize}px; display: flex; align-items: center; justify-content: center; font-weight: bold;">•</div>`,
+                  iconSize: [fallbackSize, fallbackSize],
+                  iconAnchor: [fallbackSize/2, fallbackSize/2]
+                });
               }
-              
-              return false; // Prevent any default behavior
-            }
-          }}
-          iconCreateFunction={(cluster: any) => {
-            try {
-              const count = cluster.getChildCount();
-              const map = cluster._group._map;
-              const currentZoom = map ? map.getZoom() : 10;
-              
-              // Dynamic sizing based on count and zoom
-              let size = 32;
-              let bgColor = '#3b82f6';
-              let textColor = 'white';
-              let borderColor = 'white';
-              
-              // Size based on count
-              if (count >= 1000) {
-                size = 60;
-                bgColor = '#7c2d12'; // Dark red for 1000+
-              } else if (count >= 500) {
-                size = 55;
-                bgColor = '#dc2626'; // Red for 500+
-              } else if (count >= 100) {
-                size = 50;
-                bgColor = '#ea580c'; // Orange for 100+
-              } else if (count >= 50) {
-                size = 45;
-                bgColor = '#d97706'; // Amber for 50+
-              } else if (count >= 20) {
-                size = 40;
-                bgColor = '#ca8a04'; // Yellow for 20+
-              } else if (count >= 10) {
-                size = 36;
-                bgColor = '#16a34a'; // Green for 10+
-              }
-              
-              // Adjust size slightly based on zoom for better visibility
-              if (currentZoom >= 12) {
-                size += 4;
-              } else if (currentZoom <= 8) {
-                size += 2;
-              }
-              
-              const fontSize = size > 50 ? '14px' : size > 40 ? '12px' : '11px';
-              
-              return L.divIcon({
-                html: `<div style="
-                  background: ${bgColor};
-                  color: ${textColor};
-                  border-radius: 50%;
-                  width: ${size}px;
-                  height: ${size}px;
-                  display: flex;
-                  align-items: center;
-                  justify-content: center;
-                  font-weight: bold;
-                  border: 3px solid ${borderColor};
-                  box-shadow: 0 3px 12px rgba(0,0,0,0.3);
-                  font-size: ${fontSize};
-                  cursor: pointer;
-                  transition: transform 0.2s ease;
-                ">${count}</div>`,
-                className: 'cluster-icon',
-                iconSize: [size, size],
-                iconAnchor: [size/2, size/2]
-              });
-            } catch (error) {
-              console.error('Cluster icon error:', error);
-              return L.divIcon({
-                html: '<div style="background: #6b7280; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold;">•</div>',
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
-              });
-            }
-          }}
-        >
-          {memoizedMarkers.length > 0 ? memoizedMarkers : []}
-        </MarkerClusterGroup>
+            }}
+          >
+            {memoizedMarkers.length > 0 ? memoizedMarkers : []}
+          </MarkerClusterGroup>
+        )}
       </MapContainer>
 
       {/* Icon Scroll Navigation Controls */}

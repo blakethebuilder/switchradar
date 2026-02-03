@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { serverDataService } from '../services/serverData';
 import { filterBusinesses, clearFilterCaches } from '../utils/dataProcessors';
@@ -14,8 +14,8 @@ export const useBusinessData = () => {
     const [error, setError] = useState<string | null>(null);
     const [lastFetch, setLastFetch] = useState<Date | null>(null);
 
-    // Fetch businesses from server
-    const fetchBusinesses = async (forceRefresh = false) => {
+    // Memoized fetch function to prevent unnecessary re-renders
+    const fetchBusinesses = useCallback(async (forceRefresh = false) => {
         console.log('🚀 FETCH: fetchBusinesses called, forceRefresh:', forceRefresh);
         console.log('🔐 FETCH: Auth status - token present:', !!token, 'isAuthenticated:', isAuthenticated);
         
@@ -59,10 +59,10 @@ export const useBusinessData = () => {
             console.log('🏁 FETCH: Fetch completed, setting loading to false');
             setLoading(false);
         }
-    };
+    }, [token, isAuthenticated, lastFetch]);
 
-    // Fetch routes from server
-    const fetchRoutes = async () => {
+    // Memoized fetch routes function
+    const fetchRoutes = useCallback(async () => {
         if (!token || !isAuthenticated) {
             setRouteItems([]);
             return;
@@ -76,7 +76,7 @@ export const useBusinessData = () => {
         } catch (err) {
             console.error('Failed to fetch routes:', err);
         }
-    };
+    }, [token, isAuthenticated]);
 
     // Auto-fetch on mount and auth changes
     useEffect(() => {
@@ -107,13 +107,37 @@ export const useBusinessData = () => {
         clearFilterCaches();
     }, [businesses.length]);
 
+    // Memoized categories calculation with better performance
     const categories = useMemo(
-        () => Array.from(new Set(businesses.map(b => b.category))).filter(Boolean).sort(),
+        () => {
+            if (!businesses.length) return [];
+            return PerformanceMonitor.measure('calculateCategories', () => {
+                const categorySet = new Set<string>();
+                for (const business of businesses) {
+                    if (business.category) {
+                        categorySet.add(business.category);
+                    }
+                }
+                return Array.from(categorySet).sort();
+            });
+        },
         [businesses]
     );
 
+    // Memoized providers calculation with better performance
     const availableProviders = useMemo(
-        () => Array.from(new Set(businesses.map(b => b.provider))).filter(Boolean).sort(),
+        () => {
+            if (!businesses.length) return [];
+            return PerformanceMonitor.measure('calculateProviders', () => {
+                const providerSet = new Set<string>();
+                for (const business of businesses) {
+                    if (business.provider) {
+                        providerSet.add(business.provider);
+                    }
+                }
+                return Array.from(providerSet).sort();
+            });
+        },
         [businesses]
     );
 
