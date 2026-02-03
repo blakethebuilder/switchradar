@@ -9,7 +9,13 @@ const APIAlignmentService = require('./services/apiAlignment');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-const JWT_SECRET = process.env.JWT_SECRET || '10WLkV5qHvXMgADdHm78e6DlBdH8SC4kmFUBSWaEDIQ';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+    console.error('❌ FATAL: JWT_SECRET environment variable is required');
+    console.error('Please set JWT_SECRET in your environment variables');
+    process.exit(1);
+}
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increase JSON payload limit

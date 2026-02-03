@@ -15,7 +15,12 @@ module.exports = (req, res, next) => {
         }
 
         // Use the same JWT_SECRET as the main server
-        const JWT_SECRET = process.env.JWT_SECRET || '10WLkV5qHvXMgADdHm78e6DlBdH8SC4kmFUBSWaEDIQ';
+        const JWT_SECRET = process.env.JWT_SECRET;
+        
+        if (!JWT_SECRET) {
+            console.error('❌ JWT_SECRET environment variable is required');
+            return res.status(500).json({ message: 'Server configuration error' });
+        }
         console.log('🔐 Auth: Using JWT_SECRET:', JWT_SECRET.substring(0, 10) + '...');
         console.log('🎫 Auth: Token to verify:', token.substring(0, 20) + '...');
 
