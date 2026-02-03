@@ -14,8 +14,6 @@ import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
 import { serverDataService } from './services/serverData';
 import { processImportedData, sampleData } from './utils/dataProcessors';
-import { UserManager } from './utils/userManager';
-import { db } from './db';
 import './App.css';
 import type { Business, ImportMapping, ViewMode } from './types';
 
@@ -38,31 +36,6 @@ const LoadingSpinner = () => (
 
 
 function App() {
-  // Initialize default user on app startup
-  useEffect(() => {
-    UserManager.initializeDefaultUser();
-    
-    // Also ensure current user blake is in the user management system
-    const currentUser = JSON.parse(localStorage.getItem('sr_user') || 'null');
-    if (currentUser && currentUser.username.toLowerCase() === 'blake') {
-      const existingBlake = UserManager.getUserByUsername('blake');
-      if (!existingBlake) {
-        try {
-          UserManager.addUser({
-            username: 'blake',
-            email: currentUser.email || 'blake@switchradar.com',
-            role: 'superAdmin'
-          });
-          console.log('Added blake to user management system');
-        } catch (error) {
-          console.log('Blake already exists in user management system');
-        }
-      } else if (existingBlake.role !== 'superAdmin') {
-        UserManager.updateUser(existingBlake.id, { role: 'superAdmin' });
-        console.log('Upgraded blake to superAdmin in user management system');
-      }
-    }
-  }, []);
 
   const {
     businesses,
@@ -116,7 +89,16 @@ function App() {
   }, [viewMode]);
 
   const handleUpdateBusiness = async (id: string, updates: Partial<Business>) => {
-    await db.businesses.update(id, updates);
+    if (!token) return;
+    
+    try {
+      const result = await serverDataService.updateBusiness(id, updates, token);
+      if (result.success) {
+        await refetch(); // Refresh data from server
+      }
+    } catch (error) {
+      console.error('Failed to update business:', error);
+    }
   };
 
   // Show database error if there's an issue
@@ -489,10 +471,18 @@ function App() {
   };
 
   const handleDeleteBusiness = async (id: string) => {
+    if (!token) return;
+    
     if (window.confirm('Are you sure you want to delete this business?')) {
-      await db.businesses.delete(id);
-      await db.route.where('businessId').equals(id).delete();
-      if (selectedBusiness?.id === id) setSelectedBusiness(null);
+      try {
+        const result = await serverDataService.deleteBusiness(id, token);
+        if (result.success) {
+          if (selectedBusiness?.id === id) setSelectedBusiness(null);
+          await refetch(); // Refresh data from server
+        }
+      } catch (error) {
+        console.error('Failed to delete business:', error);
+      }
     }
   };
 
@@ -508,12 +498,24 @@ function App() {
   }, []);
 
   const handleAddSelectedToRoute = useCallback(async () => {
-    for (const businessId of selectedBusinessIds) {
-      const maxOrder = Math.max(...routeItems.map(i => i.order), 0);
-      await db.route.add({ businessId, order: maxOrder + 1, addedAt: new Date() });
+    if (!token) return;
+    
+    try {
+      const newRouteItems = [...routeItems];
+      for (const businessId of selectedBusinessIds) {
+        const maxOrder = Math.max(...newRouteItems.map(i => i.order), 0);
+        newRouteItems.push({ businessId, order: maxOrder + 1, addedAt: new Date() });
+      }
+      
+      const result = await serverDataService.saveRoutes(newRouteItems, token);
+      if (result.success) {
+        setSelectedBusinessIds([]);
+        await refetch(); // Refresh data from server
+      }
+    } catch (error) {
+      console.error('Failed to add selected to route:', error);
     }
-    setSelectedBusinessIds([]);
-  }, [selectedBusinessIds, routeItems]);
+  }, [selectedBusinessIds, routeItems, token, refetch]);
 
   const handleClearSelection = useCallback(() => {
     setSelectedBusinessIds([]);
@@ -548,8 +550,17 @@ function App() {
   }, [filteredBusinesses, currentBusinessIndex, viewMode]);
   
   const handleTogglePhoneType = async (id: string, currentType: 'landline' | 'mobile') => {
+    if (!token) return;
+    
     const newType = currentType === 'landline' ? 'mobile' : 'landline';
-    await db.businesses.update(id, { phoneTypeOverride: newType });
+    try {
+      const result = await serverDataService.updateBusiness(id, { phoneTypeOverride: newType }, token);
+      if (result.success) {
+        await refetch(); // Refresh data from server
+      }
+    } catch (error) {
+      console.error('Failed to toggle phone type:', error);
+    }
   };
 
   const handleExport = () => {
@@ -565,10 +576,18 @@ function App() {
   };
 
   const handleClearAll = async () => {
+    if (!token) return;
+    
     if (window.confirm('Delete ALL businesses and routes? This cannot be undone.')) {
-      await db.businesses.clear();
-      await db.route.clear();
-      setSelectedBusiness(null);
+      try {
+        const result = await serverDataService.clearWorkspace(token);
+        if (result.success) {
+          setSelectedBusiness(null);
+          await refetch(); // Refresh data from server
+        }
+      } catch (error) {
+        console.error('Failed to clear all data:', error);
+      }
     }
   };
 
@@ -665,25 +684,39 @@ function App() {
                   onTogglePhoneType={handleTogglePhoneType}
                   onAddToRoute={handleAddToRoute}
                   onBulkDelete={async (ids) => {
+                    if (!token) return;
+                    
                     if (window.confirm(`Delete ${ids.length} selected businesses? This cannot be undone.`)) {
-                      for (const id of ids) {
-                        await db.businesses.delete(id);
-                        await db.route.where('businessId').equals(id).delete();
-                      }
-                      if (selectedBusiness && ids.includes(selectedBusiness.id)) {
-                        setSelectedBusiness(null);
+                      try {
+                        const result = await serverDataService.bulkDelete(ids, token);
+                        if (result.success) {
+                          if (selectedBusiness && ids.includes(selectedBusiness.id)) {
+                            setSelectedBusiness(null);
+                          }
+                          await refetch(); // Refresh data from server
+                        }
+                      } catch (error) {
+                        console.error('Failed to bulk delete:', error);
                       }
                     }
                   }}
                   onDeleteNonSelectedProviders={async () => {
+                    if (!token) return;
+                    
                     if (window.confirm('Delete all businesses from non-selected providers? This cannot be undone.')) {
-                      const businessesToDelete = businesses.filter(b => !visibleProviders.includes(b.provider));
-                      for (const business of businessesToDelete) {
-                        await db.businesses.delete(business.id);
-                        await db.route.where('businessId').equals(business.id).delete();
-                      }
-                      if (selectedBusiness && businessesToDelete.some(b => b.id === selectedBusiness.id)) {
-                        setSelectedBusiness(null);
+                      try {
+                        const businessesToDelete = businesses.filter(b => !visibleProviders.includes(b.provider));
+                        const idsToDelete = businessesToDelete.map(b => b.id);
+                        
+                        const result = await serverDataService.bulkDelete(idsToDelete, token);
+                        if (result.success) {
+                          if (selectedBusiness && businessesToDelete.some(b => b.id === selectedBusiness.id)) {
+                            setSelectedBusiness(null);
+                          }
+                          await refetch(); // Refresh data from server
+                        }
+                      } catch (error) {
+                        console.error('Failed to delete non-selected providers:', error);
                       }
                     }
                   }}
