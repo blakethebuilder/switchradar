@@ -21,7 +21,48 @@ db.exec(`
     total_businesses INTEGER DEFAULT 0,
     storage_used_mb REAL DEFAULT 0
   );
+`);
 
+// Add missing columns to existing users table (ignore errors if columns exist)
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN last_sync DATETIME;`);
+} catch (e) {
+  // Column already exists, ignore
+}
+
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN total_businesses INTEGER DEFAULT 0;`);
+} catch (e) {
+  // Column already exists, ignore
+}
+
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN storage_used_mb REAL DEFAULT 0;`);
+} catch (e) {
+  // Column already exists, ignore
+}
+
+// Add missing dataset_id column to existing leads table
+try {
+  db.exec(`ALTER TABLE leads ADD COLUMN dataset_id INTEGER DEFAULT 1;`);
+} catch (e) {
+  // Column already exists, ignore
+}
+
+// Add missing columns to existing datasets table
+try {
+  db.exec(`ALTER TABLE datasets ADD COLUMN town TEXT;`);
+} catch (e) {
+  // Column already exists, ignore
+}
+
+try {
+  db.exec(`ALTER TABLE datasets ADD COLUMN province TEXT;`);
+} catch (e) {
+  // Column already exists, ignore
+}
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS datasets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -52,7 +93,6 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS leads (
     id TEXT PRIMARY KEY,
     userId INTEGER,
-    dataset_id INTEGER,
     name TEXT,
     address TEXT,
     phone TEXT,
@@ -71,6 +111,7 @@ db.exec(`
     metadata TEXT,
     last_modified DATETIME DEFAULT CURRENT_TIMESTAMP,
     sync_status TEXT DEFAULT 'synced',
+    dataset_id INTEGER DEFAULT 1,
     FOREIGN KEY(userId) REFERENCES users(id),
     FOREIGN KEY(dataset_id) REFERENCES datasets(id)
   );
@@ -112,6 +153,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_datasets_town ON datasets(town, province);
   CREATE INDEX IF NOT EXISTS idx_dataset_permissions_user ON dataset_permissions(user_id);
 `);
+
+// Create default dataset if it doesn't exist
+try {
+  const defaultDataset = db.prepare('SELECT * FROM datasets WHERE id = 1').get();
+  if (!defaultDataset) {
+    db.prepare(`
+      INSERT INTO datasets (id, name, description, created_by, business_count, is_active)
+      VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', 1, 0, 1)
+    `).run();
+    console.log('✓ Created default dataset');
+  }
+} catch (e) {
+  console.log('Default dataset already exists or error creating:', e.message);
+}
 
 console.log('Database initialized successfully');
 

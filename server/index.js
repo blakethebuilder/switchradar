@@ -462,8 +462,8 @@ app.post('/api/businesses/sync', auth, (req, res) => {
 
     const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
     const insertStmt = db.prepare(`
-        INSERT INTO leads (id, userId, name, address, phone, email, website, provider, category, town, province, lat, lng, status, notes, importedAt, source, metadata)
-        VALUES (@id, @userId, @name, @address, @phone, @email, @website, @provider, @category, @town, @province, @lat, @lng, @status, @notes, @importedAt, @source, @metadata)
+        INSERT INTO leads (id, userId, name, address, phone, email, website, provider, category, town, province, lat, lng, status, notes, importedAt, source, metadata, dataset_id)
+        VALUES (@id, @userId, @name, @address, @phone, @email, @website, @provider, @category, @town, @province, @lat, @lng, @status, @notes, @importedAt, @source, @metadata, @dataset_id)
     `);
 
     const transaction = db.transaction((businessesToSync) => {
@@ -480,13 +480,25 @@ app.post('/api/businesses/sync', auth, (req, res) => {
         for (const business of businessesToSync) {
             try {
                 insertStmt.run({
-                    ...business,
+                    id: business.id,
                     userId,
+                    name: business.name || null,
+                    address: business.address || null,
+                    phone: business.phone || null,
+                    email: business.email || null,
+                    website: business.website || null,
+                    provider: business.provider || null,
+                    category: business.category || null,
+                    town: business.town || null,
+                    province: business.province || null,
                     lat: business.coordinates?.lat || business.lat || null,
                     lng: business.coordinates?.lng || business.lng || null,
+                    status: business.status || 'active',
                     notes: JSON.stringify(business.notes || []),
                     metadata: JSON.stringify(business.metadata || {}),
-                    importedAt: business.importedAt || new Date().toISOString()
+                    importedAt: business.importedAt || new Date().toISOString(),
+                    source: business.source || 'import',
+                    dataset_id: 1 // Use default dataset for now
                 });
                 successCount++;
             } catch (error) {

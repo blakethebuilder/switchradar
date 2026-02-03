@@ -226,7 +226,7 @@ function App() {
           console.log('Server import - Processing Excel/CSV file');
           
           try {
-            console.log('Server import - XLSX library available');
+            // XLSX is already imported at the top, no need for dynamic import
             const workbook = XLSX.read(data, { type: 'array' });
             console.log('Server import - Workbook read, sheets:', workbook.SheetNames);
             
@@ -553,15 +553,15 @@ function App() {
   };
 
   const handleExport = () => {
-    import('xlsx').then(XLSX => {
+    try {
         const worksheet = XLSX.utils.json_to_sheet(filteredBusinesses);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Businesses");
         XLSX.writeFile(workbook, "switchradar_export.xlsx");
-    }).catch(error => {
-        console.error('Failed to load XLSX library:', error);
+    } catch (error) {
+        console.error('Export failed:', error);
         alert('Export failed. Please try again.');
-    });
+    }
   };
 
   const handleClearAll = async () => {
