@@ -67,8 +67,23 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const token = jwt.sign({ userId: user.id, username: user.username }, JWT_SECRET, { expiresIn: '24h' });
-    res.json({ token, userId: user.id, username: user.username });
+    // Determine user role - blake is always superAdmin
+    let role = 'user';
+    if (username.toLowerCase() === 'blake') {
+        role = 'superAdmin';
+    } else if (username.toLowerCase() === 'sean') {
+        role = 'admin';
+    }
+
+    const token = jwt.sign({ userId: user.id, username: user.username, role }, JWT_SECRET, { expiresIn: '24h' });
+    res.json({ 
+        token, 
+        userId: user.id, 
+        username: user.username,
+        role,
+        email: `${username.toLowerCase()}@switchradar.com`,
+        createdAt: user.created_at
+    });
 });
 
 // Lead Routes with pagination and filtering
