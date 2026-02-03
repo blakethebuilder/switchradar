@@ -105,7 +105,7 @@ export class UserManager {
     const defaultAdmin: User = {
       id: Date.now(),
       username: 'blake',
-      email: 'blake@switchradar.com',
+      email: 'blake@smartintegrateco.za',
       role: 'admin',
       createdAt: new Date().toISOString(),
       isActive: true

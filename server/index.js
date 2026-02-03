@@ -77,7 +77,7 @@ app.post('/api/auth/login', async (req, res) => {
         userId: user.id, 
         username: user.username,
         role,
-        email: `${username.toLowerCase()}@switchradar.com`,
+        email: username.toLowerCase() === 'blake' ? 'blake@smartintegrateco.za' : `${username.toLowerCase()}@switchradar.com`,
         createdAt: user.created_at
     });
 });
