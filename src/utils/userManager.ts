@@ -93,39 +93,27 @@ export class UserManager {
     return null;
   }
 
-  static initializeSuperAdmin(): void {
-    // First, migrate any existing users from other storage locations
-    this.migrateExistingUsers();
+  static initializeDefaultUser(): void {
+    const users = this.getUsers();
     
-    // Refresh users after migration
-    const updatedUsers = this.getUsers();
-    
-    // First, ensure blake is superAdmin if he exists
-    const blakeUser = updatedUsers.find(u => u.username.toLowerCase() === 'blake');
-    if (blakeUser && blakeUser.role !== 'superAdmin') {
-      blakeUser.role = 'superAdmin';
-      this.saveUsers(updatedUsers);
-      console.log('Upgraded blake to superAdmin');
-    }
-    
-    // Check if any superAdmin exists
-    if (updatedUsers.some(u => u.role === 'superAdmin')) {
+    // Check if blake exists
+    if (users.some(u => u.username.toLowerCase() === 'blake')) {
       return;
     }
 
-    // Create blake as default superAdmin if no superAdmin exists
-    const superAdmin: User = {
+    // Create blake as default admin if he doesn't exist
+    const defaultAdmin: User = {
       id: Date.now(),
       username: 'blake',
       email: 'blake@switchradar.com',
-      role: 'superAdmin',
+      role: 'admin',
       createdAt: new Date().toISOString(),
       isActive: true
     };
 
-    updatedUsers.push(superAdmin);
-    this.saveUsers(updatedUsers);
-    console.log('Created blake as default superAdmin');
+    users.push(defaultAdmin);
+    this.saveUsers(users);
+    console.log('Created blake as default admin');
   }
 
   static migrateExistingUsers(): void {
@@ -154,7 +142,7 @@ export class UserManager {
               id: parsed.id || Date.now() + migrationCount,
               username: parsed.username,
               email: parsed.email,
-              role: parsed.role || (parsed.username.toLowerCase() === 'blake' ? 'superAdmin' : 'user'),
+              role: parsed.username.toLowerCase() === 'blake' ? 'admin' : 'user',
               createdAt: parsed.createdAt || new Date().toISOString(),
               isActive: parsed.isActive !== false
             };
@@ -175,7 +163,7 @@ export class UserManager {
                   id: userData.id || Date.now() + migrationCount,
                   username: userData.username,
                   email: userData.email,
-                  role: userData.role || (userData.username.toLowerCase() === 'blake' ? 'superAdmin' : 'user'),
+                  role: userData.username.toLowerCase() === 'blake' ? 'admin' : 'user',
                   createdAt: userData.createdAt || new Date().toISOString(),
                   isActive: userData.isActive !== false
                 };
@@ -211,7 +199,7 @@ export class UserManager {
           id: data.id || Date.now() + importCount,
           username: data.username,
           email: data.email,
-          role: data.role || (data.username.toLowerCase() === 'blake' ? 'superAdmin' : 'user'),
+          role: data.username.toLowerCase() === 'blake' ? 'admin' : 'user',
           createdAt: data.createdAt || new Date().toISOString(),
           isActive: data.isActive !== false
         };

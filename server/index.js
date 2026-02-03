@@ -20,9 +20,7 @@ const apiAlignment = new APIAlignmentService(app);
 // Seed default users for authentication
 const seedDefaultUsers = async () => {
     const defaultUsers = [
-        { username: 'blake', password: 'Smart@2026!' },
-        { username: 'Sean', password: 'Smart@2026!' },
-        { username: 'Jarred', password: 'Smart@2026!' }
+        { username: 'blake', password: 'Smart@2026!' }
     ];
     
     for (const user of defaultUsers) {
@@ -67,11 +65,9 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Determine user role - blake is always superAdmin
+    // Determine user role - blake is always admin
     let role = 'user';
     if (username.toLowerCase() === 'blake') {
-        role = 'superAdmin';
-    } else if (username.toLowerCase() === 'sean') {
         role = 'admin';
     }
 
@@ -84,107 +80,6 @@ app.post('/api/auth/login', async (req, res) => {
         email: `${username.toLowerCase()}@switchradar.com`,
         createdAt: user.created_at
     });
-});
-
-// Lead Routes with pagination and filtering
-app.get('/api/leads', auth, (req, res) => {
-    const { 
-        page = 1, 
-        limit = 1000, 
-        search = '', 
-        category = '', 
-        provider = '', 
-        town = '',
-        status = '',
-        phoneType = 'all'
-    } = req.query;
-    
-    const offset = (parseInt(page) - 1) * parseInt(limit);
-    
-    // Build dynamic query
-    let whereClause = 'WHERE userId = ?';
-    let params = [req.userData.userId];
-    
-    if (search) {
-        whereClause += ' AND (name LIKE ? OR address LIKE ? OR phone LIKE ?)';
-        const searchTerm = `%${search}%`;
-        params.push(searchTerm, searchTerm, searchTerm);
-    }
-    
-    if (category) {
-        whereClause += ' AND category = ?';
-        params.push(category);
-    }
-    
-    if (provider) {
-        whereClause += ' AND provider = ?';
-        params.push(provider);
-    }
-    
-    if (town) {
-        whereClause += ' AND town = ?';
-        params.push(town);
-    }
-    
-    if (status) {
-        whereClause += ' AND status = ?';
-        params.push(status);
-    }
-    
-    // Get total count for pagination
-    const countQuery = `SELECT COUNT(*) as total FROM leads ${whereClause}`;
-    const totalResult = db.prepare(countQuery).get(...params);
-    const total = totalResult.total;
-    
-    // Get paginated results
-    const dataQuery = `SELECT * FROM leads ${whereClause} ORDER BY name LIMIT ? OFFSET ?`;
-    const leads = db.prepare(dataQuery).all(...params, parseInt(limit), offset);
-    
-    res.json({
-        data: leads.map(lead => ({
-            ...lead,
-            coordinates: { lat: lead.lat, lng: lead.lng },
-            notes: JSON.parse(lead.notes || '[]'),
-            metadata: JSON.parse(lead.metadata || '{}')
-        })),
-        pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
-            total,
-            totalPages: Math.ceil(total / parseInt(limit)),
-            hasNext: offset + parseInt(limit) < total,
-            hasPrev: parseInt(page) > 1
-        }
-    });
-});
-
-app.post('/api/leads/sync', auth, (req, res) => {
-    const { leads } = req.body;
-    const userId = req.userData.userId;
-
-    const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
-    const insertStmt = db.prepare(`
-    INSERT INTO leads (id, userId, name, address, phone, email, website, provider, category, town, province, lat, lng, status, notes, importedAt, source, metadata)
-    VALUES (@id, @userId, @name, @address, @phone, @email, @website, @provider, @category, @town, @province, @lat, @lng, @status, @notes, @importedAt, @source, @metadata)
-  `);
-
-    const transaction = db.transaction((leadsToSync) => {
-        deleteStmt.run(userId);
-        for (const lead of leadsToSync) {
-            insertStmt.run({
-                ...lead,
-                userId,
-                lat: lead.coordinates.lat,
-                lng: lead.coordinates.lng,
-                notes: JSON.stringify(lead.notes || []),
-                metadata: JSON.stringify(lead.metadata || {}),
-                importedAt: lead.importedAt
-            });
-        }
-    });
-
-    transaction(leads);
-    res.json({ message: 'Sync successful' });
 });
 
 // Route Planner Routes
@@ -397,25 +292,6 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     }
 });
 
-// Dataset Routes
-app.get('/api/datasets', auth, (req, res) => {
-    try {
-        const datasets = db.prepare(`
-            SELECT d.*, COUNT(db.business_id) as business_count
-            FROM datasets d
-            LEFT JOIN dataset_businesses db ON d.id = db.dataset_id
-            WHERE d.userId = ?
-            GROUP BY d.id
-            ORDER BY d.last_modified DESC
-        `).all(req.userData.userId);
-
-        res.json(datasets);
-    } catch (error) {
-        console.error('Dataset fetch error:', error);
-        res.status(500).json({ message: 'Failed to fetch datasets', error: error.message });
-    }
-});
-
 // Get aggregated statistics
 app.get('/api/stats', auth, (req, res) => {
     try {
@@ -510,64 +386,6 @@ app.post('/api/businesses/bulk', auth, (req, res) => {
     }
 });
 
-// Sync status and monitoring
-app.get('/api/sync/status', auth, (req, res) => {
-    try {
-        const userId = req.userData.userId;
-        
-        // Get user sync info
-        const userInfo = db.prepare(`
-            SELECT username, last_sync, total_businesses, storage_used_mb, created_at
-            FROM users 
-            WHERE id = ?
-        `).get(userId);
-        
-        // Get recent sync history
-        const syncHistory = db.prepare(`
-            SELECT sync_type, records_count, success, error_message, sync_timestamp
-            FROM sync_log 
-            WHERE userId = ? 
-            ORDER BY sync_timestamp DESC 
-            LIMIT 10
-        `).all(userId);
-        
-        // Get current data counts
-        const businessCount = db.prepare('SELECT COUNT(*) as count FROM leads WHERE userId = ?').get(userId).count;
-        const routeCount = db.prepare('SELECT COUNT(*) as count FROM routes WHERE userId = ?').get(userId).count;
-        
-        // Calculate storage usage (rough estimate)
-        const storageInfo = db.prepare(`
-            SELECT 
-                COUNT(*) as total_records,
-                AVG(LENGTH(name) + LENGTH(address) + LENGTH(phone) + LENGTH(notes) + LENGTH(metadata)) as avg_record_size
-            FROM leads 
-            WHERE userId = ?
-        `).get(userId);
-        
-        const estimatedStorageMB = (storageInfo.total_records * (storageInfo.avg_record_size || 0)) / (1024 * 1024);
-        
-        res.json({
-            user: {
-                username: userInfo.username,
-                memberSince: userInfo.created_at,
-                lastSync: userInfo.last_sync
-            },
-            currentData: {
-                businesses: businessCount,
-                routes: routeCount,
-                estimatedStorageMB: Math.round(estimatedStorageMB * 100) / 100
-            },
-            syncHistory,
-            cloudSyncEnabled: true,
-            serverTime: new Date().toISOString()
-        });
-        
-    } catch (error) {
-        console.error('Sync status error:', error);
-        res.status(500).json({ message: 'Failed to get sync status', error: error.message });
-    }
-});
-
 // Export data for backup
 app.get('/api/export/full', auth, (req, res) => {
     try {
@@ -600,79 +418,6 @@ app.get('/api/export/full', auth, (req, res) => {
     } catch (error) {
         console.error('Export error:', error);
         res.status(500).json({ message: 'Export failed', error: error.message });
-    }
-});
-
-app.post('/api/datasets', auth, (req, res) => {
-    const { name, description, businessIds = [] } = req.body;
-    const userId = req.userData.userId;
-    const datasetId = `dataset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-    const transaction = db.transaction(() => {
-        // Create dataset
-        const insertDataset = db.prepare(`
-            INSERT INTO datasets (id, userId, name, description)
-            VALUES (@id, @userId, @name, @description)
-        `);
-        
-        insertDataset.run({
-            id: datasetId,
-            userId,
-            name,
-            description: description || ''
-        });
-
-        // Add businesses to dataset if provided
-        if (businessIds.length > 0) {
-            const insertBusiness = db.prepare(`
-                INSERT INTO dataset_businesses (dataset_id, business_id)
-                VALUES (@datasetId, @businessId)
-            `);
-            
-            for (const businessId of businessIds) {
-                insertBusiness.run({ datasetId, businessId });
-            }
-        }
-
-        return datasetId;
-    });
-
-    try {
-        const createdId = transaction();
-        res.status(201).json({ 
-            message: 'Dataset created successfully', 
-            datasetId: createdId,
-            businessCount: businessIds.length
-        });
-    } catch (error) {
-        console.error('Dataset creation error:', error);
-        res.status(500).json({ message: 'Failed to create dataset', error: error.message });
-    }
-});
-
-app.get('/api/datasets/:id/businesses', auth, (req, res) => {
-    const { id } = req.params;
-    const userId = req.userData.userId;
-
-    try {
-        const businesses = db.prepare(`
-            SELECT l.*, db.added_at
-            FROM leads l
-            JOIN dataset_businesses db ON l.id = db.business_id
-            JOIN datasets d ON db.dataset_id = d.id
-            WHERE d.id = ? AND d.userId = ?
-            ORDER BY db.added_at DESC
-        `).all(id, userId);
-
-        res.json(businesses.map(business => ({
-            ...business,
-            coordinates: { lat: business.lat, lng: business.lng },
-            notes: JSON.parse(business.notes || '[]'),
-            metadata: JSON.parse(business.metadata || '{}')
-        })));
-    } catch (error) {
-        console.error('Dataset businesses fetch error:', error);
-        res.status(500).json({ message: 'Failed to fetch dataset businesses', error: error.message });
     }
 });
 

@@ -236,9 +236,33 @@ function MapController({
           <div className="flex flex-col">
             <button
               onClick={() => {
-                if (businesses.length > 0) {
-                  const bounds = L.latLngBounds(businesses.map(b => [b.coordinates.lat, b.coordinates.lng]));
-                  map.fitBounds(bounds, { padding: [20, 20], maxZoom: 12 });
+                if (businesses.length > 0 && map) {
+                  try {
+                    // Filter out businesses with invalid coordinates
+                    const validBusinesses = businesses.filter(b => 
+                      b.coordinates && 
+                      typeof b.coordinates.lat === 'number' && 
+                      typeof b.coordinates.lng === 'number' &&
+                      !isNaN(b.coordinates.lat) && 
+                      !isNaN(b.coordinates.lng) &&
+                      b.coordinates.lat >= -90 && b.coordinates.lat <= 90 &&
+                      b.coordinates.lng >= -180 && b.coordinates.lng <= 180
+                    );
+                    
+                    if (validBusinesses.length > 0) {
+                      const coordinates: [number, number][] = validBusinesses.map(b => [b.coordinates.lat, b.coordinates.lng]);
+                      const bounds = L.latLngBounds(coordinates);
+                      
+                      map.fitBounds(bounds, { 
+                        padding: [50, 50], 
+                        maxZoom: 12,
+                        animate: true,
+                        duration: 1
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Error fitting bounds:', error);
+                  }
                 }
               }}
               className="p-1 md:p-2 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-200 border-b border-slate-100/50 flex items-center justify-center"

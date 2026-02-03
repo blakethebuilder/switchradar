@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { cloudSyncService } from '../services/cloudSync';
+import { serverDataService } from '../services/serverData';
 import { db } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { environmentConfig } from '../config/environment';
 
 interface SyncStatus {
   type: 'idle' | 'loading' | 'success' | 'error';
@@ -11,7 +10,7 @@ interface SyncStatus {
   details?: any;
 }
 
-interface CloudStats {
+interface ServerStats {
   totalBusinesses: number;
   lastSync: string | null;
   storageUsed: number;
@@ -20,262 +19,128 @@ interface CloudStats {
 export const ManualSyncPanel: React.FC = () => {
   const { user, token } = useAuth();
   const [syncStatus, setSyncStatus] = useState<SyncStatus>({ type: 'idle', message: '' });
-  const [cloudStats, setCloudStats] = useState<CloudStats | null>(null);
+  const [serverStats, setServerStats] = useState<ServerStats | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState<string | null>(null);
 
   const localBusinesses = useLiveQuery(() => db.businesses.toArray()) || [];
   const localRoutes = useLiveQuery(() => db.route.toArray()) || [];
 
-  // Fetch cloud statistics
-  const fetchCloudStats = async () => {
+  // Fetch server statistics
+  const fetchServerStats = async () => {
     if (!token) return;
     
-    setSyncStatus({ type: 'loading', message: 'Fetching cloud statistics...' });
+    setSyncStatus({ type: 'loading', message: 'Fetching server statistics...' });
     
     try {
-      const apiUrl = environmentConfig.getApiUrl();
-      const statusUrl = apiUrl ? `${apiUrl}/api/sync/status` : '/api/sync/status';
-      
-      const response = await fetch(statusUrl, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setCloudStats({
-          totalBusinesses: data.currentData?.businesses || 0,
-          lastSync: data.user?.lastSync || null,
-          storageUsed: data.currentData?.estimatedStorageMB || 0
+      const result = await serverDataService.getStats(token);
+      if (result.success) {
+        setServerStats({
+          totalBusinesses: result.data?.totalBusinesses || 0,
+          lastSync: new Date().toISOString(),
+          storageUsed: 0
         });
-        setSyncStatus({ type: 'success', message: 'Cloud statistics updated' });
+        setSyncStatus({ type: 'success', message: 'Server statistics updated' });
       } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(result.error);
       }
     } catch (error) {
-      console.error('Failed to fetch cloud stats:', error);
       setSyncStatus({ 
         type: 'error', 
-        message: 'Failed to fetch cloud statistics. Check your connection and try again.',
+        message: 'Failed to fetch server statistics',
         details: error
       });
     }
   };
 
-  useEffect(() => {
-    // Only fetch stats when user explicitly requests it - no automatic calls
-  }, []);
-
-  // Upload local data to cloud
-  const uploadToCloud = async () => {
+  // Upload local data to server
+  const uploadToServer = async () => {
     if (!token) return;
     
-    setSyncStatus({ type: 'loading', message: 'Uploading data to cloud...' });
+    setSyncStatus({ type: 'loading', message: 'Uploading data to server...' });
     
     try {
-      const result = await cloudSyncService.syncToCloud(localBusinesses, localRoutes, token);
+      const result = await serverDataService.saveBusinesses(localBusinesses, token);
       
       if (result.success) {
         setSyncStatus({ 
           type: 'success', 
-          message: `Successfully uploaded ${result.syncedCount} items to cloud`,
-          details: { syncedCount: result.syncedCount }
+          message: `Successfully uploaded ${result.count} businesses to server`
         });
-        await fetchCloudStats();
+        await fetchServerStats();
       } else {
         setSyncStatus({ 
           type: 'error', 
-          message: `Upload failed: ${result.errors[0]?.message || 'Unknown error'}`,
-          details: result.errors
+          message: `Upload failed: ${result.error}`
         });
       }
     } catch (error) {
       setSyncStatus({ 
         type: 'error', 
-        message: 'Upload failed: Network error',
-        details: error
+        message: 'Upload failed: Network error'
       });
     }
   };
 
-  // Download data from cloud
-  const downloadFromCloud = async () => {
+  // Download data from server
+  const downloadFromServer = async () => {
     if (!token) return;
     
-    setSyncStatus({ type: 'loading', message: 'Downloading data from cloud...' });
+    setSyncStatus({ type: 'loading', message: 'Downloading data from server...' });
     
     try {
-      const cloudData = await cloudSyncService.syncFromCloud(token);
+      const result = await serverDataService.getBusinesses(token);
       
-      if (cloudData.businesses.length > 0 || cloudData.routeItems.length > 0) {
-        // Add cloud data to local database
-        const transaction = db.transaction('rw', [db.businesses, db.route], async () => {
-          let addedBusinesses = 0;
-          let addedRoutes = 0;
-          
-          for (const business of cloudData.businesses) {
-            const existing = await db.businesses.get(business.id);
-            if (!existing) {
-              await db.businesses.add(business);
-              addedBusinesses++;
-            }
-          }
-          
-          for (const route of cloudData.routeItems) {
-            const existing = await db.route.where('businessId').equals(route.businessId).first();
-            if (!existing) {
-              await db.route.add(route);
-              addedRoutes++;
-            }
-          }
-          
-          return { addedBusinesses, addedRoutes };
+      if (result.success && result.data) {
+        // Add server data to local database
+        await db.transaction('rw', [db.businesses], async () => {
+          await db.businesses.clear();
+          await db.businesses.bulkAdd(result.data);
         });
         
-        const result = await transaction;
         setSyncStatus({ 
           type: 'success', 
-          message: `Downloaded ${result.addedBusinesses} businesses and ${result.addedRoutes} routes from cloud`,
-          details: result
+          message: `Downloaded ${result.count} businesses from server`
         });
       } else {
         setSyncStatus({ 
-          type: 'success', 
-          message: 'No new data found in cloud'
+          type: 'error', 
+          message: result.error || 'Download failed'
         });
       }
     } catch (error) {
       setSyncStatus({ 
         type: 'error', 
-        message: 'Download failed: Network error',
-        details: error
+        message: 'Download failed: Network error'
       });
     }
   };
 
-  // Replace local data with cloud data
-  const replaceWithCloudData = async () => {
+  // Clear server database
+  const clearServerDatabase = async () => {
     if (!token) return;
     
-    setSyncStatus({ type: 'loading', message: 'Replacing local data with cloud data...' });
+    setSyncStatus({ type: 'loading', message: 'Clearing server database...' });
     
     try {
-      const cloudData = await cloudSyncService.syncFromCloud(token);
+      const result = await serverDataService.clearWorkspace(token);
       
-      // Clear local data and replace with cloud data
-      const transaction = db.transaction('rw', [db.businesses, db.route], async () => {
-        await db.businesses.clear();
-        await db.route.clear();
-        
-        await db.businesses.bulkAdd(cloudData.businesses);
-        await db.route.bulkAdd(cloudData.routeItems);
-        
-        return {
-          businesses: cloudData.businesses.length,
-          routes: cloudData.routeItems.length
-        };
-      });
-      
-      const result = await transaction;
-      setSyncStatus({ 
-        type: 'success', 
-        message: `Replaced local data with ${result.businesses} businesses and ${result.routes} routes from cloud`,
-        details: result
-      });
-      setShowConfirmDialog(null);
-    } catch (error) {
-      setSyncStatus({ 
-        type: 'error', 
-        message: 'Replace failed: Network error',
-        details: error
-      });
-    }
-  };
-
-  // Clear cloud database
-  const clearCloudDatabase = async () => {
-    if (!token) return;
-    
-    setSyncStatus({ type: 'loading', message: 'Clearing cloud database...' });
-    
-    try {
-      const response = await fetch('/api/workspace', {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
+      if (result.success) {
         setSyncStatus({ 
           type: 'success', 
-          message: 'Cloud database cleared successfully'
+          message: 'Server database cleared successfully'
         });
-        await fetchCloudStats();
+        await fetchServerStats();
         setShowConfirmDialog(null);
       } else {
-        throw new Error('Failed to clear cloud database');
-      }
-    } catch (error) {
-      setSyncStatus({ 
-        type: 'error', 
-        message: 'Failed to clear cloud database',
-        details: error
-      });
-    }
-  };
-
-  // Clear local database
-  const clearLocalDatabase = async () => {
-    setSyncStatus({ type: 'loading', message: 'Clearing local database...' });
-    
-    try {
-      await db.transaction('rw', [db.businesses, db.route], async () => {
-        await db.businesses.clear();
-        await db.route.clear();
-      });
-      
-      setSyncStatus({ 
-        type: 'success', 
-        message: 'Local database cleared successfully'
-      });
-      setShowConfirmDialog(null);
-    } catch (error) {
-      setSyncStatus({ 
-        type: 'error', 
-        message: 'Failed to clear local database',
-        details: error
-      });
-    }
-  };
-
-  // Export data as backup
-  const exportData = async () => {
-    if (!token) return;
-    
-    try {
-      const response = await fetch('/api/export/full', {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `switchradar-backup-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        
         setSyncStatus({ 
-          type: 'success', 
-          message: 'Data exported successfully'
+          type: 'error', 
+          message: result.error || 'Failed to clear server database'
         });
       }
     } catch (error) {
       setSyncStatus({ 
         type: 'error', 
-        message: 'Export failed',
-        details: error
+        message: 'Failed to clear server database'
       });
     }
   };
@@ -283,15 +148,15 @@ export const ManualSyncPanel: React.FC = () => {
   if (!user) {
     return (
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Manual Sync</h3>
-        <p className="text-gray-600">Please log in to access cloud sync features.</p>
+        <h3 className="text-lg font-semibold mb-4">Server Sync</h3>
+        <p className="text-gray-600">Please log in to access server sync features.</p>
       </div>
     );
   }
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
-      <h3 className="text-lg font-semibold mb-4">Manual Database Sync</h3>
+      <h3 className="text-lg font-semibold mb-4">Server Database Sync</h3>
       
       {/* Status Display */}
       {syncStatus.message && (
@@ -319,25 +184,22 @@ export const ManualSyncPanel: React.FC = () => {
         </div>
         <div className="bg-gray-50 p-4 rounded-md">
           <div className="flex items-center justify-between mb-2">
-            <h4 className="font-medium text-gray-900">Cloud Data</h4>
+            <h4 className="font-medium text-gray-900">Server Data</h4>
             <button
-              onClick={fetchCloudStats}
+              onClick={fetchServerStats}
               disabled={syncStatus.type === 'loading'}
               className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200 disabled:opacity-50"
             >
               {syncStatus.type === 'loading' ? 'Loading...' : 'Refresh'}
             </button>
           </div>
-          {cloudStats ? (
+          {serverStats ? (
             <>
-              <p className="text-sm text-gray-600">{cloudStats.totalBusinesses} businesses</p>
-              <p className="text-sm text-gray-600">
-                Last sync: {cloudStats.lastSync ? new Date(cloudStats.lastSync).toLocaleDateString() : 'Never'}
-              </p>
-              <p className="text-sm text-gray-600">{cloudStats.storageUsed.toFixed(2)} MB used</p>
+              <p className="text-sm text-gray-600">{serverStats.totalBusinesses} businesses</p>
+              <p className="text-sm text-gray-600">Connected to server</p>
             </>
           ) : (
-            <p className="text-sm text-gray-600">Click refresh to load cloud stats</p>
+            <p className="text-sm text-gray-600">Click refresh to load server stats</p>
           )}
         </div>
       </div>
@@ -346,54 +208,28 @@ export const ManualSyncPanel: React.FC = () => {
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-3">
           <button
-            onClick={uploadToCloud}
+            onClick={uploadToServer}
             disabled={syncStatus.type === 'loading' || localBusinesses.length === 0}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50"
           >
-            📤 Upload to Cloud
+            📤 Upload to Server
           </button>
           
           <button
-            onClick={downloadFromCloud}
+            onClick={downloadFromServer}
             disabled={syncStatus.type === 'loading'}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
           >
-            📥 Download from Cloud
+            📥 Download from Server
           </button>
         </div>
 
         <button
-          onClick={() => setShowConfirmDialog('replace')}
+          onClick={() => setShowConfirmDialog('clearServer')}
           disabled={syncStatus.type === 'loading'}
-          className="w-full bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
         >
-          🔄 Replace Local with Cloud Data
-        </button>
-
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={() => setShowConfirmDialog('clearCloud')}
-            disabled={syncStatus.type === 'loading'}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            🗑️ Clear Cloud DB
-          </button>
-          
-          <button
-            onClick={() => setShowConfirmDialog('clearLocal')}
-            disabled={syncStatus.type === 'loading'}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            🗑️ Clear Local DB
-          </button>
-        </div>
-
-        <button
-          onClick={exportData}
-          disabled={syncStatus.type === 'loading'}
-          className="w-full bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          💾 Export Backup
+          🗑️ Clear Server Database
         </button>
       </div>
 
@@ -403,9 +239,7 @@ export const ManualSyncPanel: React.FC = () => {
           <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
             <h4 className="text-lg font-semibold mb-4">Confirm Action</h4>
             <p className="text-gray-600 mb-6">
-              {showConfirmDialog === 'replace' && 'This will replace all local data with cloud data. Local changes will be lost.'}
-              {showConfirmDialog === 'clearCloud' && 'This will permanently delete all data from the cloud database.'}
-              {showConfirmDialog === 'clearLocal' && 'This will permanently delete all local data.'}
+              This will permanently delete all data from the server database.
             </p>
             <div className="flex space-x-3">
               <button
@@ -415,11 +249,7 @@ export const ManualSyncPanel: React.FC = () => {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  if (showConfirmDialog === 'replace') replaceWithCloudData();
-                  else if (showConfirmDialog === 'clearCloud') clearCloudDatabase();
-                  else if (showConfirmDialog === 'clearLocal') clearLocalDatabase();
-                }}
+                onClick={clearServerDatabase}
                 className="flex-1 bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700"
               >
                 Confirm

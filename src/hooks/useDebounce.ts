@@ -1,4 +1,4 @@
-import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * Custom hook that debounces a value.
@@ -22,20 +22,4 @@ export const useDebounce = <T>(value: T, delay: number): T => {
   }, [value, delay]);
 
   return debouncedValue;
-};
-
-// Also exporting a helper to create a debounced setter for convenience
-export const useDebouncedSetter = <T>(
-  setter: Dispatch<SetStateAction<T>>,
-  delay: number,
-  initialValue: T
-): [T, Dispatch<SetStateAction<T>>] => {
-  const [value, setValue] = useState(initialValue);
-  const debouncedValue = useDebounce(value, delay);
-
-  useEffect(() => {
-    setter(debouncedValue);
-  }, [debouncedValue, setter]);
-
-  return [value, setValue];
 };

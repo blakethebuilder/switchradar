@@ -4,7 +4,7 @@ interface User {
     id: number;
     username: string;
     email?: string;
-    role: 'superAdmin' | 'admin' | 'user';
+    role: 'admin' | 'user';
     createdAt: string;
 }
 
@@ -14,7 +14,6 @@ interface AuthContextType {
     login: (token: string, user: User) => void;
     logout: () => void;
     isAuthenticated: boolean;
-    isSuperAdmin: boolean;
     isAdmin: boolean;
 }
 
@@ -25,17 +24,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('sr_user');
         if (savedUser) {
             const parsedUser = JSON.parse(savedUser);
-            // Upgrade existing users to superAdmin if they don't have a role
-            if (!parsedUser.role) {
-                parsedUser.role = 'superAdmin';
+            // Ensure blake is always admin
+            if (parsedUser.username && parsedUser.username.toLowerCase() === 'blake' && parsedUser.role !== 'admin') {
+                parsedUser.role = 'admin';
                 parsedUser.createdAt = parsedUser.createdAt || new Date().toISOString();
                 localStorage.setItem('sr_user', JSON.stringify(parsedUser));
-            }
-            // Ensure blake is always superAdmin
-            if (parsedUser.username && parsedUser.username.toLowerCase() === 'blake' && parsedUser.role !== 'superAdmin') {
-                parsedUser.role = 'superAdmin';
-                localStorage.setItem('sr_user', JSON.stringify(parsedUser));
-                console.log('Upgraded blake to superAdmin in AuthContext');
+                console.log('Set blake as admin in AuthContext');
             }
             return parsedUser;
         }
@@ -59,8 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('sr_user');
     };
 
-    const isSuperAdmin = user?.role === 'superAdmin';
-    const isAdmin = user?.role === 'admin' || user?.role === 'superAdmin';
+    const isAdmin = user?.role === 'admin';
 
     return (
         <AuthContext.Provider value={{ 
@@ -69,7 +62,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             login, 
             logout, 
             isAuthenticated: !!token,
-            isSuperAdmin,
             isAdmin
         }}>
             {children}

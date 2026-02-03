@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Database, ShieldCheck, X, CheckCircle2, Wifi, WifiOff, Server, Users } from 'lucide-react';
+import { Database, ShieldCheck, X, CheckCircle2, Wifi, WifiOff, Server, Users, UserCheck, AlertTriangle } from 'lucide-react';
 import type { Business } from '../types';
 import { useAuth } from '../context/AuthContext';
 import UserManagement from './UserManagement';
+import UserDataManagement from './UserDataManagement';
 
 interface DbSettingsPageProps {
   businesses: Business[];
@@ -10,8 +11,8 @@ interface DbSettingsPageProps {
 }
 
 export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onClose }) => {
-  const { user, isAuthenticated, isSuperAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<'database' | 'users'>('database');
+  const { user, isAuthenticated, isAdmin } = useAuth();
+  const [activeTab, setActiveTab] = useState<'database' | 'users' | 'userdata'>('database');
   const totalBusinesses = businesses.length;
   const providers = new Set(businesses.map(b => b.provider)).size;
   const towns = new Set(businesses.map(b => b.town)).size;
@@ -59,18 +60,31 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
           <Database className="h-4 w-4" />
           Database
         </button>
-        {isSuperAdmin && (
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
-              activeTab === 'users'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            Users
-          </button>
+        {isAdmin && (
+          <>
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeTab === 'users'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              Users
+            </button>
+            <button
+              onClick={() => setActiveTab('userdata')}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                activeTab === 'userdata'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <UserCheck className="h-4 w-4" />
+              User Data
+            </button>
+          </>
         )}
       </div>
 
@@ -189,8 +203,12 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
       </div>
       )}
 
-      {activeTab === 'users' && isSuperAdmin && (
+      {activeTab === 'users' && isAdmin && (
         <UserManagement />
+      )}
+
+      {activeTab === 'userdata' && isAdmin && (
+        <UserDataManagement />
       )}
     </div>
   );

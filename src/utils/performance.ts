@@ -35,34 +35,3 @@ export class PerformanceMonitor {
     }
   }
 }
-
-// Memory usage monitoring
-export const getMemoryUsage = (): string => {
-  if ('memory' in performance) {
-    const memory = (performance as any).memory;
-    const used = Math.round(memory.usedJSHeapSize / 1024 / 1024);
-    const total = Math.round(memory.totalJSHeapSize / 1024 / 1024);
-    return `${used}MB / ${total}MB`;
-  }
-  return 'N/A';
-};
-
-// Check if we should enable performance mode
-export const shouldUsePerformanceMode = (dataSize: number): boolean => {
-  return dataSize > 1000;
-};
-
-// Throttle function for high-frequency events
-export const throttle = <T extends (...args: any[]) => any>(
-  func: T,
-  limit: number
-): ((...args: Parameters<T>) => void) => {
-  let inThrottle: boolean;
-  return function(this: any, ...args: Parameters<T>) {
-    if (!inThrottle) {
-      func.apply(this, args);
-      inThrottle = true;
-      setTimeout(() => inThrottle = false, limit);
-    }
-  };
-};

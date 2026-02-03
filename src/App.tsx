@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
-import { Plus, X, Target } from 'lucide-react';
+import { Plus, X } from 'lucide-react';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';
@@ -36,9 +36,9 @@ const LoadingSpinner = () => (
 
 
 function App() {
-  // Initialize SuperAdmin on app startup
+  // Initialize default user on app startup
   useEffect(() => {
-    UserManager.initializeSuperAdmin();
+    UserManager.initializeDefaultUser();
     
     // Also ensure current user blake is in the user management system
     const currentUser = JSON.parse(localStorage.getItem('sr_user') || 'null');
@@ -411,53 +411,6 @@ function App() {
       setSelectedBusiness(b);
     });
   }, []);
-
-  // Calculate distance between two coordinates (Haversine formula)
-  // const calculateDistance = useCallback((lat1: number, lng1: number, lat2: number, lng2: number): number => {
-  //   const R = 6371; // Earth's radius in kilometers
-  //   const dLat = (lat2 - lat1) * Math.PI / 180;
-  //   const dLng = (lng2 - lng1) * Math.PI / 180;
-  //   const a = 
-  //     Math.sin(dLat/2) * Math.sin(dLat/2) +
-  //     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-  //     Math.sin(dLng/2) * Math.sin(dLng/2);
-  //   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  //   return R * c;
-  // }, []);
-
-  // Get businesses sorted by proximity - use a stable reference point for navigation
-  // const [navigationReferencePoint, setNavigationReferencePoint] = useState<{lat: number, lng: number} | null>(null);
-  
-  // Set reference point when business is first selected (not from navigation)
-  // useEffect(() => {
-  //   if (selectedBusiness && !navigationReferencePoint) {
-  //     setNavigationReferencePoint({
-  //       lat: selectedBusiness.coordinates.lat,
-  //       lng: selectedBusiness.coordinates.lng
-  //     });
-  //   }
-  // }, [selectedBusiness, navigationReferencePoint]);
-
-  // Reset reference point when filters change or new area is selected
-  // useEffect(() => {
-  //   setNavigationReferencePoint(null);
-  // }, [searchTerm, selectedCategory, visibleProviders, droppedPin]);
-
-  // const businessesByProximity = useMemo(() => {
-  //   if (!navigationReferencePoint) return filteredBusinesses;
-    
-  //   return [...filteredBusinesses]
-  //     .map(business => ({
-  //       ...business,
-  //       distance: calculateDistance(
-  //         navigationReferencePoint.lat, 
-  //         navigationReferencePoint.lng, 
-  //         business.coordinates.lat, 
-  //         business.coordinates.lng
-  //       )
-  //     }))
-  //     .sort((a, b) => a.distance - b.distance);
-  // }, [navigationReferencePoint, filteredBusinesses, calculateDistance]);
 
   const handleMultiSelect = useCallback((businesses: Business[]) => {
     setSelectedBusinessIds(businesses.map(b => b.id));

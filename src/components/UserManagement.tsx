@@ -1,22 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Edit, Trash2, Shield, User as UserIcon, Mail, Calendar, CheckCircle, XCircle, Crown } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Shield, User as UserIcon, Mail, Calendar, CheckCircle, XCircle } from 'lucide-react';
 import { UserManager, type User } from '../utils/userManager';
 import { useAuth } from '../context/AuthContext';
 
 export const UserManagement: React.FC = () => {
-  const { user: currentUser, isSuperAdmin } = useAuth();
+  const { user: currentUser, isAdmin } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     username: '',
     email: '',
-    role: 'user' as 'superAdmin' | 'admin' | 'user'
+    role: 'user' as 'admin' | 'user'
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importData, setImportData] = useState('');
 
   useEffect(() => {
     loadUsers();
@@ -98,24 +96,8 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const handleImportUsers = () => {
-    try {
-      const userData = JSON.parse(importData);
-      const importCount = UserManager.importUsersFromData(Array.isArray(userData) ? userData : [userData]);
-      setSuccess(`Successfully imported ${importCount} users`);
-      setShowImportModal(false);
-      setImportData('');
-      loadUsers();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (error) {
-      setError('Invalid JSON format. Please check your data.');
-    }
-  };
-
   const getRoleIcon = (role: string) => {
     switch (role) {
-      case 'superAdmin':
-        return <Crown className="h-4 w-4 text-yellow-600" />;
       case 'admin':
         return <Shield className="h-4 w-4 text-blue-600" />;
       default:
@@ -125,8 +107,6 @@ export const UserManagement: React.FC = () => {
 
   const getRoleBadge = (role: string) => {
     switch (role) {
-      case 'superAdmin':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
       case 'admin':
         return 'bg-blue-100 text-blue-800 border-blue-200';
       default:
@@ -134,13 +114,13 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  if (!isSuperAdmin) {
+  if (!isAdmin) {
     return (
       <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
         <div className="text-center py-8">
           <Shield className="h-12 w-12 text-slate-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-slate-900 mb-2">Access Restricted</h3>
-          <p className="text-slate-600">You need Super Admin privileges to manage users.</p>
+          <p className="text-slate-600">You need Admin privileges to manage users.</p>
         </div>
       </div>
     );
@@ -160,36 +140,28 @@ export const UserManagement: React.FC = () => {
               <p className="text-sm text-slate-600">Manage system users and permissions</p>
             </div>
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors text-sm"
-            >
-              Import Users
-            </button>
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Add User
-            </button>
-          </div>
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add User
+          </button>
         </div>
-      </div>
 
-      {/* Status Messages */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800 text-sm font-medium">{error}</p>
-        </div>
-      )}
-      
-      {success && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <p className="text-green-800 text-sm font-medium">{success}</p>
-        </div>
-      )}
+        {/* Status Messages */}
+        {error && (
+          <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800 text-sm font-medium">{error}</p>
+          </div>
+        )}
+        
+        {success && (
+          <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
+            <p className="text-green-800 text-sm font-medium">{success}</p>
+          </div>
+        )}
+      </div>
 
       {/* Users List */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -312,7 +284,6 @@ export const UserManagement: React.FC = () => {
                 >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
-                  <option value="superAdmin">Super Admin</option>
                 </select>
               </div>
             </div>
@@ -376,7 +347,6 @@ export const UserManagement: React.FC = () => {
                 >
                   <option value="user">User</option>
                   <option value="admin">Admin</option>
-                  <option value="superAdmin">Super Admin</option>
                 </select>
               </div>
               
@@ -408,66 +378,6 @@ export const UserManagement: React.FC = () => {
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 Update User
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Import Users Modal */}
-      {showImportModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl max-w-2xl w-full p-6">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Import Users</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  User Data (JSON format)
-                </label>
-                <textarea
-                  value={importData}
-                  onChange={(e) => setImportData(e.target.value)}
-                  className="w-full h-40 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 font-mono text-sm"
-                  placeholder={`[
-  {
-    "username": "john",
-    "email": "john@example.com",
-    "role": "user"
-  },
-  {
-    "username": "admin",
-    "email": "admin@example.com", 
-    "role": "admin"
-  }
-]`}
-                />
-              </div>
-              
-              <div className="text-xs text-slate-600">
-                <p className="mb-2"><strong>Format:</strong> JSON array of user objects</p>
-                <p><strong>Required fields:</strong> username</p>
-                <p><strong>Optional fields:</strong> email, role (user/admin/superAdmin), isActive (true/false)</p>
-              </div>
-            </div>
-            
-            <div className="flex gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowImportModal(false);
-                  setImportData('');
-                  setError('');
-                }}
-                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleImportUsers}
-                disabled={!importData.trim()}
-                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Import Users
               </button>
             </div>
           </div>
