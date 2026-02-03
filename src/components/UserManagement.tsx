@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Edit, Trash2, Shield, User as UserIcon, Mail, Calendar, CheckCircle, XCircle } from 'lucide-react';
+import { Users, Plus, Trash2, Shield, User as UserIcon, Calendar, CheckCircle } from 'lucide-react';
 import { serverDataService } from '../services/serverData';
 import { useAuth } from '../context/AuthContext';
 

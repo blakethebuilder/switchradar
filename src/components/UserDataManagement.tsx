@@ -41,7 +41,7 @@ export const UserDataManagement: React.FC = () => {
       const result = await serverDataService.getUsers(token);
       if (result.success) {
         const users = result.data || [];
-        const stats: UserDataStats[] = users.map(user => ({
+        const stats: UserDataStats[] = users.map((user: any) => ({
           userId: user.id,
           username: user.username,
           businessCount: user.total_businesses || 0,

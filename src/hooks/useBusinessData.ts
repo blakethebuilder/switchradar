@@ -151,6 +151,18 @@ export const useBusinessData = () => {
         lastFetch,
         refetch: () => fetchBusinesses(true),
         isDbReady: isAuthenticated && !error,
-        dbError: error
+        dbError: error,
+        // Database reset function (for compatibility)
+        handleDatabaseReset: async () => {
+            // In server-first architecture, this would clear server data
+            if (token) {
+                try {
+                    await serverDataService.clearWorkspace(token);
+                    await fetchBusinesses(true);
+                } catch (err) {
+                    console.error('Failed to reset database:', err);
+                }
+            }
+        }
     };
 };
