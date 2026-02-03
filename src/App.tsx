@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Target } from 'lucide-react';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
 import { BusinessTable } from './components/BusinessTable';
 import { BusinessMap } from './components/BusinessMap';

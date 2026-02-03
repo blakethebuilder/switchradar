@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { serverDataService } from '../services/serverData';
 import { db } from '../db';
 import { useLiveQuery } from 'dexie-react-hooks';
-import type { Business } from '../types';
 
 interface DatabaseStats {
   local: {
