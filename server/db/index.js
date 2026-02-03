@@ -154,20 +154,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_dataset_permissions_user ON dataset_permissions(user_id);
 `);
 
-// Create default dataset if it doesn't exist
-try {
-  const defaultDataset = db.prepare('SELECT * FROM datasets WHERE id = 1').get();
-  if (!defaultDataset) {
-    db.prepare(`
-      INSERT INTO datasets (id, name, description, created_by, business_count, is_active)
-      VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', 1, 0, 1)
-    `).run();
-    console.log('✓ Created default dataset');
-  }
-} catch (e) {
-  console.log('Default dataset already exists or error creating:', e.message);
-}
-
 console.log('Database initialized successfully');
 
 module.exports = db;

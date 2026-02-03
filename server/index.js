@@ -29,12 +29,32 @@ const seedDefaultUsers = async () => {
             const existing = db.prepare('SELECT * FROM users WHERE username = ?').get(user.username);
             if (!existing) {
                 const hashedPassword = await bcrypt.hash(user.password, 10);
-                db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(user.username, hashedPassword);
-                console.log(`✓ Seeded user: ${user.username}`);
+                const result = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(user.username, hashedPassword);
+                console.log(`✓ Seeded user: ${user.username} with ID: ${result.lastInsertRowid}`);
             }
         } catch (err) {
             console.error(`✗ Error seeding user ${user.username}:`, err.message);
         }
+    }
+    
+    // Create default dataset after users are seeded
+    try {
+        const defaultDataset = db.prepare('SELECT * FROM datasets WHERE id = 1').get();
+        if (!defaultDataset) {
+            // Get the first user (should be blake with ID 1)
+            const firstUser = db.prepare('SELECT * FROM users ORDER BY id LIMIT 1').get();
+            if (firstUser) {
+                db.prepare(`
+                    INSERT INTO datasets (id, name, description, created_by, business_count, is_active)
+                    VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', ?, 0, 1)
+                `).run(firstUser.id);
+                console.log(`✓ Created default dataset with creator ID: ${firstUser.id}`);
+            } else {
+                console.error('✗ No users found to create default dataset');
+            }
+        }
+    } catch (e) {
+        console.error('✗ Error creating default dataset:', e.message);
     }
 };
 
@@ -470,6 +490,25 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     console.log('✅ Received', businesses.length, 'businesses for sync');
     if (isChunked) {
         console.log(`📦 Chunked upload: chunk ${chunkIndex + 1}/${totalChunks}`);
+    }
+
+    // Ensure default dataset exists before inserting businesses
+    try {
+        let defaultDataset = db.prepare('SELECT * FROM datasets WHERE id = 1').get();
+        if (!defaultDataset) {
+            console.log('🔧 Default dataset not found, creating it...');
+            db.prepare(`
+                INSERT INTO datasets (id, name, description, created_by, business_count, is_active)
+                VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', ?, 0, 1)
+            `).run(userId);
+            console.log('✓ Created default dataset for user:', userId);
+        }
+    } catch (error) {
+        console.error('❌ Failed to ensure default dataset exists:', error.message);
+        return res.status(500).json({ 
+            message: 'Database setup error', 
+            error: error.message 
+        });
     }
 
     const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
