@@ -45,6 +45,12 @@ const findCoordinatesFromUrl = (url: string) => {
   return null;
 };
 
+// Test the coordinate extraction with a real URL
+const testUrl = "https://www.google.com/maps/place/Greyhorn+Engineering+Consultants+%28Pty%29+Ltd/data=!4m7!3m6!1s0x1e96f13e5c9b2015:0x3bf0e8f5d6ca8169!8m2!3d-26.8490145!4d26.6749577!16s%2Fg%2F11f102gv1j!19sChIJFSCbXD7xlh4RaYHK1vXo8Ds?authuser=0&hl=en&rclk=1";
+console.log('🧪 TESTING coordinate extraction with real URL...');
+const testResult = findCoordinatesFromUrl(testUrl);
+console.log('🧪 TEST RESULT:', testResult);
+
 export const deriveCoordinates = (row: Record<string, unknown>, fallback: { lat: number; lng: number }) => {
   console.log('🗺️ DERIVE: Starting coordinate derivation for row:', {
     maps_link: row.maps_link,

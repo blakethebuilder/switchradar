@@ -900,7 +900,23 @@ function App() {
 
                   <BusinessMap
                     key={`map-${viewMode}-${filteredBusinesses.length}`}
-                    businesses={filteredBusinesses}
+                    businesses={(() => {
+                      console.log('🗺️ APP: Passing businesses to BusinessMap:', {
+                        count: filteredBusinesses.length,
+                        sample: filteredBusinesses.slice(0, 3).map(b => ({
+                          id: b.id,
+                          name: b.name,
+                          provider: b.provider,
+                          coordinates: b.coordinates,
+                          hasValidCoords: !!(b.coordinates && 
+                            typeof b.coordinates.lat === 'number' && 
+                            typeof b.coordinates.lng === 'number' &&
+                            !isNaN(b.coordinates.lat) && 
+                            !isNaN(b.coordinates.lng))
+                        }))
+                      });
+                      return filteredBusinesses;
+                    })()}
                     targetLocation={mapTarget?.center}
                     zoom={mapTarget?.zoom}
                     fullScreen={true}
