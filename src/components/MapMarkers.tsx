@@ -119,6 +119,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
   }, [validBusinesses, selectedBusinessId, selectedBusinessIds, onBusinessSelect]);
 
   // Progressive clustering radius - scatter at zoom 15 (14.5+ range)
+  /* TEMPORARILY DISABLED - TESTING WITHOUT CLUSTERING
   const getClusterRadius = React.useCallback((zoom: number) => {
     // Consistent clustering across all devices for better UX
     // No mobile/desktop differences - same experience everywhere
@@ -224,6 +225,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
       console.error('🗺️ CLUSTER CLICK ERROR:', error);
     }
   }, []);
+  */
 
   console.log('🗺️ MAPMARKERS: Rendering', markers.length, 'valid markers');
 
@@ -231,6 +233,15 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
     return <MarkerClusterGroup>{[]}</MarkerClusterGroup>;
   }
 
+  // TEMPORARY: Disable clustering to test if that's causing the disappearing issue
+  // Return markers directly without clustering
+  return (
+    <>
+      {markers}
+    </>
+  );
+
+  /* ORIGINAL CLUSTERING CODE - TEMPORARILY DISABLED
   return (
     <MarkerClusterGroup
       // Core clustering settings - Scatter at zoom 15 (effectively 14.5+)
@@ -262,4 +273,5 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
       {markers}
     </MarkerClusterGroup>
   );
+  */
 });

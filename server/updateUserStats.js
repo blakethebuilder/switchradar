@@ -5,12 +5,8 @@
  * This fixes the issue where user stats show 0 businesses even when they have data
  */
 
-import Database from 'better-sqlite3';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const Database = require('better-sqlite3');
+const path = require('path');
 
 // Database path
 const dbPath = path.join(__dirname, '..', 'data', 'switchradar.db');
