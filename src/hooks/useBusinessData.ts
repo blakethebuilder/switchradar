@@ -342,7 +342,16 @@ export const useBusinessData = () => {
         loading,
         error,
         lastFetch,
-        refetch: () => fetchBusinesses(true),
+        refetch: useCallback(async () => {
+            console.log('🔄 REFETCH: Manual refetch triggered');
+            setLastFetch(null); // Clear cache
+            await Promise.all([
+                fetchBusinesses(true),
+                fetchRoutes(),
+                fetchDatasets()
+            ]);
+            console.log('✅ REFETCH: Manual refetch completed');
+        }, [fetchBusinesses, fetchRoutes, fetchDatasets]),
         isDbReady: isAuthenticated && !error,
         dbError: error,
         // Database reset function (for compatibility)

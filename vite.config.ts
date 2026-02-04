@@ -8,42 +8,23 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // Separate vendor libraries
+          // Keep vendor libraries separate but avoid component-specific chunks
           'vendor-react': ['react', 'react-dom'],
           'vendor-leaflet': ['leaflet', 'react-leaflet', 'react-leaflet-cluster'],
           'vendor-xlsx': ['xlsx'],
-          'vendor-ui': ['lucide-react'],
-          'vendor-db': ['dexie'],
-          // Split components into logical chunks
-          'components-map': [
-            './src/components/BusinessMap.tsx',
-            './src/components/MarketIntelligence.tsx'
-          ],
-          'components-table': [
-            './src/components/BusinessTable.tsx',
-            './src/components/MobileBusinessList.tsx'
-          ],
-          'components-forms': [
-            './src/components/ImportModal.tsx',
-            './src/components/ImportMappingModal.tsx',
-            './src/components/LoginModal.tsx'
-          ],
-          'components-details': [
-            './src/components/ClientDetailsToolbar.tsx',
-            './src/components/SeenClients.tsx'
-          ]
+          'vendor-ui': ['lucide-react']
         }
       }
     },
     // Optimize chunk size
-    chunkSizeWarningLimit: 600,
+    chunkSizeWarningLimit: 1000,
     // Enable source maps for debugging but keep them separate
     sourcemap: false,
     // Optimize minification
     minify: 'terser',
     terserOptions: {
       compress: {
-        drop_console: true,
+        drop_console: false, // Keep console logs for debugging
         drop_debugger: true
       }
     }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, Suspense } from 'react';
 import { Plus, X, Target } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { WorkspaceFilters } from './components/WorkspaceFilters';
@@ -10,6 +10,11 @@ import { LoginModal } from './components/LoginModal';
 import { ClientDetailsToolbar } from './components/ClientDetailsToolbar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import LandingPage from './components/LandingPage';
+import { ManualSyncPanel } from './components/ManualSyncPanel';
+import { DbSettingsPage } from './components/DbSettingsPage';
+import { DatasetSelector } from './components/DatasetSelector';
+import { ImportModal } from './components/ImportModal';
+import { ImportMappingModal } from './components/ImportMappingModal';
 import { useAuth } from './context/AuthContext';
 import { useBusinessData } from './hooks/useBusinessData';
 import { serverDataService } from './services/serverData';
@@ -26,16 +31,11 @@ console.log('🔧 APP: Environment check:', {
   hostname: window.location.hostname
 });
 
-// Lazy load heavy components that aren't immediately needed
-const MarketIntelligence = lazy(() => import('./components/MarketIntelligence'));
-const ImportModal = lazy(() => import('./components/ImportModal'));
-const ImportMappingModal = lazy(() => import('./components/ImportMappingModal'));
-const RouteView = lazy(() => import('./components/RouteView'));
-const DbSettingsPage = lazy(() => import('./components/DbSettingsPage'));
-const ManualSyncPanel = lazy(() => import('./components/ManualSyncPanel'));
-const SeenClients = lazy(() => import('./components/SeenClients'));
-const PresentationView = lazy(() => import('./components/PresentationView'));
-const DatasetSelector = lazy(() => import('./components/DatasetSelector'));
+// Keep only heavy components as lazy imports
+const MarketIntelligence = React.lazy(() => import('./components/MarketIntelligence'));
+const RouteView = React.lazy(() => import('./components/RouteView'));
+const SeenClients = React.lazy(() => import('./components/SeenClients'));
+const PresentationView = React.lazy(() => import('./components/PresentationView'));
 
 // Loading component for lazy-loaded components
 const LoadingSpinner = () => (
@@ -947,14 +947,12 @@ function App() {
             {viewMode === 'settings' && (
               <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
                 <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
-                  <Suspense fallback={<LoadingSpinner />}>
-                    <ManualSyncPanel />
-                    <DbSettingsPage 
-                      businesses={businesses} 
-                      onClose={() => setViewMode('table')} 
-                      onImport={openImportModal}
-                    />
-                  </Suspense>
+                  <ManualSyncPanel />
+                  <DbSettingsPage 
+                    businesses={businesses} 
+                    onClose={() => setViewMode('table')} 
+                    onImport={openImportModal}
+                  />
                 </div>
               </div>
             )}
@@ -1005,17 +1003,15 @@ function App() {
           </div>
         ) : availableDatasets.length > 0 ? (
           // Show dataset selector when datasets are available but no businesses loaded
-          <Suspense fallback={<LoadingSpinner />}>
-            <DatasetSelector
-              onDatasetSelected={(datasetIds: number[]) => {
-                console.log('📊 DATASET SELECTOR: Selected datasets:', datasetIds);
-                setSelectedDatasets(datasetIds);
-                // Force refresh data after dataset selection
-                refetch();
-              }}
-              onImportClick={openImportModal}
-            />
-          </Suspense>
+          <DatasetSelector
+            onDatasetSelected={(datasetIds: number[]) => {
+              console.log('📊 DATASET SELECTOR: Selected datasets:', datasetIds);
+              setSelectedDatasets(datasetIds);
+              // Force refresh data after dataset selection
+              refetch();
+            }}
+            onImportClick={openImportModal}
+          />
         ) : (
           // Show dashboard when no data at all
           <Dashboard
@@ -1045,10 +1041,8 @@ function App() {
         />
       )}
 
-      <Suspense fallback={null}>
-        <ImportModal isOpen={isImportOpen} isImporting={isImporting} onClose={() => setIsImportOpen(false)} onFileSelected={handleFileSelected} onLoadSample={handleImportSample} errorMessage={importError} />
-        <ImportMappingModal isOpen={isMappingOpen} columns={importColumns} initialMapping={{}} onConfirm={handleConfirmMapping} onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }} />
-      </Suspense>
+      <ImportModal isOpen={isImportOpen} isImporting={isImporting} onClose={() => setIsImportOpen(false)} onFileSelected={handleFileSelected} onLoadSample={handleImportSample} errorMessage={importError} />
+      <ImportMappingModal isOpen={isMappingOpen} columns={importColumns} initialMapping={{}} onConfirm={handleConfirmMapping} onBack={() => { setIsMappingOpen(false); setIsImportOpen(true); }} />
       <LoginModal isOpen={isLoginOpen} onClose={() => setIsLoginOpen(false)} onLoginSuccess={() => {}} />
     </div>
     </ErrorBoundary>
