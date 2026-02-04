@@ -35,6 +35,7 @@ const DbSettingsPage = lazy(() => import('./components/DbSettingsPage'));
 const ManualSyncPanel = lazy(() => import('./components/ManualSyncPanel'));
 const SeenClients = lazy(() => import('./components/SeenClients'));
 const PresentationView = lazy(() => import('./components/PresentationView'));
+const DatasetSelector = lazy(() => import('./components/DatasetSelector'));
 
 // Loading component for lazy-loaded components
 const LoadingSpinner = () => (
@@ -696,7 +697,7 @@ function App() {
                 )}
               </div>
             </div>
-          ) : businesses.length > 0 ? (
+        ) : businesses.length > 0 ? (
             <div className="flex-1 flex flex-col h-full relative">
             {(viewMode === 'table' || viewMode === 'stats' || viewMode === 'seen') && (
               <div className="p-3 md:p-4 lg:p-6 xl:p-8 pb-0">
@@ -1004,7 +1005,21 @@ function App() {
               </div>
             )}
           </div>
+        ) : availableDatasets.length > 0 ? (
+          // Show dataset selector when datasets are available but no businesses loaded
+          <Suspense fallback={<LoadingSpinner />}>
+            <DatasetSelector
+              onDatasetSelected={(datasetIds) => {
+                console.log('📊 DATASET SELECTOR: Selected datasets:', datasetIds);
+                setSelectedDatasets(datasetIds);
+                // Force refresh data after dataset selection
+                refetch();
+              }}
+              onImportClick={openImportModal}
+            />
+          </Suspense>
         ) : (
+          // Show dashboard when no data at all
           <Dashboard
             businessCount={businesses.length}
             providerCount={providerCount}
