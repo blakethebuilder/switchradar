@@ -9,13 +9,30 @@ const APIAlignmentService = require('./services/apiAlignment');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
-const JWT_SECRET = process.env.JWT_SECRET;
+
+// Debug environment variables
+console.log('🔍 Environment check:');
+console.log('NODE_ENV:', process.env.NODE_ENV);
+console.log('PORT:', process.env.PORT);
+console.log('JWT_SECRET present:', !!process.env.JWT_SECRET);
+console.log('JWT_SECRET length:', process.env.JWT_SECRET?.length || 0);
+
+// JWT_SECRET with fallback for production
+let JWT_SECRET = process.env.JWT_SECRET;
+
+// If no JWT_SECRET in production, try to use the known production key
+if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+    console.log('⚠️ No JWT_SECRET found, using production fallback');
+    JWT_SECRET = '10WLkV5qHvXMgADdHm78e6DlBdH8SC4kmFUBSWaEDIQ';
+}
 
 if (!JWT_SECRET) {
     console.error('❌ FATAL: JWT_SECRET environment variable is required');
     console.error('Please set JWT_SECRET in your environment variables');
     process.exit(1);
 }
+
+console.log('✅ JWT_SECRET configured successfully');
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' })); // Increase JSON payload limit

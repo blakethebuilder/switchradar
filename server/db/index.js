@@ -57,6 +57,12 @@ try {
 }
 
 try {
+  db.exec(`ALTER TABLE datasets ADD COLUMN business_count INTEGER DEFAULT 0;`);
+} catch (e) {
+  // Column already exists, ignore
+}
+
+try {
   db.exec(`ALTER TABLE datasets ADD COLUMN town TEXT;`);
 } catch (e) {
   // Column already exists, ignore

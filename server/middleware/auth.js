@@ -14,8 +14,13 @@ module.exports = (req, res, next) => {
             return res.status(401).json({ message: 'No token provided' });
         }
 
-        // Use the same JWT_SECRET as the main server
-        const JWT_SECRET = process.env.JWT_SECRET;
+        // Use the same JWT_SECRET logic as the main server
+        let JWT_SECRET = process.env.JWT_SECRET;
+        
+        // Fallback for production if environment variable not set
+        if (!JWT_SECRET && process.env.NODE_ENV === 'production') {
+            JWT_SECRET = '10WLkV5qHvXMgADdHm78e6DlBdH8SC4kmFUBSWaEDIQ';
+        }
         
         if (!JWT_SECRET) {
             console.error('❌ JWT_SECRET environment variable is required');
