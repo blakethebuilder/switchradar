@@ -335,10 +335,8 @@ function App() {
         const percentage = Math.round((processed / total) * 100);
         console.log(`📊 Processing progress: ${processed}/${total} (${percentage}%)`);
         
-        // Update import status for user feedback
-        if (percentage % 10 === 0) { // Update every 10%
-          setImportError(`Processing data... ${percentage}% complete`);
-        }
+        // Update import status for user feedback more frequently
+        setImportError(`Processing data... ${percentage}% complete (${processed}/${total} records)`);
       });
       
       console.log('✅ IMPORT STEP 6: Processed businesses count:', processed.length);

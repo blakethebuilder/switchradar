@@ -500,6 +500,23 @@ export const BusinessMap = React.memo(({
     selectedBusinessId,
     selectedBusinessIds: selectedBusinessIds.length
   });
+
+  // Log coordinate validation
+  if (businesses?.length > 0) {
+    const validCoords = businesses.filter(b => 
+      b.coordinates && 
+      typeof b.coordinates.lat === 'number' && 
+      typeof b.coordinates.lng === 'number' &&
+      !isNaN(b.coordinates.lat) && 
+      !isNaN(b.coordinates.lng)
+    );
+    console.log('🗺️ MAP: Coordinate validation', {
+      total: businesses.length,
+      validCoords: validCoords.length,
+      invalidCoords: businesses.length - validCoords.length,
+      sampleValid: validCoords.slice(0, 2).map(b => ({ name: b.name, coords: b.coordinates }))
+    });
+  }
   
   const [isDropMode, setIsDropMode] = useState(false);
   const [currentBusinessIndex, setCurrentBusinessIndex] = useState(0);

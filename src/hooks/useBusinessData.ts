@@ -28,7 +28,7 @@ export const useBusinessData = () => {
         }
 
         // Don't refetch if we have recent data (unless forced)
-        if (!forceRefresh && lastFetch && Date.now() - lastFetch.getTime() < 30000) {
+        if (!forceRefresh && lastFetch && Date.now() - lastFetch.getTime() < 10000) { // Reduced to 10 seconds
             console.log('⏭️ FETCH: Skipping fetch, recent data available');
             return;
         }
@@ -138,7 +138,7 @@ export const useBusinessData = () => {
                 try {
                     // Fetch all data concurrently for better performance
                     await Promise.all([
-                        fetchBusinesses(),
+                        fetchBusinesses(true), // Force refresh on auth change
                         fetchRoutes(),
                         fetchDatasets()
                     ]);

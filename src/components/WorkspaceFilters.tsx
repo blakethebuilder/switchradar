@@ -107,10 +107,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
       {/* Main Filter Panel - Sidebar for Map View */}
       <div className={`
         ${isMapView ? (
-          // Map view: Sidebar layout
+          // Map view: Sidebar layout with proper scrolling
           `fixed top-0 left-0 h-full w-80 transform transition-transform duration-300 ease-in-out z-50 ${
             isVisible ? 'translate-x-0' : '-translate-x-full'
-          } md:relative md:translate-x-0 md:w-80 md:h-auto md:max-h-screen md:overflow-y-auto`
+          } md:relative md:translate-x-0 md:w-80 md:h-auto md:max-h-screen md:overflow-hidden flex flex-col`
         ) : (
           // Table view: Normal block layout
           'block w-full max-w-none'
@@ -118,7 +118,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
         glass-card ${isMapView ? 'rounded-none md:rounded-r-[2rem]' : 'rounded-[2rem]'} shadow-2xl overflow-hidden border-white/50 backdrop-blur-xl
       `}>
         {/* Header */}
-        <div className={`p-4 border-b flex items-center justify-between transition-all ${
+        <div className={`p-4 border-b flex items-center justify-between transition-all flex-shrink-0 ${
           isMapView 
             ? 'border-white/20 bg-white/90' 
             : 'border-slate-100 bg-white'
@@ -170,20 +170,20 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
         </div>
 
         {/* Content - Always visible in map sidebar, collapsible in table view */}
-        <div className={`transition-all duration-300 ease-in-out ${
+        <div className={`transition-all duration-300 ease-in-out flex-1 ${
           isMapView 
-            ? 'max-h-none opacity-100 overflow-y-auto' 
+            ? 'flex flex-col overflow-hidden' 
             : isVisible 
               ? 'max-h-[80vh] md:max-h-[600px] opacity-100 overflow-y-auto' 
               : 'max-h-0 opacity-0 overflow-hidden'
         }`}>
           <div className={`${
-            isMapView ? 'bg-white/90' : 'bg-white'
+            isMapView ? 'bg-white/90 flex-1 overflow-y-auto' : 'bg-white'
           }`}>
-            <div className="p-6">
+            <div className="p-6 space-y-6">
               {/* Dataset Selector */}
               {availableDatasets.length > 0 && onDatasetChange && (
-                <div className="mb-6">
+                <div className="flex-shrink-0">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-bold text-slate-700">Datasets</h4>
                     <div className="flex gap-2">
@@ -229,8 +229,8 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                 </div>
               )}
 
-              {/* Provider Bar - Scrollable only on map view */}
-              <div className={`mb-6 ${isMapView ? 'max-h-[300px] overflow-y-auto custom-scrollbar' : ''}`}>
+              {/* Provider Bar - Compact for sidebar */}
+              <div className="flex-shrink-0">
                 <ProviderBar
                   availableProviders={availableProviders}
                   visibleProviders={visibleProviders}
@@ -240,8 +240,8 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                 />
               </div>
 
-              {/* Filter Panel - Fixed height */}
-              <div className="mb-6">
+              {/* Filter Panel - Compact for sidebar */}
+              <div className="flex-shrink-0">
                 <FilterPanel
                   searchTerm={searchTerm}
                   onSearchChange={onSearchChange}
@@ -256,7 +256,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
               
               {/* Radius Filter Control (Map View Only) */}
               {isMapView && droppedPin && radiusKm !== undefined && setRadiusKm && (
-                <div className="mt-6 pt-6 border-t border-slate-100">
+                <div className="flex-shrink-0 pt-6 border-t border-slate-100">
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center justify-between">
                       <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
