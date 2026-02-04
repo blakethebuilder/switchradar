@@ -105,14 +105,17 @@ const toNumber = (value: unknown) => {
   return undefined;
 };
 
-const buildCoordinates = (row: Record<string, unknown>, mapping: ImportMapping) => {
-  console.log('🗺️ BUILD: Building coordinates for row with mapping:', {
-    mapping: mapping,
-    rowKeys: Object.keys(row),
-    latValue: getValue(row, mapping.lat),
-    lngValue: getValue(row, mapping.lng),
-    mapsLinkValue: getValue(row, mapping.mapsLink)
-  });
+const buildCoordinates = (row: Record<string, unknown>, mapping: ImportMapping, index: number) => {
+  // Only log for first few businesses to avoid performance issues
+  if (index < 5) {
+    console.log('🗺️ BUILD: Building coordinates for row', index, 'with mapping:', {
+      mapping: mapping,
+      rowKeys: Object.keys(row).slice(0, 10), // Limit keys logged
+      latValue: getValue(row, mapping.lat),
+      lngValue: getValue(row, mapping.lng),
+      mapsLinkValue: getValue(row, mapping.mapsLink)
+    });
+  }
   
   const latValue = getValue(row, mapping.lat);
   const lngValue = getValue(row, mapping.lng);
@@ -121,25 +124,33 @@ const buildCoordinates = (row: Record<string, unknown>, mapping: ImportMapping) 
   const lng = toNumber(lngValue);
 
   if (lat !== undefined && lng !== undefined) {
-    console.log('🗺️ BUILD: ✅ Using direct lat/lng values:', { lat, lng });
+    if (index < 5) {
+      console.log('🗺️ BUILD: ✅ Using direct lat/lng values:', { lat, lng });
+    }
     return { lat, lng };
   }
 
   const mapsLinkValue = getValue(row, mapping.mapsLink);
   if (typeof mapsLinkValue === 'string' && mapsLinkValue.trim() !== '') {
-    console.log('🗺️ BUILD: Attempting to extract from maps link:', mapsLinkValue);
-    const coords = deriveCoordinates({ maps_link: mapsLinkValue }, DEFAULT_COORDINATES);
+    if (index < 5) {
+      console.log('🗺️ BUILD: Attempting to extract from maps link:', mapsLinkValue);
+    }
+    const coords = deriveCoordinates({ maps_link: mapsLinkValue }, DEFAULT_COORDINATES, index);
     if (coords !== DEFAULT_COORDINATES) {
-      console.log('🗺️ BUILD: ✅ Successfully extracted from maps link:', coords);
+      if (index < 5) {
+        console.log('🗺️ BUILD: ✅ Successfully extracted from maps link:', coords);
+      }
       return coords;
-    } else {
+    } else if (index < 5) {
       console.log('🗺️ BUILD: ❌ Failed to extract from maps link, using default');
     }
-  } else {
+  } else if (index < 5) {
     console.log('🗺️ BUILD: ❌ No valid maps link found');
   }
 
-  console.log('🗺️ BUILD: Using default coordinates:', DEFAULT_COORDINATES);
+  if (index < 5) {
+    console.log('🗺️ BUILD: Using default coordinates:', DEFAULT_COORDINATES);
+  }
   return DEFAULT_COORDINATES;
 };
 
@@ -157,7 +168,7 @@ export const processImportedData = async (
   
   const now = Date.now();
   const results: Business[] = [];
-  const chunkSize = 100; // Process in chunks to avoid blocking UI
+  const chunkSize = 500; // Increased chunk size for better performance
   
   console.log('🚀 PROCESS: Processing', rows.length, 'rows in chunks of', chunkSize);
   
@@ -188,7 +199,7 @@ export const processImportedData = async (
         category: String(getValue(row, resolvedMapping.category) ?? 'General'),
         town: String(town),
         province: String(getValue(row, resolvedMapping.province) ?? ''),
-        coordinates: buildCoordinates(row, resolvedMapping),
+        coordinates: buildCoordinates(row, resolvedMapping, index),
         status: normalizeStatus(getValue(row, resolvedMapping.status)),
         notes: [],
         importedAt: new Date(),
@@ -204,11 +215,6 @@ export const processImportedData = async (
           provider: business.provider,
           coordinates: business.coordinates,
           mapsLink: business.mapsLink,
-          rawRow: row,
-          rawCoords: {
-            lat: getValue(row, resolvedMapping.lat),
-            lng: getValue(row, resolvedMapping.lng)
-          },
           mapping: resolvedMapping
         });
       }
@@ -224,9 +230,9 @@ export const processImportedData = async (
       onProgress(results.length, rows.length);
     }
     
-    // Yield control to prevent UI blocking
+    // Yield control to prevent UI blocking - reduced delay
     if (i + chunkSize < rows.length) {
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await new Promise(resolve => setTimeout(resolve, 5)); // Reduced from 10ms to 5ms
     }
   }
   
