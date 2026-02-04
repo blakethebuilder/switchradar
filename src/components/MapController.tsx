@@ -12,6 +12,7 @@ interface MapControllerProps {
   onMapReady?: (map: L.Map) => void;
   currentZoom: number;
   setCurrentZoom: (zoom: number) => void;
+  radiusKm: number;
 }
 
 export const MapController: React.FC<MapControllerProps> = ({
@@ -21,7 +22,8 @@ export const MapController: React.FC<MapControllerProps> = ({
   setIsDropMode,
   setDroppedPin,
   onMapReady,
-  setCurrentZoom
+  setCurrentZoom,
+  radiusKm
 }) => {
   const map = useMap();
 
@@ -52,10 +54,27 @@ export const MapController: React.FC<MapControllerProps> = ({
   // Handle map click for pin dropping
   const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
     if (isDropMode) {
-      setDroppedPin({ lat: e.latlng.lat, lng: e.latlng.lng });
+      const newPin = { lat: e.latlng.lat, lng: e.latlng.lng };
+      setDroppedPin(newPin);
       setIsDropMode(false);
+      
+      // Focus on the pin with appropriate zoom level for the radius
+      // Calculate zoom level based on radius - larger radius needs lower zoom
+      let targetZoom = 13; // Default zoom
+      if (radiusKm <= 0.5) targetZoom = 15;
+      else if (radiusKm <= 1) targetZoom = 14;
+      else if (radiusKm <= 2) targetZoom = 13;
+      else if (radiusKm <= 5) targetZoom = 12;
+      else if (radiusKm <= 10) targetZoom = 11;
+      else targetZoom = 10;
+      
+      // Smoothly pan and zoom to the pin
+      map.setView([newPin.lat, newPin.lng], targetZoom, { 
+        animate: true, 
+        duration: 1.0 
+      });
     }
-  }, [isDropMode, setDroppedPin, setIsDropMode]);
+  }, [isDropMode, setDroppedPin, setIsDropMode, map]);
 
   // Set up event listeners
   useEffect(() => {

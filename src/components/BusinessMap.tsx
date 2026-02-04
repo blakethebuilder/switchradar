@@ -92,20 +92,43 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           b.coordinates.lng >= -180 && b.coordinates.lng <= 180
         );
         
-        if (validBusinesses.length > 0) {
+        console.log('🗺️ FIT BOUNDS: Valid businesses:', validBusinesses.length, 'out of', businesses.length);
+        
+        if (validBusinesses.length === 0) {
+          console.warn('🗺️ FIT BOUNDS: No valid businesses with coordinates');
+          return;
+        }
+        
+        if (validBusinesses.length === 1) {
+          // Single business - center on it with reasonable zoom
+          const business = validBusinesses[0];
+          mapInstance.setView([business.coordinates.lat, business.coordinates.lng], 14, { 
+            animate: true, 
+            duration: 1 
+          });
+        } else {
+          // Multiple businesses - fit bounds with padding
           const coordinates: [number, number][] = validBusinesses.map(b => [b.coordinates.lat, b.coordinates.lng]);
           const bounds = L.latLngBounds(coordinates);
           
+          // Calculate appropriate padding based on screen size
+          const isMobile = window.innerWidth < 768;
+          const padding = isMobile ? [30, 30] : [50, 50];
+          
           mapInstance.fitBounds(bounds, { 
-            padding: [50, 50], 
-            maxZoom: 12,
+            padding: padding,
+            maxZoom: 15, // Increased max zoom for better visibility
             animate: true,
-            duration: 1
+            duration: 1.2
           });
         }
+        
+        console.log('✅ FIT BOUNDS: Successfully fitted bounds');
       } catch (error) {
-        console.error('Error fitting bounds:', error);
+        console.error('❌ FIT BOUNDS: Error fitting bounds:', error);
       }
+    } else {
+      console.warn('🗺️ FIT BOUNDS: No businesses or map instance available');
     }
   }, [businesses, mapInstance]);
 
@@ -215,6 +238,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           onMapReady={handleMapReady}
           currentZoom={currentZoom}
           setCurrentZoom={setCurrentZoom}
+          radiusKm={radiusKm}
         />
         
         <TileLayer
