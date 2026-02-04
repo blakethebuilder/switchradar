@@ -46,7 +46,7 @@ export interface Business {
   dataset?: string; // Dataset name for filtering
 }
 
-export type ViewMode = 'table' | 'map' | 'stats' | 'settings' | 'route' | 'seen' | 'present';
+export type ViewMode = 'dashboard' | 'table' | 'map' | 'stats' | 'settings' | 'route' | 'seen' | 'present';
 
 export interface FilterState {
   searchTerm: string;

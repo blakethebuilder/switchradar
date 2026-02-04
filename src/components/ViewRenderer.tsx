@@ -4,9 +4,8 @@ import { WorkspaceFilters } from './WorkspaceFilters';
 import { BusinessTable } from './BusinessTable';
 import { BusinessMap } from './BusinessMap';
 import { Dashboard } from './Dashboard';
-import { ManualSyncPanel } from './ManualSyncPanel';
-import { DbSettingsPage } from './DbSettingsPage';
 import { DatasetSelector } from './DatasetSelector';
+import AdminConsole from './AdminConsole';
 import type { Business, ViewMode } from '../types';
 
 // Lazy load heavy components
@@ -59,6 +58,7 @@ interface ViewRendererProps {
   onDatasetChange: (datasets: number[]) => void;
   onToggleFiltersVisibility: () => void;
   onBusinessSelect: (business: Business) => void;
+  onMapBusinessSelect?: (business: Business) => void; // Map-specific handler that preserves view
   onDeleteBusiness: (id: string) => void;
   onTogglePhoneType: (id: string, currentType: 'landline' | 'mobile') => void;
   onAddToRoute: (businessId: string) => void;
@@ -69,6 +69,8 @@ interface ViewRendererProps {
   onProviderSearch: (provider: string) => void;
   onCategorySearch: (category: string) => void;
   onImportClick: () => void;
+  onExportClick?: () => void;
+  onClearData?: () => void;
   onAddSelectedToRoute: () => void;
   onClearSelection: () => void;
   onProviderFilter: (provider: string) => void;
@@ -77,6 +79,9 @@ interface ViewRendererProps {
   setDroppedPin: (pin: any) => void;
   setRadiusKm: (radius: number) => void;
   setViewMode: (mode: ViewMode) => void;
+  
+  // Auth props
+  isAdmin: boolean;
 }
 
 export const ViewRenderer: React.FC<ViewRendererProps> = ({
@@ -113,6 +118,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
   onDatasetChange,
   onToggleFiltersVisibility,
   onBusinessSelect,
+  onMapBusinessSelect,
   onDeleteBusiness,
   onTogglePhoneType,
   onAddToRoute,
@@ -123,6 +129,8 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
   onProviderSearch,
   onCategorySearch,
   onImportClick,
+  onExportClick,
+  onClearData,
   onAddSelectedToRoute,
   onClearSelection,
   onProviderFilter,
@@ -131,6 +139,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
   setDroppedPin,
   setRadiusKm,
   setViewMode,
+  isAdmin,
 }) => {
   const providerCount = availableProviders.length;
 
@@ -156,15 +165,29 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
     }
 
     if (viewMode === 'settings') {
+      // Only admins can access settings when no data
+      if (!isAdmin) {
+        return (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-red-600 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Access Restricted</h2>
+              <p className="text-gray-600">
+                Settings are only available to administrators.
+              </p>
+            </div>
+          </div>
+        );
+      }
+      
       return (
         <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
-          <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
-            <ManualSyncPanel />
-            <DbSettingsPage 
-              businesses={businesses} 
-              onClose={() => setViewMode('table')} 
-              onImport={onImportClick}
-            />
+          <div className="max-w-6xl mx-auto">
+            <AdminConsole />
           </div>
         </div>
       );
@@ -225,6 +248,18 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
   );
 
   switch (viewMode) {
+    case 'dashboard':
+      return (
+        <Dashboard
+          businessCount={businesses.length}
+          providerCount={availableProviders.length}
+          onImportClick={onImportClick}
+          onViewMapClick={() => setViewMode('map')}
+          onViewModeChange={setViewMode}
+          onTownSelect={onTownChange}
+        />
+      );
+
     case 'table':
       return (
         <div className="flex-1 flex flex-col h-full relative">
@@ -359,7 +394,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
               targetLocation={mapTarget?.center}
               zoom={mapTarget?.zoom}
               fullScreen={true}
-              onBusinessSelect={onBusinessSelect}
+              onBusinessSelect={onMapBusinessSelect || onBusinessSelect}
               selectedBusinessId={selectedBusiness?.id}
               selectedBusinessIds={selectedBusinessIds}
               droppedPin={droppedPin}
@@ -386,14 +421,33 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
       );
 
     case 'settings':
+      // Only admins can access settings
+      if (!isAdmin) {
+        return (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <div className="text-red-600 mb-4">
+                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">Access Restricted</h2>
+              <p className="text-gray-600">
+                Settings are only available to administrators.
+              </p>
+            </div>
+          </div>
+        );
+      }
+      
       return (
         <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
-          <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
-            <ManualSyncPanel />
-            <DbSettingsPage 
-              businesses={businesses} 
-              onClose={() => setViewMode('table')} 
-              onImport={onImportClick}
+          <div className="max-w-6xl mx-auto">
+            <AdminConsole 
+              onImportClick={onImportClick}
+              onExportClick={onExportClick}
+              onClearData={onClearData}
+              totalCount={businesses.length}
             />
           </div>
         </div>

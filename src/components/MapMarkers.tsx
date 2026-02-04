@@ -58,9 +58,10 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         icon = createFallbackIcon();
       }
 
-      // Simple click handler
+      // Simple click handler - preserve map view for marker clicks
       const handleClick = (e: L.LeafletMouseEvent) => {
         e.originalEvent?.stopPropagation();
+        // Don't reset map view when clicking on individual markers
         onBusinessSelect?.(business);
       };
 
@@ -153,31 +154,45 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
 
       console.log('🗺️ CLUSTER CLICK:', { currentZoom, childCount });
 
-      // Prevent default behavior
+      // Prevent default behavior and stop propagation
       if (cluster.originalEvent) {
         cluster.originalEvent.preventDefault();
         cluster.originalEvent.stopPropagation();
       }
 
-      // Smart zoom vs spiderfy logic
-      if (currentZoom < 12) {
-        // Low zoom: Always zoom in to reveal more detail
-        const targetZoom = Math.min(currentZoom + 2, 14);
-        map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.6 });
-      } else if (currentZoom < 14 && childCount > 10) {
-        // Medium zoom with many items: Zoom in once more
-        const targetZoom = Math.min(currentZoom + 1, 15);
-        map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.5 });
-      } else {
+      // Smart zoom vs spiderfy logic - prioritize spiderfying at higher zooms
+      if (currentZoom >= 14 || childCount <= 8) {
         // High zoom or small groups: Use spiderfy
         if (typeof clusterLayer.spiderfy === 'function') {
           console.log('🗺️ SPIDERFY:', childCount, 'items');
           clusterLayer.spiderfy();
-        } else {
-          // Fallback: minimal zoom
-          const targetZoom = Math.min(currentZoom + 1, 16);
-          map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.3 });
+          
+          // Keep cluster expanded - prevent auto-collapse
+          setTimeout(() => {
+            if (clusterLayer._spiderfied) {
+              // Add event listeners to prevent cluster from collapsing
+              map.off('click', clusterLayer._unspiderfy);
+              map.off('zoomstart', clusterLayer._unspiderfy);
+            }
+          }, 100);
+          
+          return; // Don't zoom if we spiderfied
         }
+      }
+      
+      // Lower zoom or large groups: Zoom in
+      if (currentZoom < 12) {
+        // Low zoom: Zoom in more aggressively
+        const targetZoom = Math.min(currentZoom + 2, 14);
+        map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.6 });
+      } else if (currentZoom < 14 && childCount > 8) {
+        // Medium zoom with many items: Zoom in once more
+        const targetZoom = Math.min(currentZoom + 1, 15);
+        map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.5 });
+      } else {
+        // Fallback: minimal zoom
+        const targetZoom = Math.min(currentZoom + 1, 16);
+        map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.3 });
       }
     } catch (error) {
       console.error('🗺️ CLUSTER CLICK ERROR:', error);
@@ -194,7 +209,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
     <MarkerClusterGroup
       // Core clustering settings
       maxClusterRadius={getClusterRadius}
-      disableClusteringAtZoom={16}
+      disableClusteringAtZoom={17} // Increased to allow more clustering
       minimumClusterSize={2}
       
       // Performance settings
@@ -203,14 +218,15 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
       animate={true}
       animateAddingMarkers={false}
       
-      // Spiderfy settings
+      // Spiderfy settings - Enhanced
       spiderfyOnMaxZoom={true}
-      spiderfyOnEveryZoom={false}
-      spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.0 : 1.3}
+      spiderfyOnEveryZoom={true} // Enable spiderfy at all zoom levels
+      spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.2 : 1.5} // Increased distance
+      spiderfyShapePositions={undefined} // Use default spiral shape
       
       // Visual settings
       showCoverageOnHover={false}
-      zoomToBoundsOnClick={false}
+      zoomToBoundsOnClick={false} // Disable default zoom behavior
       singleMarkerMode={false}
       
       // Custom icon and event handlers
@@ -219,20 +235,20 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         clusterclick: handleClusterClick
       }}
       
-      // Spiderfy styling
+      // Spiderfy styling - Enhanced
       polygonOptions={{
+        fillColor: '#3b82f6',
+        color: '#1e40af',
+        weight: 2,
+        opacity: 0.7,
+        fillOpacity: 0.3
+      }}
+      clockHelpingCircleOptions={{
         fillColor: '#3b82f6',
         color: '#1e40af',
         weight: 2,
         opacity: 0.6,
         fillOpacity: 0.2
-      }}
-      clockHelpingCircleOptions={{
-        fillColor: '#3b82f6',
-        color: '#1e40af',
-        weight: 1,
-        opacity: 0.4,
-        fillOpacity: 0.1
       }}
     >
       {markers}

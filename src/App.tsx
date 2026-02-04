@@ -24,7 +24,7 @@ console.log('🚀 APP: App.tsx loaded at', new Date().toISOString());
 function App() {
   console.log('🚀 APP: App component rendering at', new Date().toISOString());
 
-  const { isAuthenticated, token } = useAuth();
+  const { isAuthenticated, token, isAdmin } = useAuth();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   // Business data hook
@@ -445,6 +445,8 @@ function App() {
               onProviderSearch={setSearchTerm}
               onCategorySearch={setSearchTerm}
               onImportClick={openImportModal}
+              onExportClick={handleExport}
+              onClearData={handleClearAll}
               onAddSelectedToRoute={handleAddSelectedToRoute}
               onClearSelection={clearSelection}
               onProviderFilter={(provider) => {
@@ -459,6 +461,7 @@ function App() {
               setDroppedPin={setDroppedPin}
               setRadiusKm={setRadiusKm}
               setViewMode={setViewMode}
+              isAdmin={isAdmin}
             />
           )}
         </main>

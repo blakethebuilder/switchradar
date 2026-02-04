@@ -10,7 +10,7 @@ export interface AppState {
 }
 
 export const useAppState = () => {
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [isFiltersVisible, setIsFiltersVisible] = useState(true);
   const [selectedBusiness, setSelectedBusiness] = useState<Business | null>(null);
   const [selectedBusinessIds, setSelectedBusinessIds] = useState<string[]>([]);
@@ -34,10 +34,14 @@ export const useAppState = () => {
     }
   }, []);
 
-  const selectBusinessAndShowOnMap = useCallback((business: Business) => {
+  const selectBusinessAndShowOnMap = useCallback((business: Business, preserveView = false) => {
     setSelectedBusiness(business);
     setViewMode('map');
-    setMapTargetFromBusiness(business);
+    
+    // Only change map target if not preserving current view
+    if (!preserveView) {
+      setMapTargetFromBusiness(business);
+    }
   }, [setMapTargetFromBusiness]);
 
   return {

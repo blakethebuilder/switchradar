@@ -281,7 +281,10 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
 
               {/* Add to Route Button */}
               <button
-                onClick={() => isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id);
+                }}
                 className={`p-1.5 md:p-2 rounded-lg transition-colors ${
                   isInRoute
                     ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
@@ -748,7 +751,10 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                 {/* Action Buttons */}
                 <div className="flex gap-3">
                   <button
-                    onClick={() => isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id);
+                    }}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-colors ${
                       isInRoute
                         ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
