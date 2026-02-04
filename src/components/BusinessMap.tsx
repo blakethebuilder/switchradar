@@ -113,7 +113,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           
           // Calculate appropriate padding based on screen size
           const isMobile = window.innerWidth < 768;
-          const padding = isMobile ? [30, 30] : [50, 50];
+          const padding: [number, number] = isMobile ? [30, 30] : [50, 50];
           
           mapInstance.fitBounds(bounds, { 
             padding: padding,

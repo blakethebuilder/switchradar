@@ -35,13 +35,18 @@ export const UserManagement: React.FC = () => {
     
     setLoading(true);
     try {
+      console.log('🔍 Loading users with token:', token?.substring(0, 20) + '...');
       const result = await serverDataService.getUsers(token);
+      console.log('📥 Users result:', result);
       if (result.success) {
+        console.log('✅ Setting users:', result.data);
         setUsers(result.data || []);
       } else {
+        console.error('❌ Failed to load users:', result.error);
         setError(result.error || 'Failed to load users');
       }
     } catch (error) {
+      console.error('💥 Exception loading users:', error);
       setError('Failed to load users');
     } finally {
       setLoading(false);
@@ -65,18 +70,23 @@ export const UserManagement: React.FC = () => {
       }
 
       setLoading(true);
+      console.log('🚀 Creating user:', newUser.username);
       const result = await serverDataService.createUser(newUser.username.trim(), newUser.password, token);
+      console.log('📥 Create user result:', result);
       
       if (result.success) {
         setSuccess(`User "${newUser.username}" created successfully`);
         setNewUser({ username: '', password: '' });
         setIsAddModalOpen(false);
+        console.log('🔄 Reloading users after creation...');
         await loadUsers();
         setTimeout(() => setSuccess(''), 3000);
       } else {
+        console.error('❌ Failed to create user:', result.error);
         setError(result.error || 'Failed to create user');
       }
     } catch (error) {
+      console.error('💥 Exception creating user:', error);
       setError(error instanceof Error ? error.message : 'Failed to create user');
     } finally {
       setLoading(false);

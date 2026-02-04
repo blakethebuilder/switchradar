@@ -579,20 +579,26 @@ class ServerDataService {
   // User Management (Admin only)
   async getUsers(token: string): Promise<ServerDataResult> {
     try {
+      console.log('🌐 Fetching users from:', this.getApiUrl('/api/users'));
       const response = await fetch(this.getApiUrl('/api/users'), {
         headers: this.getAuthHeaders(token)
       });
 
+      console.log('📥 Users response status:', response.status, response.statusText);
+
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Users response error:', errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const users = await response.json();
+      console.log('📊 Users response data:', users);
 
       return {
         success: true,
-        data: users,
-        count: users.length
+        data: users.data || users, // Handle both formats
+        count: (users.data || users).length
       };
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -605,18 +611,23 @@ class ServerDataService {
 
   async createUser(username: string, password: string, token: string): Promise<ServerDataResult> {
     try {
+      console.log('🚀 Creating user:', username, 'at:', this.getApiUrl('/api/users'));
       const response = await fetch(this.getApiUrl('/api/users'), {
         method: 'POST',
         headers: this.getAuthHeaders(token),
         body: JSON.stringify({ username, password })
       });
 
+      console.log('📥 Create user response status:', response.status, response.statusText);
+
       if (!response.ok) {
         const errorText = await response.text();
+        console.error('❌ Create user error:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
+      console.log('✅ Create user success:', result);
 
       return {
         success: true,

@@ -88,9 +88,9 @@ const seedDefaultUsers = async () => {
             const firstUser = db.prepare('SELECT * FROM users ORDER BY id LIMIT 1').get();
             if (firstUser) {
                 db.prepare(`
-                    INSERT INTO datasets (id, name, description, created_by, business_count, is_active)
-                    VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', ?, 0, 1)
-                `).run(firstUser.id);
+                    INSERT INTO datasets (id, name, description, userId, created_by, business_count, is_active)
+                    VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', ?, ?, 0, 1)
+                `).run(firstUser.id, firstUser.id);
                 console.log(`✓ Created default dataset with creator ID: ${firstUser.id}`);
             } else {
                 console.error('✗ No users found to create default dataset');
@@ -270,9 +270,9 @@ app.post('/api/datasets', auth, (req, res) => {
         }
         
         const result = db.prepare(`
-            INSERT INTO datasets (name, description, town, province, created_by)
-            VALUES (?, ?, ?, ?, ?)
-        `).run(name, description, town, province, userId);
+            INSERT INTO datasets (name, description, town, province, userId, created_by)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `).run(name, description, town, province, userId, userId);
         
         // Grant admin permission to creator
         db.prepare(`
@@ -547,13 +547,14 @@ app.post('/api/businesses/sync', auth, (req, res) => {
         if (!dataset) {
             // Create new dataset for this import
             const result = db.prepare(`
-                INSERT INTO datasets (name, description, town, province, created_by)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO datasets (name, description, town, province, userId, created_by)
+                VALUES (?, ?, ?, ?, ?, ?)
             `).run(
                 importSource,
                 `Imported dataset: ${importSource}`,
                 importTown,
                 'Various',
+                userId,
                 userId
             );
             
@@ -662,9 +663,11 @@ app.post('/api/businesses/sync', auth, (req, res) => {
 
 // User Management Routes (Admin only)
 app.get('/api/users', auth, (req, res) => {
+    console.log('📥 GET /api/users - Request received from user:', req.userData.username);
     const { role } = req.userData;
     
     if (role !== 'admin') {
+        console.log('❌ Access denied - user is not admin:', role);
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -675,7 +678,11 @@ app.get('/api/users', auth, (req, res) => {
             ORDER BY created_at DESC
         `).all();
         
-        res.json(users);
+        console.log('✅ Returning', users.length, 'users');
+        res.json({
+            success: true,
+            data: users
+        });
     } catch (error) {
         console.error('Failed to fetch users:', error);
         res.status(500).json({ message: 'Failed to fetch users' });
@@ -683,21 +690,29 @@ app.get('/api/users', auth, (req, res) => {
 });
 
 app.post('/api/users', auth, (req, res) => {
+    console.log('📥 POST /api/users - Create user request received from:', req.userData.username);
     const { role } = req.userData;
     const { username, password } = req.body;
     
+    console.log('📊 Request data:', { username, passwordLength: password?.length, userRole: role });
+    
     if (role !== 'admin') {
+        console.log('❌ Access denied - user is not admin:', role);
         return res.status(403).json({ message: 'Admin access required' });
     }
     
     if (!username || !password) {
+        console.log('❌ Missing required fields:', { username: !!username, password: !!password });
         return res.status(400).json({ message: 'Username and password required' });
     }
     
     try {
+        console.log('🔐 Hashing password for user:', username);
         const hashedPassword = bcrypt.hashSync(password, 10);
+        console.log('💾 Inserting user into database...');
         const result = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hashedPassword);
         
+        console.log('✅ User created successfully:', { userId: result.lastInsertRowid, username });
         res.status(201).json({ 
             message: 'User created successfully',
             userId: result.lastInsertRowid,
@@ -705,9 +720,10 @@ app.post('/api/users', auth, (req, res) => {
         });
     } catch (error) {
         if (error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+            console.log('❌ Username already exists:', username);
             res.status(400).json({ message: 'Username already exists' });
         } else {
-            console.error('Failed to create user:', error);
+            console.error('❌ Failed to create user:', error);
             res.status(500).json({ message: 'Failed to create user' });
         }
     }
