@@ -60,17 +60,17 @@ export const MapController: React.FC<MapControllerProps> = ({
       
       // Focus on the pin with appropriate zoom level for the radius
       // Calculate zoom level based on radius - larger radius needs lower zoom
-      // Respect zoom limits: min 5, max 16
+      // Respect zoom limits: min 5, max 18
       let targetZoom = 13; // Default zoom
-      if (radiusKm <= 0.5) targetZoom = Math.min(15, 16); // Clamp to max 16
-      else if (radiusKm <= 1) targetZoom = 14;
-      else if (radiusKm <= 2) targetZoom = 13;
-      else if (radiusKm <= 5) targetZoom = 12;
-      else if (radiusKm <= 10) targetZoom = 11;
+      if (radiusKm <= 0.5) targetZoom = Math.min(16, 18); // Clamp to max 18
+      else if (radiusKm <= 1) targetZoom = 15;
+      else if (radiusKm <= 2) targetZoom = 14;
+      else if (radiusKm <= 5) targetZoom = 13;
+      else if (radiusKm <= 10) targetZoom = 12;
       else targetZoom = Math.max(10, 5); // Clamp to min 5
       
       // Ensure zoom is within safe limits
-      targetZoom = Math.max(5, Math.min(16, targetZoom));
+      targetZoom = Math.max(5, Math.min(18, targetZoom));
       
       // Smoothly pan and zoom to the pin
       map.setView([newPin.lat, newPin.lng], targetZoom, { 

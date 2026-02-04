@@ -72,60 +72,85 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
           key={business.id}
           position={[business.coordinates.lat, business.coordinates.lng]}
           icon={icon}
-          eventHandlers={{ click: handleClick }}
+          eventHandlers={{ 
+            click: handleClick,
+            // Add hover effects for better UX at high zoom levels
+            mouseover: (e) => {
+              const marker = e.target;
+              if (marker.getElement) {
+                const element = marker.getElement();
+                if (element) {
+                  element.style.transform = 'scale(1.2)';
+                  element.style.zIndex = '1000';
+                }
+              }
+            },
+            mouseout: (e) => {
+              const marker = e.target;
+              if (marker.getElement) {
+                const element = marker.getElement();
+                if (element) {
+                  element.style.transform = 'scale(1)';
+                  element.style.zIndex = '';
+                }
+              }
+            }
+          }}
         />
       );
     });
   }, [validBusinesses, selectedBusinessId, selectedBusinessIds, onBusinessSelect]);
 
-  // Progressive clustering radius based on zoom level with safe limits
+  // Progressive clustering radius - consistent across all devices
   const getClusterRadius = React.useCallback((zoom: number) => {
-    const isMobile = window.innerWidth < 768;
-    const multiplier = isMobile ? 0.8 : 1.0;
+    // Consistent clustering across all devices for better UX
+    // No mobile/desktop differences - same experience everywhere
     
-    // Progressive clustering - larger radius at lower zoom, smaller at higher zoom
-    // Safe zoom range: 5-16 to prevent render issues
-    if (zoom <= 5) return Math.round(150 * multiplier);  // Very clustered at country level
-    if (zoom <= 7) return Math.round(120 * multiplier);  // Clustered at province level
-    if (zoom <= 9) return Math.round(100 * multiplier);  // Moderate clustering at city level
-    if (zoom <= 11) return Math.round(80 * multiplier);  // Less clustering at district level
-    if (zoom <= 13) return Math.round(60 * multiplier);  // Minimal clustering at neighborhood level
-    if (zoom <= 15) return Math.round(40 * multiplier);  // Very minimal clustering at street level
+    // Progressive clustering - businesses scatter at zoom 15+
+    // Zoom range: 5-18, clustering disabled at 15+
+    if (zoom <= 5) return 150;  // Very clustered at country level
+    if (zoom <= 7) return 120;  // Clustered at province level
+    if (zoom <= 9) return 100;  // Moderate clustering at city level
+    if (zoom <= 11) return 80;  // Less clustering at district level
+    if (zoom <= 13) return 60;  // Minimal clustering at neighborhood level
+    if (zoom <= 14) return 40;  // Very minimal clustering at street level
     
-    return Math.round(25 * multiplier); // Almost no clustering at building level (zoom 16+)
+    // Zoom 15+ = No clustering (handled by disableClusteringAtZoom)
+    return 25; // This won't be used due to disableClusteringAtZoom=15
   }, []);
 
-  // Custom cluster icon
+  // Custom cluster icon with better visibility
   const createClusterIcon = React.useCallback((cluster: any) => {
     const count = cluster.getChildCount();
     
-    // Size based on count
-    let size = 40;
+    // Size and color based on count - more prominent for better visibility
+    let size = 45;
     let bgColor = '#3b82f6';
     let textColor = 'white';
+    let borderColor = '#1e40af';
     
     if (count >= 100) {
-      size = 50;
+      size = 55;
       bgColor = '#dc2626';
+      borderColor = '#991b1b';
     } else if (count >= 50) {
-      size = 45;
+      size = 52;
       bgColor = '#ea580c';
+      borderColor = '#c2410c';
     } else if (count >= 20) {
-      size = 42;
+      size = 48;
       bgColor = '#f59e0b';
+      borderColor = '#d97706';
     } else if (count >= 10) {
-      size = 40;
+      size = 45;
       bgColor = '#10b981';
+      borderColor = '#059669';
     }
 
-    // Mobile adjustment
-    if (window.innerWidth < 768) {
-      size = Math.round(size * 0.85);
-    }
-
+    // Consistent size across devices - no mobile adjustment for better UX
     return L.divIcon({
       html: `<div style="
-        background-color: ${bgColor};
+        background: linear-gradient(135deg, ${bgColor} 0%, ${borderColor} 100%);
         color: ${textColor};
         width: ${size}px;
         height: ${size}px;
@@ -134,11 +159,12 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        font-size: ${size > 45 ? '14px' : '12px'};
+        font-size: ${size > 50 ? '16px' : '14px'};
         border: 3px solid white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         cursor: pointer;
-      ">${count}</div>`,
+        transition: transform 0.2s ease;
+      " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">${count}</div>`,
       className: 'custom-cluster-icon',
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2]
@@ -163,11 +189,11 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
         cluster.originalEvent.stopPropagation();
       }
 
-      // Simple behavior: Always zoom in by 1 level with safe limits
-      const targetZoom = Math.min(currentZoom + 1, 16); // Max zoom 16 to prevent render issues
+      // Simple behavior: Always zoom in by 1 level with extended limits
+      const targetZoom = Math.min(currentZoom + 1, 18); // Max zoom 18 for detailed viewing
       
       // Don't zoom if we're already at max zoom
-      if (currentZoom >= 16) {
+      if (currentZoom >= 18) {
         console.log('🗺️ CLUSTER CLICK: Already at max zoom, ignoring');
         return;
       }
@@ -190,9 +216,9 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
 
   return (
     <MarkerClusterGroup
-      // Core clustering settings - Simple and predictable with safe limits
+      // Core clustering settings - Scatter at zoom 15+
       maxClusterRadius={getClusterRadius}
-      disableClusteringAtZoom={17} // Disable clustering at zoom 17+ to prevent render issues
+      disableClusteringAtZoom={15} // Disable clustering at zoom 15+ to scatter businesses
       minimumClusterSize={2}
       
       // Performance settings
