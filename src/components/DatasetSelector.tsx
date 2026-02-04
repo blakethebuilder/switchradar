@@ -45,10 +45,13 @@ export const DatasetSelector: React.FC<DatasetSelectorProps> = ({
       if (response.ok) {
         const data = await response.json();
         console.log('📊 DATASETS: Fetched datasets:', data);
-        setDatasets(data);
+        
+        // Ensure data is an array before processing
+        const datasetsArray = Array.isArray(data) ? data : [];
+        setDatasets(datasetsArray);
         
         // Auto-select all datasets by default
-        const allIds = data.map((d: Dataset) => d.id);
+        const allIds = datasetsArray.map((d: Dataset) => d.id);
         setSelectedDatasets(allIds);
       } else {
         setError('Failed to load datasets');

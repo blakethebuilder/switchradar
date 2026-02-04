@@ -118,10 +118,10 @@ class ServerDataService {
       hasCoordinates: !!businesses[0].coordinates
     } : null);
 
-    // If dataset is large (>1000 businesses), use chunked upload
-    if (businesses.length > 1000) {
+    // If dataset is large (>800 businesses), use chunked upload
+    if (businesses.length > 800) {
       console.log('📦 API: Large dataset detected, using chunked upload...');
-      return this.saveBusinessesChunked(businesses, token, 500, metadata);
+      return this.saveBusinessesChunked(businesses, token, 1000, metadata); // Increased chunk size
     }
 
     try {

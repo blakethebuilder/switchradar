@@ -28,7 +28,7 @@ export const useBusinessData = () => {
         }
 
         // Don't refetch if we have recent data (unless forced)
-        if (!forceRefresh && lastFetch && Date.now() - lastFetch.getTime() < 10000) { // Reduced to 10 seconds
+        if (!forceRefresh && lastFetch && Date.now() - lastFetch.getTime() < 30000) { // Increased to 30 seconds
             console.log('⏭️ FETCH: Skipping fetch, recent data available');
             return;
         }

@@ -168,7 +168,8 @@ export const processImportedData = async (
   
   const now = Date.now();
   const results: Business[] = [];
-  const chunkSize = 500; // Increased chunk size for better performance
+  // Optimize chunk size based on data size
+  const chunkSize = rows.length > 5000 ? 1000 : 500; // Larger chunks for big datasets
   
   console.log('🚀 PROCESS: Processing', rows.length, 'rows in chunks of', chunkSize);
   
@@ -176,52 +177,8 @@ export const processImportedData = async (
     const chunk = rows.slice(i, i + chunkSize);
     console.log(`🚀 PROCESS: Processing chunk ${Math.floor(i/chunkSize) + 1}/${Math.ceil(rows.length/chunkSize)} (${chunk.length} rows)`);
     
-    // Process chunk
-    const chunkResults = chunk.map((row, chunkIndex) => {
-      const index = i + chunkIndex;
-      const resolvedMapping = mapping ?? {};
-      const name = getValue(row, resolvedMapping.name) ?? `Business ${index + 1}`;
-      const town = getValue(row, resolvedMapping.town) ?? 'Unknown';
-      const provider = getValue(row, resolvedMapping.provider) ?? 'Unknown';
-
-      const business = {
-        id: `import-${now}-${index}`,
-        name: String(name),
-        address: String(getValue(row, resolvedMapping.address) ?? ''),
-        phone: String(getValue(row, resolvedMapping.phone) ?? ''),
-        email: getValue(row, resolvedMapping.email)
-          ? String(getValue(row, resolvedMapping.email))
-          : undefined,
-        website: getValue(row, resolvedMapping.website)
-          ? String(getValue(row, resolvedMapping.website))
-          : undefined,
-        provider: normalizeProvider(String(provider)),
-        category: String(getValue(row, resolvedMapping.category) ?? 'General'),
-        town: String(town),
-        province: String(getValue(row, resolvedMapping.province) ?? ''),
-        coordinates: buildCoordinates(row, resolvedMapping, index),
-        status: normalizeStatus(getValue(row, resolvedMapping.status)),
-        notes: [],
-        importedAt: new Date(),
-        source: 'scraped' as const,
-        metadata: row,
-        mapsLink: resolvedMapping.mapsLink ? String(getValue(row, resolvedMapping.mapsLink) ?? '') : undefined
-      };
-      
-      // Log coordinate extraction for first few businesses
-      if (index < 10) {
-        console.log(`🚀 PROCESS: Business ${index} detailed info:`, {
-          name: business.name,
-          provider: business.provider,
-          coordinates: business.coordinates,
-          mapsLink: business.mapsLink,
-          mapping: resolvedMapping
-        });
-      }
-      
-      return business;
-    });
-    
+    // Process chunk with batch coordinate extraction
+    const chunkResults = await processChunkOptimized(chunk, i, now, mapping);
     results.push(...chunkResults);
     
     // Report progress
@@ -230,9 +187,9 @@ export const processImportedData = async (
       onProgress(results.length, rows.length);
     }
     
-    // Yield control to prevent UI blocking - reduced delay
+    // Reduced delay for better performance
     if (i + chunkSize < rows.length) {
-      await new Promise(resolve => setTimeout(resolve, 5)); // Reduced from 10ms to 5ms
+      await new Promise(resolve => setTimeout(resolve, 2)); // Reduced from 5ms to 2ms
     }
   }
   
@@ -248,6 +205,60 @@ export const processImportedData = async (
   });
   
   return results;
+};
+
+// Optimized chunk processing with batch coordinate extraction
+const processChunkOptimized = async (
+  chunk: Record<string, unknown>[],
+  startIndex: number,
+  timestamp: number,
+  mapping?: ImportMapping
+): Promise<Business[]> => {
+  const resolvedMapping = mapping ?? {};
+  
+  return chunk.map((row, chunkIndex) => {
+    const index = startIndex + chunkIndex;
+    const name = getValue(row, resolvedMapping.name) ?? `Business ${index + 1}`;
+    const town = getValue(row, resolvedMapping.town) ?? 'Unknown';
+    const provider = getValue(row, resolvedMapping.provider) ?? 'Unknown';
+
+    const business = {
+      id: `import-${timestamp}-${index}`,
+      name: String(name),
+      address: String(getValue(row, resolvedMapping.address) ?? ''),
+      phone: String(getValue(row, resolvedMapping.phone) ?? ''),
+      email: getValue(row, resolvedMapping.email)
+        ? String(getValue(row, resolvedMapping.email))
+        : undefined,
+      website: getValue(row, resolvedMapping.website)
+        ? String(getValue(row, resolvedMapping.website))
+        : undefined,
+      provider: normalizeProvider(String(provider)),
+      category: String(getValue(row, resolvedMapping.category) ?? 'General'),
+      town: String(town),
+      province: String(getValue(row, resolvedMapping.province) ?? ''),
+      coordinates: buildCoordinates(row, resolvedMapping, index),
+      status: normalizeStatus(getValue(row, resolvedMapping.status)),
+      notes: [],
+      importedAt: new Date(),
+      source: 'scraped' as const,
+      metadata: row,
+      mapsLink: resolvedMapping.mapsLink ? String(getValue(row, resolvedMapping.mapsLink) ?? '') : undefined
+    };
+    
+    // Log coordinate extraction for first few businesses only
+    if (index < 5) {
+      console.log(`🚀 PROCESS: Business ${index} detailed info:`, {
+        name: business.name,
+        provider: business.provider,
+        coordinates: business.coordinates,
+        mapsLink: business.mapsLink,
+        mapping: resolvedMapping
+      });
+    }
+    
+    return business;
+  });
 };
 
 

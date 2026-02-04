@@ -8,8 +8,10 @@ declare global {
 }
 
 const findCoordinatesFromUrl = (url: string, index: number = 0) => {
-  // Only log for first few URLs to avoid performance issues
-  if (index < 5) {
+  // Only log for first URL to avoid performance issues
+  const shouldLog = index === 0;
+  
+  if (shouldLog) {
     console.log('🗺️ COORDS: Extracting coordinates from URL:', url);
   }
   
@@ -17,7 +19,7 @@ const findCoordinatesFromUrl = (url: string, index: number = 0) => {
   const match1 = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
   if (match1) {
     const coords = { lat: Number(match1[1]), lng: Number(match1[2]) };
-    if (index < 5) {
+    if (shouldLog) {
       console.log('🗺️ COORDS: Pattern 1 match (@lat,lng):', coords);
     }
     return coords;
@@ -27,7 +29,7 @@ const findCoordinatesFromUrl = (url: string, index: number = 0) => {
   const match2 = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
   if (match2) {
     const coords = { lat: Number(match2[1]), lng: Number(match2[2]) };
-    if (index < 5) {
+    if (shouldLog) {
       console.log('🗺️ COORDS: Pattern 2 match (!3d!4d):', coords);
     }
     return coords;
@@ -37,7 +39,7 @@ const findCoordinatesFromUrl = (url: string, index: number = 0) => {
   const match3 = url.match(/[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
   if (match3) {
     const coords = { lat: Number(match3[1]), lng: Number(match3[2]) };
-    if (index < 5) {
+    if (shouldLog) {
       console.log('🗺️ COORDS: Pattern 3 match (q= or ll=):', coords);
     }
     return coords;
@@ -52,14 +54,14 @@ const findCoordinatesFromUrl = (url: string, index: number = 0) => {
     const lng = Number(match4[2]);
     if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
       const coords = { lat, lng };
-      if (index < 5) {
+      if (shouldLog) {
         console.log('🗺️ COORDS: Pattern 4 match (general):', coords);
       }
       return coords;
     }
   }
 
-  if (index < 5) {
+  if (shouldLog) {
     console.log('🗺️ COORDS: ❌ No coordinate patterns matched for URL:', url);
   }
   return null;
