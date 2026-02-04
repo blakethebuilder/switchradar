@@ -583,19 +583,27 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     `);
 
     const transaction = db.transaction((businessesToSync) => {
+        console.log(`🔄 Starting transaction for ${businessesToSync.length} businesses`);
+        
         // Only clear existing data on first chunk or non-chunked uploads
         if (!isChunked || (isChunked && chunkIndex === 0) || clearFirst !== false) {
-            const deleteResult = deleteStmt.run(userId);
-            console.log(`🗑️ Cleared ${deleteResult.changes} existing businesses for user ${userId}`);
+            try {
+                const deleteResult = deleteStmt.run(userId);
+                console.log(`🗑️ Cleared ${deleteResult.changes} existing businesses for user ${userId}`);
+            } catch (error) {
+                console.error('❌ Failed to clear existing businesses:', error);
+                throw error;
+            }
         }
         
         let successCount = 0;
         let errorCount = 0;
         const errors = [];
         
-        for (const business of businessesToSync) {
+        for (let i = 0; i < businessesToSync.length; i++) {
+            const business = businessesToSync[i];
             try {
-                insertStmt.run({
+                const businessData = {
                     id: business.id,
                     userId,
                     name: business.name || null,
@@ -615,16 +623,50 @@ app.post('/api/businesses/sync', auth, (req, res) => {
                     importedAt: business.importedAt || new Date().toISOString(),
                     source: business.source || 'import',
                     dataset_id: datasetId // Use the created/found dataset
-                });
+                };
+                
+                // Log first few businesses for debugging
+                if (i < 3) {
+                    console.log(`📊 Business ${i} data sample:`, {
+                        id: businessData.id,
+                        name: businessData.name,
+                        userId: businessData.userId,
+                        dataset_id: businessData.dataset_id,
+                        coordinates: { lat: businessData.lat, lng: businessData.lng }
+                    });
+                }
+                
+                const result = insertStmt.run(businessData);
                 successCount++;
+                
+                if (i < 3) {
+                    console.log(`✅ Business ${i} inserted successfully, rowid:`, result.lastInsertRowid);
+                }
             } catch (error) {
                 errorCount++;
-                errors.push({
+                const errorDetail = {
                     businessId: business.id,
                     businessName: business.name,
-                    error: error.message
-                });
-                console.error(`❌ Failed to sync business ${business.id}:`, error);
+                    error: error.message,
+                    code: error.code,
+                    errno: error.errno
+                };
+                errors.push(errorDetail);
+                
+                // Log first few errors in detail
+                if (errorCount <= 3) {
+                    console.error(`❌ Failed to sync business ${business.id} (${business.name}):`, {
+                        error: error.message,
+                        code: error.code,
+                        errno: error.errno,
+                        businessData: {
+                            id: business.id,
+                            name: business.name,
+                            userId,
+                            dataset_id: datasetId
+                        }
+                    });
+                }
             }
         }
         
@@ -710,6 +752,16 @@ app.post('/api/users', auth, (req, res) => {
         console.log('🔐 Hashing password for user:', username);
         const hashedPassword = bcrypt.hashSync(password, 10);
         console.log('💾 Inserting user into database...');
+        
+        // Test database connection first
+        try {
+            const testQuery = db.prepare('SELECT COUNT(*) as count FROM users').get();
+            console.log('✅ Database connection test passed, current user count:', testQuery.count);
+        } catch (dbError) {
+            console.error('❌ Database connection test failed:', dbError);
+            throw new Error('Database connection failed: ' + dbError.message);
+        }
+        
         const result = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hashedPassword);
         
         console.log('✅ User created successfully:', { userId: result.lastInsertRowid, username });

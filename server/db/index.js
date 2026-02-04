@@ -1,8 +1,31 @@
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
 const dbPath = path.resolve(__dirname, '../../data/switchradar.db');
+console.log('🗄️ Database path:', dbPath);
+
+// Check if data directory exists and is writable
+const dataDir = path.dirname(dbPath);
+console.log('📁 Data directory:', dataDir);
+console.log('📁 Data directory exists:', fs.existsSync(dataDir));
+
+if (!fs.existsSync(dataDir)) {
+    console.log('📁 Creating data directory...');
+    fs.mkdirSync(dataDir, { recursive: true });
+}
+
+// Check permissions
+try {
+    fs.accessSync(dataDir, fs.constants.W_OK);
+    console.log('✅ Data directory is writable');
+} catch (error) {
+    console.error('❌ Data directory is not writable:', error.message);
+}
+
+console.log('🗄️ Initializing database...');
 const db = new Database(dbPath);
+console.log('✅ Database connection established');
 
 // Enable WAL mode for better concurrent access
 db.pragma('journal_mode = WAL');

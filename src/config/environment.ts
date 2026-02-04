@@ -24,12 +24,14 @@ class EnvironmentConfigManager {
     const apiUrl = import.meta.env.VITE_API_URL || 
                    (isProduction ? '' : 'http://localhost:5001');
     
-    console.log('Environment config:', {
+    console.log('🔧 Environment config debug:', {
       hostname: window.location.hostname,
+      href: window.location.href,
       isProduction,
       isDev: import.meta.env.DEV,
       apiUrl,
-      envApiUrl: import.meta.env.VITE_API_URL
+      envApiUrl: import.meta.env.VITE_API_URL,
+      allEnvVars: import.meta.env
     });
     
     return {
