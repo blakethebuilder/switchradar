@@ -605,15 +605,15 @@ app.post('/api/businesses/sync', auth, (req, res) => {
 
     const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
     const insertStmt = db.prepare(`
-        INSERT INTO leads (id, userId, name, address, phone, email, website, provider, category, town, province, lat, lng, status, notes, importedAt, source, metadata, dataset_id)
+        INSERT OR REPLACE INTO leads (id, userId, name, address, phone, email, website, provider, category, town, province, lat, lng, status, notes, importedAt, source, metadata, dataset_id)
         VALUES (@id, @userId, @name, @address, @phone, @email, @website, @provider, @category, @town, @province, @lat, @lng, @status, @notes, @importedAt, @source, @metadata, @dataset_id)
     `);
 
     const transaction = db.transaction((businessesToSync) => {
         console.log(`🔄 Starting transaction for ${businessesToSync.length} businesses`);
         
-        // Only clear existing data on first chunk or non-chunked uploads
-        if (!isChunked || (isChunked && chunkIndex === 0) || clearFirst !== false) {
+        // Only clear existing data if explicitly requested
+        if (clearFirst === true || (isChunked && chunkIndex === 0 && clearFirst !== false)) {
             try {
                 const deleteResult = deleteStmt.run(userId);
                 console.log(`🗑️ Cleared ${deleteResult.changes} existing businesses for user ${userId}`);
@@ -621,6 +621,8 @@ app.post('/api/businesses/sync', auth, (req, res) => {
                 console.error('❌ Failed to clear existing businesses:', error);
                 throw error;
             }
+        } else {
+            console.log(`📝 Appending ${businessesToSync.length} businesses to existing data (clearFirst: ${clearFirst})`);
         }
         
         let successCount = 0;
@@ -1211,6 +1213,110 @@ app.get('/api/share/towns', auth, (req, res) => {
     } catch (error) {
         console.error('Failed to fetch towns:', error);
         res.status(500).json({ message: 'Failed to fetch towns', error: error.message });
+    }
+});
+
+// Single business update endpoint - more efficient than full sync
+app.put('/api/businesses/:businessId', auth, (req, res) => {
+    const { businessId } = req.params;
+    const updates = req.body;
+    const userId = req.userData.userId;
+    
+    console.log('📝 PUT /api/businesses/:businessId - Update single business');
+    console.log('Business ID:', businessId);
+    console.log('User ID:', userId);
+    console.log('Updates:', Object.keys(updates));
+    
+    try {
+        // First, get the current business
+        const currentBusiness = db.prepare('SELECT * FROM leads WHERE id = ? AND userId = ?').get(businessId, userId);
+        
+        if (!currentBusiness) {
+            return res.status(404).json({ message: 'Business not found' });
+        }
+        
+        // Parse current metadata and notes
+        const currentMetadata = JSON.parse(currentBusiness.metadata || '{}');
+        const currentNotes = JSON.parse(currentBusiness.notes || '[]');
+        
+        // Merge updates
+        const updatedBusiness = {
+            name: updates.name !== undefined ? updates.name : currentBusiness.name,
+            address: updates.address !== undefined ? updates.address : currentBusiness.address,
+            phone: updates.phone !== undefined ? updates.phone : currentBusiness.phone,
+            email: updates.email !== undefined ? updates.email : currentBusiness.email,
+            website: updates.website !== undefined ? updates.website : currentBusiness.website,
+            provider: updates.provider !== undefined ? updates.provider : currentBusiness.provider,
+            category: updates.category !== undefined ? updates.category : currentBusiness.category,
+            town: updates.town !== undefined ? updates.town : currentBusiness.town,
+            province: updates.province !== undefined ? updates.province : currentBusiness.province,
+            lat: updates.coordinates?.lat !== undefined ? updates.coordinates.lat : currentBusiness.lat,
+            lng: updates.coordinates?.lng !== undefined ? updates.coordinates.lng : currentBusiness.lng,
+            status: updates.status !== undefined ? updates.status : currentBusiness.status,
+            notes: JSON.stringify(updates.notes !== undefined ? updates.notes : currentNotes),
+            metadata: JSON.stringify({
+                ...currentMetadata,
+                ...(updates.metadata || {}),
+                // Handle richNotes specially
+                ...(updates.richNotes !== undefined ? { richNotes: updates.richNotes } : {})
+            }),
+            source: updates.source !== undefined ? updates.source : currentBusiness.source
+        };
+        
+        // Update the business
+        const stmt = db.prepare(`
+            UPDATE leads 
+            SET name = ?, address = ?, phone = ?, email = ?, website = ?, provider = ?, 
+                category = ?, town = ?, province = ?, lat = ?, lng = ?, status = ?, 
+                notes = ?, metadata = ?, source = ?, last_modified = CURRENT_TIMESTAMP
+            WHERE id = ? AND userId = ?
+        `);
+        
+        const result = stmt.run(
+            updatedBusiness.name,
+            updatedBusiness.address,
+            updatedBusiness.phone,
+            updatedBusiness.email,
+            updatedBusiness.website,
+            updatedBusiness.provider,
+            updatedBusiness.category,
+            updatedBusiness.town,
+            updatedBusiness.province,
+            updatedBusiness.lat,
+            updatedBusiness.lng,
+            updatedBusiness.status,
+            updatedBusiness.notes,
+            updatedBusiness.metadata,
+            updatedBusiness.source,
+            businessId,
+            userId
+        );
+        
+        if (result.changes === 0) {
+            return res.status(404).json({ message: 'Business not found or no changes made' });
+        }
+        
+        console.log('✅ Business updated successfully, changes:', result.changes);
+        
+        // Return the updated business in the expected format
+        const updatedBusinessResponse = {
+            id: businessId,
+            ...updatedBusiness,
+            coordinates: { lat: updatedBusiness.lat, lng: updatedBusiness.lng },
+            notes: JSON.parse(updatedBusiness.notes),
+            metadata: JSON.parse(updatedBusiness.metadata),
+            importedAt: currentBusiness.importedAt,
+            dataset_id: currentBusiness.dataset_id
+        };
+        
+        res.json({ 
+            message: 'Business updated successfully',
+            business: updatedBusinessResponse
+        });
+        
+    } catch (error) {
+        console.error('❌ Single business update error:', error);
+        res.status(500).json({ message: 'Business update failed', error: error.message });
     }
 });
 

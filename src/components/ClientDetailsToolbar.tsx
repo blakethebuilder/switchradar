@@ -135,14 +135,57 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
     }
   };
 
-  const handleUpdateTextMetadata = async (key: keyof BusinessMetadata, value: string) => {
-    // For text inputs, update immediately without showing loading state
-    try {
-      await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
-    } catch (error) {
-      console.error('Error updating metadata:', error);
+  // Debounced text input handler to prevent excessive API calls
+  const [textInputValues, setTextInputValues] = useState<Record<string, string>>({
+    lengthWithCurrentProvider: business.metadata?.lengthWithCurrentProvider || '',
+    ispProvider: business.metadata?.ispProvider || '',
+    pabxProvider: business.metadata?.pabxProvider || ''
+  });
+
+  // Debounce timer ref
+  const debounceTimerRef = React.useRef<Record<string, number>>({});
+
+  const handleUpdateTextMetadata = (key: keyof BusinessMetadata, value: string) => {
+    // Update local state immediately for responsive UI
+    setTextInputValues(prev => ({ ...prev, [key]: value }));
+    
+    // Clear existing timer for this field
+    if (debounceTimerRef.current[key]) {
+      clearTimeout(debounceTimerRef.current[key]);
     }
+    
+    // Set new timer to update server after user stops typing
+    debounceTimerRef.current[key] = setTimeout(async () => {
+      try {
+        await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
+      } catch (error) {
+        console.error('Error updating metadata:', error);
+        // Revert local state on error
+        setTextInputValues(prev => ({ 
+          ...prev, 
+          [key]: String(business.metadata?.[key] || '') 
+        }));
+      }
+    }, 1000); // 1 second delay
   };
+
+  // Cleanup timers on unmount
+  React.useEffect(() => {
+    return () => {
+      Object.values(debounceTimerRef.current).forEach(timer => {
+        if (timer) clearTimeout(timer);
+      });
+    };
+  }, []);
+
+  // Update local state when business prop changes
+  React.useEffect(() => {
+    setTextInputValues({
+      lengthWithCurrentProvider: business.metadata?.lengthWithCurrentProvider || '',
+      ispProvider: business.metadata?.ispProvider || '',
+      pabxProvider: business.metadata?.pabxProvider || ''
+    });
+  }, [business.metadata?.lengthWithCurrentProvider, business.metadata?.ispProvider, business.metadata?.pabxProvider]);
 
   const handleAddRichNote = async () => {
     if (!newNoteContent.trim()) return;
@@ -157,14 +200,27 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
       };
       
       const currentRichNotes = business.richNotes || [];
-      await onUpdateBusiness(business.id, { 
+      const updatedBusiness = { 
+        ...business,
         richNotes: [...currentRichNotes, newNote] 
+      };
+      
+      // Update business with new note
+      await onUpdateBusiness(business.id, { 
+        richNotes: updatedBusiness.richNotes 
       });
       
       setNewNoteContent('');
       setShowTemplates(false);
-      setTimeout(() => setIsUpdating(null), 300);
+      
+      // Show success feedback
+      setTimeout(() => {
+        setIsUpdating(null);
+        // Force a small UI update to ensure the note appears
+        console.log('✅ Note added successfully:', newNote.content);
+      }, 500);
     } catch (error) {
+      console.error('❌ Failed to add note:', error);
       setIsUpdating(null);
     }
   };
@@ -529,7 +585,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <label className="text-xs font-bold text-slate-600">Length with Current Provider</label>
                       <input
                         type="text"
-                        value={business.metadata?.lengthWithCurrentProvider || ''}
+                        value={textInputValues.lengthWithCurrentProvider}
                         onChange={(e) => handleUpdateTextMetadata('lengthWithCurrentProvider', e.target.value)}
                         placeholder="e.g., 2 years, 6 months"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors bg-white"
@@ -541,7 +597,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <label className="text-xs font-bold text-slate-600">ISP Provider</label>
                       <input
                         type="text"
-                        value={business.metadata?.ispProvider || ''}
+                        value={textInputValues.ispProvider}
                         onChange={(e) => handleUpdateTextMetadata('ispProvider', e.target.value)}
                         placeholder="e.g., Telkom, Vodacom, MTN"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors bg-white"
@@ -553,7 +609,7 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <label className="text-xs font-bold text-slate-600">PABX Provider</label>
                       <input
                         type="text"
-                        value={business.metadata?.pabxProvider || ''}
+                        value={textInputValues.pabxProvider}
                         onChange={(e) => handleUpdateTextMetadata('pabxProvider', e.target.value)}
                         placeholder="e.g., Panasonic, Avaya, Cisco"
                         className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors bg-white"

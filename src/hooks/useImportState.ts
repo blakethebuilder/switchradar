@@ -5,6 +5,7 @@ export const useImportState = () => {
   const [isMappingOpen, setIsMappingOpen] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState('');
+  const [importProgress, setImportProgress] = useState('');
   const [lastImportName, setLastImportName] = useState('');
   const [importRows, setImportRows] = useState<Record<string, unknown>[]>([]);
   const [importColumns, setImportColumns] = useState<string[]>([]);
@@ -12,6 +13,7 @@ export const useImportState = () => {
 
   const openImportModal = useCallback(() => {
     setImportError('');
+    setImportProgress('');
     setIsImportOpen(true);
   }, []);
 
@@ -32,6 +34,7 @@ export const useImportState = () => {
   const startImporting = useCallback(() => {
     setIsImporting(true);
     setImportError('');
+    setImportProgress('');
   }, []);
 
   const stopImporting = useCallback(() => {
@@ -55,6 +58,7 @@ export const useImportState = () => {
     isMappingOpen,
     isImporting,
     importError,
+    importProgress,
     lastImportName,
     importRows,
     importColumns,
@@ -62,6 +66,7 @@ export const useImportState = () => {
     
     // Actions
     setImportError,
+    setImportProgress,
     setLastImportName,
     setPendingFileName,
     openImportModal,

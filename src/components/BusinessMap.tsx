@@ -120,7 +120,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           
           mapInstance.fitBounds(bounds, { 
             padding: padding,
-            maxZoom: 16, // Increased max zoom for better detail when fitting bounds
+            maxZoom: 15, // Max zoom 15 for fit bounds to ensure businesses scatter
             animate: true,
             duration: 1.2
           });
@@ -232,7 +232,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
         preferCanvas={true}
         worldCopyJump={true}
         minZoom={5}
-        maxZoom={18} // Increased max zoom for detailed business viewing
+        maxZoom={17} // Max zoom 17 for optimal performance and detail
         zoomSnap={0.5}
         zoomDelta={0.5}
         wheelPxPerZoomLevel={100} // Consistent zoom speed across all devices

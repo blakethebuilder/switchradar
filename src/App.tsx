@@ -73,6 +73,7 @@ function App() {
     clearSelectedBusiness,
     setMapTargetFromBusiness,
     selectBusinessAndShowOnMap,
+    selectBusinessForDetails,
   } = useAppState();
 
   // Import state hook
@@ -81,11 +82,13 @@ function App() {
     isMappingOpen,
     isImporting,
     importError,
+    importProgress,
     lastImportName,
     importRows,
     importColumns,
     pendingFileName,
     setImportError,
+    setImportProgress,
     setLastImportName,
     setPendingFileName,
     openImportModal,
@@ -161,14 +164,17 @@ function App() {
     );
   }
 
+  const [importClearFirst, setImportClearFirst] = useState(false);
+
   // Import handlers
-  const handleFileSelected = async (file: File) => {
-    console.log('Server import - File selected:', file.name, file.size, file.type);
+  const handleFileSelected = async (file: File, clearFirst = false) => {
+    console.log('Server import - File selected:', file.name, file.size, file.type, 'clearFirst:', clearFirst);
     setPendingFileName(file.name);
+    setImportClearFirst(clearFirst);
     startImporting();
     
     try {
-      const { rows, columns } = await ImportService.processFile(file, setImportError);
+      const { rows, columns } = await ImportService.processFile(file, setImportProgress);
       setImportData(rows, columns);
       stopImporting();
       openMappingModal();
@@ -194,7 +200,8 @@ function App() {
         mapping,
         token,
         pendingFileName,
-        setImportError
+        setImportProgress,
+        importClearFirst
       );
 
       // Update UI state
@@ -384,15 +391,15 @@ function App() {
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
                 <p className="text-slate-600">
-                  {importError && importError.includes('%') ? importError : 'Processing import...'}
+                  {importProgress || 'Processing import...'}
                 </p>
-                {importError && importError.includes('%') && (
+                {importProgress && importProgress.includes('%') && (
                   <div className="mt-4 w-64 mx-auto">
                     <div className="bg-slate-200 rounded-full h-2">
                       <div 
                         className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
                         style={{ 
-                          width: `${importError.match(/(\d+)%/)?.[1] || 0}%` 
+                          width: `${importProgress.match(/(\d+)%/)?.[1] || 0}%` 
                         }}
                       ></div>
                     </div>
@@ -434,7 +441,8 @@ function App() {
               onClearFilters={handleClearFilters}
               onDatasetChange={setSelectedDatasets}
               onToggleFiltersVisibility={() => setIsFiltersVisible(!isFiltersVisible)}
-              onBusinessSelect={selectBusinessAndShowOnMap}
+              onBusinessSelect={selectBusinessForDetails}
+              onMapBusinessSelect={selectBusinessForDetails}
               onDeleteBusiness={handleDeleteBusiness}
               onTogglePhoneType={togglePhoneType}
               onAddToRoute={addToRoute}

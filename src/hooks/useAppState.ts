@@ -44,6 +44,12 @@ export const useAppState = () => {
     }
   }, [setMapTargetFromBusiness]);
 
+  // Handler for table business selection - only shows client details, doesn't change view
+  const selectBusinessForDetails = useCallback((business: Business) => {
+    setSelectedBusiness(business);
+    // Don't change view mode or map target - just show the client details modal
+  }, []);
+
   return {
     // State
     viewMode,
@@ -62,5 +68,6 @@ export const useAppState = () => {
     clearSelectedBusiness,
     setMapTargetFromBusiness,
     selectBusinessAndShowOnMap,
+    selectBusinessForDetails,
   };
 };

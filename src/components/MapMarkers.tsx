@@ -101,13 +101,13 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
     });
   }, [validBusinesses, selectedBusinessId, selectedBusinessIds, onBusinessSelect]);
 
-  // Progressive clustering radius - consistent across all devices
+  // Progressive clustering radius - scatter at zoom 15 (14.5+ range)
   const getClusterRadius = React.useCallback((zoom: number) => {
     // Consistent clustering across all devices for better UX
     // No mobile/desktop differences - same experience everywhere
     
-    // Progressive clustering - businesses scatter at zoom 15+
-    // Zoom range: 5-18, clustering disabled at 15+
+    // Progressive clustering - businesses scatter at zoom 15 (14.5+ range)
+    // Zoom range: 5-17, clustering disabled at 15+
     if (zoom <= 5) return 150;  // Very clustered at country level
     if (zoom <= 7) return 120;  // Clustered at province level
     if (zoom <= 9) return 100;  // Moderate clustering at city level
@@ -189,11 +189,11 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
         cluster.originalEvent.stopPropagation();
       }
 
-      // Simple behavior: Always zoom in by 1 level with extended limits
-      const targetZoom = Math.min(currentZoom + 1, 18); // Max zoom 18 for detailed viewing
+      // Simple behavior: Always zoom in by 1 level with adjusted limits
+      const targetZoom = Math.min(currentZoom + 1, 17); // Max zoom 17 for optimal performance
       
       // Don't zoom if we're already at max zoom
-      if (currentZoom >= 18) {
+      if (currentZoom >= 17) {
         console.log('🗺️ CLUSTER CLICK: Already at max zoom, ignoring');
         return;
       }
@@ -216,9 +216,9 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
 
   return (
     <MarkerClusterGroup
-      // Core clustering settings - Scatter at zoom 15+
+      // Core clustering settings - Scatter at zoom 15 (effectively 14.5+)
       maxClusterRadius={getClusterRadius}
-      disableClusteringAtZoom={15} // Disable clustering at zoom 15+ to scatter businesses
+      disableClusteringAtZoom={15} // Scatter businesses at zoom 15 (14.5+ range)
       minimumClusterSize={2}
       
       // Performance settings

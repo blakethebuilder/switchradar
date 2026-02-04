@@ -132,7 +132,8 @@ export class ImportService {
     mapping: ImportMapping,
     token: string,
     sourceName: string,
-    onProgress?: (message: string) => void
+    onProgress?: (message: string) => void,
+    clearFirst = false
   ): Promise<void> {
     if (!rows || rows.length === 0) {
       throw new Error('No data to import');
@@ -161,23 +162,27 @@ export class ImportService {
       throw new Error('No valid businesses found. Please check that the name field is mapped correctly.');
     }
     
-    onProgress?.('Uploading to server...');
+    onProgress?.(`Uploading ${validBusinesses.length} businesses to server...`);
     
-    // Send data to server
+    // Send data to server (append to existing data by default)
     const result = await serverDataService.saveBusinesses(validBusinesses, token, {
       source: sourceName,
-      town: validBusinesses[0]?.town || 'Mixed'
+      town: validBusinesses[0]?.town || 'Mixed',
+      clearFirst // Use the clearFirst parameter
     });
     
     if (!result.success) {
       throw new Error(result.error || 'Failed to save data to server');
     }
+    
+    onProgress?.(`✅ Successfully imported ${validBusinesses.length} businesses!`);
   }
 
   static async importSampleData(token: string): Promise<void> {
     const result = await serverDataService.saveBusinesses(sampleData, token, {
       source: 'Global Sample Dataset',
-      town: 'Mixed'
+      town: 'Mixed',
+      clearFirst: false // Don't clear existing data - append sample data
     });
     
     if (!result.success) {

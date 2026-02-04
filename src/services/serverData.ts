@@ -106,7 +106,7 @@ class ServerDataService {
     }
   }
 
-  async saveBusinesses(businesses: Business[], token: string, metadata?: { source?: string; town?: string }): Promise<ServerDataResult> {
+  async saveBusinesses(businesses: Business[], token: string, metadata?: { source?: string; town?: string; clearFirst?: boolean }): Promise<ServerDataResult> {
     console.log('🚀 API: saveBusinesses called');
     console.log('📊 API: Business count:', businesses.length);
     console.log('🔐 API: Token present:', !!token, 'length:', token?.length);
@@ -130,10 +130,12 @@ class ServerDataService {
 
       const requestBody = { 
         businesses,
+        clearFirst: metadata?.clearFirst || false, // Default to NOT clearing existing data
         ...metadata // Include source and town metadata
       };
       const bodySize = JSON.stringify(requestBody).length;
       console.log('📦 API: Request body size:', bodySize, 'characters', (bodySize / 1024 / 1024).toFixed(2), 'MB');
+      console.log('🔄 API: Clear existing data:', requestBody.clearFirst);
 
       console.log('🌐 API: Making fetch request...');
       
@@ -178,7 +180,7 @@ class ServerDataService {
     }
   }
 
-  private async saveBusinessesChunked(businesses: Business[], token: string, chunkSize: number = 500, metadata?: { source?: string; town?: string }): Promise<ServerDataResult> {
+  private async saveBusinessesChunked(businesses: Business[], token: string, chunkSize: number = 500, metadata?: { source?: string; town?: string; clearFirst?: boolean }): Promise<ServerDataResult> {
     console.log(`🔄 Starting chunked upload: ${businesses.length} businesses in chunks of ${chunkSize}`);
     
     const chunks = [];
@@ -189,11 +191,15 @@ class ServerDataService {
     console.log(`📦 Created ${chunks.length} chunks`);
     
     try {
-      // Clear existing data first
-      console.log('🗑️ Clearing existing server data...');
-      const clearResult = await this.clearWorkspace(token);
-      if (!clearResult.success) {
-        console.warn('⚠️ Failed to clear workspace, continuing anyway:', clearResult.error);
+      // Only clear existing data if explicitly requested
+      if (metadata?.clearFirst === true) {
+        console.log('🗑️ Clearing existing server data...');
+        const clearResult = await this.clearWorkspace(token);
+        if (!clearResult.success) {
+          console.warn('⚠️ Failed to clear workspace, continuing anyway:', clearResult.error);
+        }
+      } else {
+        console.log('📝 Appending to existing data (not clearing)');
       }
       
       let totalSuccess = 0;
@@ -214,7 +220,7 @@ class ServerDataService {
               isChunked: true,
               chunkIndex: i,
               totalChunks: chunks.length,
-              clearFirst: false, // We already cleared above
+              clearFirst: false, // Never clear on chunks since we handled it above
               ...metadata // Include source and town metadata
             })
           });
@@ -286,6 +292,45 @@ class ServerDataService {
   }
 
   async updateBusiness(businessId: string, updates: Partial<Business>, token: string): Promise<ServerDataResult> {
+    try {
+      console.log('🔄 Updating single business:', businessId, 'with updates:', Object.keys(updates));
+      
+      const response = await this.makeRequest(this.getApiUrl(`/api/businesses/${businessId}`), {
+        method: 'PUT',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify(updates)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ Business updated successfully');
+      
+      return {
+        success: true,
+        data: result.business
+      };
+    } catch (error) {
+      console.error('❌ Failed to update business:', error);
+      
+      // Fallback to the old method if the new endpoint doesn't exist
+      if (error instanceof Error && error.message.includes('404')) {
+        console.log('🔄 Falling back to full sync method...');
+        return this.updateBusinessFallback(businessId, updates, token);
+      }
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update business'
+      };
+    }
+  }
+
+  // Fallback method using the old approach
+  private async updateBusinessFallback(businessId: string, updates: Partial<Business>, token: string): Promise<ServerDataResult> {
     const currentResult = await this.getBusinesses(token);
     if (!currentResult.success) {
       return currentResult;

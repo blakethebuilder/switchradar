@@ -6,7 +6,7 @@ interface ImportModalProps {
   isOpen: boolean;
   isImporting: boolean;
   onClose: () => void;
-  onFileSelected: (file: File) => void;
+  onFileSelected: (file: File, clearFirst?: boolean) => void;
   onLoadSample: () => void;
   errorMessage?: string;
 }
@@ -22,6 +22,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   errorMessage
 }) => {
   const [dragActive, setDragActive] = useState(false);
+  const [clearExistingData, setClearExistingData] = useState(false);
 
   const helperText = useMemo(() => {
     return 'Supports CSV, Excel, and JSON files. Secure client-side processing.';
@@ -50,7 +51,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         return;
       }
       
-      onFileSelected(file);
+      onFileSelected(file, clearExistingData);
     }
   };
 
@@ -73,7 +74,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         return;
       }
       
-      onFileSelected(file);
+      onFileSelected(file, clearExistingData);
     }
   };
 
@@ -163,6 +164,23 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
           <p className="mt-6 text-center text-xs font-bold text-slate-400">
             {helperText}
+          </p>
+
+          {/* Clear existing data option */}
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <input
+              type="checkbox"
+              id="clear-existing-data"
+              checked={clearExistingData}
+              onChange={(e) => setClearExistingData(e.target.checked)}
+              className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <label htmlFor="clear-existing-data" className="text-xs font-medium text-slate-600">
+              Clear existing data before import
+            </label>
+          </div>
+          <p className="text-center text-xs text-slate-400 mt-1">
+            {clearExistingData ? 'Will replace all existing businesses' : 'Will add to existing businesses'}
           </p>
 
           {errorMessage && (
