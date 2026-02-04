@@ -29,133 +29,136 @@ export const TopNav = ({
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-slate-200/60 bg-white/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 md:h-20 max-w-[1600px] items-center justify-between px-4 md:px-6 lg:px-10">
+    <header className="sticky-navbar border-b border-slate-200/60 bg-white/95 backdrop-blur-md">
+      <div className="mx-auto flex h-16 md:h-20 max-w-[1600px] items-center justify-between px-3 md:px-6 lg:px-10 gap-2 md:gap-4">
 
         {/* Left: Logo & Title */}
-        <div className="flex items-center gap-3 md:gap-4 shrink-0">
-          <div className="flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-200 transition-transform hover:scale-105 active:scale-95 cursor-pointer">
-            <LayoutPanelLeft className="h-5 w-5 md:h-6 md:w-6" />
+        <div className="flex items-center gap-2 md:gap-4 shrink-0 min-w-0">
+          <div className="flex h-8 w-8 md:h-12 md:w-12 items-center justify-center rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-200 transition-transform hover:scale-105 active:scale-95 cursor-pointer">
+            <LayoutPanelLeft className="h-4 w-4 md:h-6 md:w-6" />
           </div>
-          <div className="hidden sm:block">
-            <h1 className="text-lg md:text-xl font-extrabold tracking-tight text-slate-900 lg:text-2xl">
+          <div className="hidden sm:block min-w-0">
+            <h1 className="text-sm md:text-xl font-extrabold tracking-tight text-slate-900 lg:text-2xl truncate">
               Switch<span className="text-indigo-600">Radar</span>
             </h1>
             {lastImportName ? (
-              <p className="flex items-center gap-1.5 text-[10px] md:text-xs font-semibold text-slate-500">
-                <Database className="h-3 w-3" />
-                {lastImportName} • {totalCount.toLocaleString()} businesses
+              <p className="flex items-center gap-1.5 text-[9px] md:text-xs font-semibold text-slate-500 truncate">
+                <Database className="h-2.5 w-2.5 md:h-3 md:w-3 shrink-0" />
+                <span className="truncate">{lastImportName}</span> • {totalCount.toLocaleString()}
               </p>
             ) : (
-              <p className="text-[10px] md:text-xs font-semibold text-slate-400">Powered by Smart Integrate</p>
+              <p className="text-[9px] md:text-xs font-semibold text-slate-400 truncate">Powered by Smart Integrate</p>
             )}
           </div>
         </div>
 
-        {/* Center: View Switcher (Visible on all screens, compact on mobile) */}
-        <nav className="flex items-center gap-1 rounded-2xl bg-slate-100 p-1 shadow-inner mx-2 md:mx-6 shrink-0">
+        {/* Center: View Switcher - More compact for tablets */}
+        <nav className="flex items-center gap-0.5 md:gap-1 rounded-2xl bg-slate-100 p-0.5 md:p-1 shadow-inner shrink-0">
           <button
             onClick={() => onViewModeChange('table')}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all ${viewMode === 'table'
+            className={`flex items-center gap-1 md:gap-2 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold transition-all ${viewMode === 'table'
               ? 'bg-white text-indigo-600 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'
               }`}
             title="Table View"
           >
-            <Table className="h-4 w-4" />
-            <span className="hidden md:inline">Table</span>
+            <Table className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="hidden lg:inline">Table</span>
           </button>
           <button
             onClick={() => onViewModeChange('map')}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all ${viewMode === 'map'
+            className={`flex items-center gap-1 md:gap-2 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold transition-all ${viewMode === 'map'
               ? 'bg-white text-indigo-600 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'
               }`}
             title="Map View"
           >
-            <Map className="h-4 w-4" />
-            <span className="hidden md:inline">Map</span>
+            <Map className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="hidden lg:inline">Map</span>
           </button>
-<button
+          <button
             onClick={() => onViewModeChange('stats')}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all ${viewMode === 'stats'
+            className={`flex items-center gap-1 md:gap-2 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold transition-all ${viewMode === 'stats'
               ? 'bg-white text-indigo-600 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'
               }`}
             title="Intelligence View"
           >
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden md:inline">Intel</span>
+            <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="hidden lg:inline">Intel</span>
           </button>
           <button
             onClick={() => onViewModeChange('route')}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all ${viewMode === 'route'
+            className={`flex items-center gap-1 md:gap-2 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold transition-all ${viewMode === 'route'
               ? 'bg-white text-indigo-600 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'
               }`}
             title="Route Planner"
           >
-            <Route className="h-4 w-4" />
-            <span className="hidden md:inline">Route</span>
+            <Route className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="hidden lg:inline">Route</span>
           </button>
           <button
             onClick={() => onViewModeChange('seen')}
-            className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-bold transition-all ${viewMode === 'seen'
+            className={`flex items-center gap-1 md:gap-2 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold transition-all ${viewMode === 'seen'
               ? 'bg-white text-indigo-600 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'
               }`}
             title="Seen Clients"
           >
-            <Eye className="h-4 w-4" />
-            <span className="hidden md:inline">Seen</span>
+            <Eye className="h-3.5 w-3.5 md:h-4 md:w-4" />
+            <span className="hidden lg:inline">Seen</span>
           </button>
         </nav>
 
-        {/* Right: Desktop Actions */}
-        <div className="hidden md:flex items-center gap-3 md:gap-6">
-          <div className="h-8 w-px bg-slate-200" />
+        {/* Right: Actions - Responsive layout */}
+        <div className="hidden sm:flex items-center gap-2 md:gap-3 lg:gap-6 shrink-0">
+          <div className="hidden lg:block h-8 w-px bg-slate-200" />
           
-          {/* Main Actions */}
-          <button onClick={onImportClick} className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-1.5 shadow-md shadow-indigo-100">
-            <Upload className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Import</span>
+          {/* Main Actions - Compact on tablet */}
+          <button 
+            onClick={onImportClick} 
+            className="px-2 md:px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs md:text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-1 md:gap-1.5 shadow-md shadow-indigo-100"
+          >
+            <Upload className="h-3 w-3 md:h-3.5 md:w-3.5" />
+            <span className="hidden md:inline">Import</span>
           </button>
 
           <div className="flex items-center">
             <button
               disabled={totalCount === 0}
               onClick={onExportClick}
-              className="btn-secondary rounded-r-none border-r-0"
+              className="p-1.5 md:p-2 rounded-l-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="Export to CSV"
             >
-              <Download className="h-4 w-4" />
+              <Download className="h-3.5 w-3.5 md:h-4 md:w-4" />
             </button>
             <button
               disabled={totalCount === 0}
               onClick={onClearData}
-              className="btn-secondary rounded-l-none border-l border-slate-200 text-slate-400 hover:text-rose-600"
+              className="p-1.5 md:p-2 rounded-r-lg border-l-0 border border-slate-200 bg-white text-slate-400 hover:text-rose-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               title="Clear all local data"
             >
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
             </button>
           </div>
 
-          {/* User/Login Menu */}
+          {/* User/Login Menu - Compact */}
           <div className="relative">
             {isAuthenticated ? (
               <>
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center gap-3 pl-2 group"
+                  className="flex items-center gap-1 md:gap-2 group"
                 >
-                  <div className="flex flex-col items-end">
+                  <div className="hidden lg:flex flex-col items-end">
                     <span className="text-xs font-black text-slate-900 leading-none">{user?.username}</span>
-                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Local Mode</span>
+                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Local Mode</span>
                   </div>
-                  <UserIcon className="h-8 w-8 p-1.5 rounded-full bg-slate-100 text-slate-500" />
+                  <UserIcon className="h-7 w-7 md:h-8 md:w-8 p-1.5 rounded-full bg-slate-100 text-slate-500" />
                 </button>
                 {isUserMenuOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-10 animate-in fade-in zoom-in-95">
+                  <div className="absolute top-full right-0 mt-2 w-48 md:w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-10 animate-in fade-in zoom-in-95">
                     {/* Present */}
                     <button
                       onClick={() => { onViewModeChange('present'); setIsUserMenuOpen(false); }}
@@ -190,10 +193,10 @@ export const TopNav = ({
             ) : (
               <button
                 onClick={onLoginClick}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-50 text-slate-600 text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-slate-100"
+                className="flex items-center gap-1 md:gap-2 px-3 md:px-5 py-2 md:py-2.5 rounded-xl bg-slate-50 text-slate-600 text-[10px] md:text-[11px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm border border-slate-100"
               >
-                <UserIcon className="h-3.5 w-3.5" />
-                Sign In
+                <UserIcon className="h-3 w-3 md:h-3.5 md:w-3.5" />
+                <span className="hidden md:inline">Sign In</span>
               </button>
             )}
           </div>
@@ -202,15 +205,15 @@ export const TopNav = ({
         {/* Right: Mobile Menu Button */}
         <button
           onClick={() => setIsMenuOpen(!isMenuOpen)}
-          className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg"
+          className="sm:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg shrink-0"
         >
-          {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
       </div>
 
       {/* Mobile Menu Dropdown */}
       {isMenuOpen && (
-        <div className="md:hidden border-t border-slate-100 bg-white absolute top-full left-0 right-0 shadow-xl p-4 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
+        <div className="sm:hidden border-t border-slate-100 bg-white/95 backdrop-blur-md absolute top-full left-0 right-0 shadow-xl p-4 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200 z-40">
           {isAuthenticated ? (
             <div className="bg-slate-50 p-4 rounded-2xl flex flex-col gap-3">
               <div className="flex items-center justify-between">
@@ -263,7 +266,7 @@ export const TopNav = ({
               <button
                 disabled={totalCount === 0}
                 onClick={() => { onExportClick(); setIsMenuOpen(false); }}
-                className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold"
+                className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold disabled:opacity-50"
               >
                 <Download className="h-4 w-4" />
                 Export CSV
@@ -271,7 +274,7 @@ export const TopNav = ({
               <button
                 disabled={totalCount === 0}
                 onClick={() => { onClearData(); setIsMenuOpen(false); }}
-                className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 font-bold"
+                className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 font-bold disabled:opacity-50"
               >
                 <Trash2 className="h-4 w-4" />
                 Clear Local

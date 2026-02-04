@@ -33,3 +33,46 @@
   justify-content: center;
   border: 2px solid white;
 }
+
+/* Enhanced sticky navbar support for mobile/tablet zoom */
+.sticky-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  /* Ensure it stays sticky during zoom */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  /* Better backdrop blur support */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Prevent layout shifts during zoom */
+@media screen and (max-width: 1024px) {
+  .sticky-navbar {
+    /* Force hardware acceleration for better performance */
+    will-change: transform;
+    /* Ensure proper stacking context */
+    isolation: isolate;
+  }
+}
+
+/* Better mobile viewport handling */
+@media screen and (max-width: 640px) {
+  .sticky-navbar {
+    /* Prevent zoom issues on mobile */
+    position: -webkit-sticky;
+    position: sticky;
+    /* Ensure it doesn't get cut off */
+    min-height: 64px;
+  }
+}
+
+/* Tablet specific optimizations */
+@media screen and (min-width: 641px) and (max-width: 1024px) {
+  .sticky-navbar {
+    /* Better tablet support */
+    min-height: 80px;
+  }
+}
