@@ -66,6 +66,9 @@ function App() {
     setDroppedPin,
     radiusKm,
     setRadiusKm,
+    availableDatasets,
+    selectedDatasets,
+    setSelectedDatasets,
     loading,
     dbError,
     handleDatabaseReset,
@@ -326,7 +329,9 @@ function App() {
       }
       
       console.log('🚀 IMPORT STEP 6: Processing imported data');
-      const processed = processImportedData(importRows, mapping);
+      const processed = await processImportedData(importRows, mapping, (processed, total) => {
+        console.log(`📊 Processing progress: ${processed}/${total} (${Math.round(processed/total*100)}%)`);
+      });
       console.log('✅ IMPORT STEP 6: Processed businesses count:', processed.length);
       console.log('📊 IMPORT STEP 6: Processed businesses sample:', processed.slice(0, 2));
       
@@ -720,6 +725,9 @@ function App() {
                     onSelectAllProviders={handleSelectAllProviders}
                     onClearProviders={handleClearProviders}
                     onClearFilters={handleClearFilters}
+                    availableDatasets={availableDatasets}
+                    selectedDatasets={selectedDatasets}
+                    onDatasetChange={setSelectedDatasets}
                     isVisible={isFiltersVisible}
                     onToggleVisibility={() => setIsFiltersVisible(!isFiltersVisible)}
                     variant="table"
@@ -804,6 +812,9 @@ function App() {
                       onSelectAllProviders={handleSelectAllProviders}
                       onClearProviders={handleClearProviders}
                       onClearFilters={handleClearFilters}
+                      availableDatasets={availableDatasets}
+                      selectedDatasets={selectedDatasets}
+                      onDatasetChange={setSelectedDatasets}
                       isVisible={isFiltersVisible}
                       onToggleVisibility={() => setIsFiltersVisible(!isFiltersVisible)}
                       droppedPin={droppedPin}

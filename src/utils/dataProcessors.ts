@@ -127,41 +127,68 @@ const buildCoordinates = (row: Record<string, unknown>, mapping: ImportMapping) 
   return DEFAULT_COORDINATES;
 };
 
-export const processImportedData = (
+export const processImportedData = async (
   rows: Record<string, unknown>[],
-  mapping?: ImportMapping
-): Business[] => {
+  mapping?: ImportMapping,
+  onProgress?: (processed: number, total: number) => void
+): Promise<Business[]> => {
   const now = Date.now();
-  return rows.map((row, index) => {
-    const resolvedMapping = mapping ?? {};
-    const name = getValue(row, resolvedMapping.name) ?? `Business ${index + 1}`;
-    const town = getValue(row, resolvedMapping.town) ?? 'Unknown';
-    const provider = getValue(row, resolvedMapping.provider) ?? 'Unknown';
+  const results: Business[] = [];
+  const chunkSize = 100; // Process in chunks to avoid blocking UI
+  
+  console.log('🚀 Processing', rows.length, 'rows in chunks of', chunkSize);
+  
+  for (let i = 0; i < rows.length; i += chunkSize) {
+    const chunk = rows.slice(i, i + chunkSize);
+    
+    // Process chunk
+    const chunkResults = chunk.map((row, chunkIndex) => {
+      const index = i + chunkIndex;
+      const resolvedMapping = mapping ?? {};
+      const name = getValue(row, resolvedMapping.name) ?? `Business ${index + 1}`;
+      const town = getValue(row, resolvedMapping.town) ?? 'Unknown';
+      const provider = getValue(row, resolvedMapping.provider) ?? 'Unknown';
 
-    return {
-      id: `import-${now}-${index}`,
-      name: String(name),
-      address: String(getValue(row, resolvedMapping.address) ?? ''),
-      phone: String(getValue(row, resolvedMapping.phone) ?? ''),
-      email: getValue(row, resolvedMapping.email)
-        ? String(getValue(row, resolvedMapping.email))
-        : undefined,
-      website: getValue(row, resolvedMapping.website)
-        ? String(getValue(row, resolvedMapping.website))
-        : undefined,
-      provider: normalizeProvider(String(provider)),
-      category: String(getValue(row, resolvedMapping.category) ?? 'General'),
-      town: String(town),
-      province: String(getValue(row, resolvedMapping.province) ?? ''),
-      coordinates: buildCoordinates(row, resolvedMapping),
-      status: normalizeStatus(getValue(row, resolvedMapping.status)),
-      notes: [],
-      importedAt: new Date(),
-      source: 'scraped',
-      metadata: row,
-      mapsLink: resolvedMapping.mapsLink ? String(getValue(row, resolvedMapping.mapsLink) ?? '') : undefined
-    };
-  });
+      return {
+        id: `import-${now}-${index}`,
+        name: String(name),
+        address: String(getValue(row, resolvedMapping.address) ?? ''),
+        phone: String(getValue(row, resolvedMapping.phone) ?? ''),
+        email: getValue(row, resolvedMapping.email)
+          ? String(getValue(row, resolvedMapping.email))
+          : undefined,
+        website: getValue(row, resolvedMapping.website)
+          ? String(getValue(row, resolvedMapping.website))
+          : undefined,
+        provider: normalizeProvider(String(provider)),
+        category: String(getValue(row, resolvedMapping.category) ?? 'General'),
+        town: String(town),
+        province: String(getValue(row, resolvedMapping.province) ?? ''),
+        coordinates: buildCoordinates(row, resolvedMapping),
+        status: normalizeStatus(getValue(row, resolvedMapping.status)),
+        notes: [],
+        importedAt: new Date(),
+        source: 'scraped',
+        metadata: row,
+        mapsLink: resolvedMapping.mapsLink ? String(getValue(row, resolvedMapping.mapsLink) ?? '') : undefined
+      };
+    });
+    
+    results.push(...chunkResults);
+    
+    // Report progress
+    if (onProgress) {
+      onProgress(results.length, rows.length);
+    }
+    
+    // Yield control to prevent UI blocking
+    if (i + chunkSize < rows.length) {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  }
+  
+  console.log('✅ Processed', results.length, 'businesses');
+  return results;
 };
 
 

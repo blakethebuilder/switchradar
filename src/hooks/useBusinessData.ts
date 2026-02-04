@@ -4,6 +4,7 @@ import { serverDataService } from '../services/serverData';
 import { filterBusinesses, clearFilterCaches } from '../utils/dataProcessors';
 import { useDebounce } from './useDebounce';
 import { PerformanceMonitor } from '../utils/performance';
+import { environmentConfig } from '../config/environment';
 import type { Business, RouteItem } from '../types';
 
 export const useBusinessData = () => {
@@ -83,12 +84,15 @@ export const useBusinessData = () => {
         if (isAuthenticated && token) {
             fetchBusinesses();
             fetchRoutes();
+            fetchDatasets();
         } else {
             setBusinesses([]);
             setRouteItems([]);
+            setAvailableDatasets([]);
+            setSelectedDatasets([]);
             setError(null);
         }
-    }, [token, isAuthenticated]);
+    }, [token, isAuthenticated, fetchBusinesses, fetchRoutes, fetchDatasets]);
 
     const [searchInput, setSearchInput] = useState('');
     const searchTerm = useDebounce(searchInput, 300);
@@ -98,9 +102,46 @@ export const useBusinessData = () => {
     const [hasUserInteracted, setHasUserInteracted] = useState(false);
     const [phoneType, setPhoneType] = useState<'all' | 'landline' | 'mobile'>('all');
     
+    // Dataset state
+    const [availableDatasets, setAvailableDatasets] = useState<Array<{id: number, name: string, town?: string}>>([]);
+    const [selectedDatasets, setSelectedDatasets] = useState<number[]>([]);
+    
     // Dropped Pin State for Filtering
     const [droppedPin, setDroppedPin] = useState<{ lat: number, lng: number } | null>(null);
     const [radiusKm, setRadiusKm] = useState<number>(0.5);
+
+    // Fetch available datasets
+    const fetchDatasets = useCallback(async () => {
+        if (!token || !isAuthenticated) {
+            setAvailableDatasets([]);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${environmentConfig.getApiUrl()}/api/datasets`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const datasets = await response.json();
+                setAvailableDatasets(datasets.map((d: any) => ({
+                    id: d.id,
+                    name: d.name,
+                    town: d.town
+                })));
+                
+                // Auto-select all datasets if none selected
+                if (selectedDatasets.length === 0) {
+                    setSelectedDatasets(datasets.map((d: any) => d.id));
+                }
+            }
+        } catch (err) {
+            console.error('Failed to fetch datasets:', err);
+        }
+    }, [token, isAuthenticated, selectedDatasets.length]);
 
     // Clear caches when businesses change
     useEffect(() => {
@@ -182,6 +223,10 @@ export const useBusinessData = () => {
         setDroppedPin,
         radiusKm,
         setRadiusKm,
+        // Dataset management
+        availableDatasets,
+        selectedDatasets,
+        setSelectedDatasets,
         // Data insights
         totalBusinesses: businesses.length,
         filteredCount: filteredBusinesses.length,

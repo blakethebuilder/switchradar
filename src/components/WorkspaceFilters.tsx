@@ -21,6 +21,11 @@ interface WorkspaceFiltersProps {
   onClearProviders: () => void;
   onClearFilters: () => void;
   
+  // Dataset state
+  availableDatasets?: Array<{id: number, name: string, town?: string}>;
+  selectedDatasets?: number[];
+  onDatasetChange?: (datasetIds: number[]) => void;
+  
   // UI state
   isVisible: boolean;
   onToggleVisibility: () => void;
@@ -48,6 +53,9 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
   onSelectAllProviders,
   onClearProviders,
   onClearFilters,
+  availableDatasets = [],
+  selectedDatasets = [],
+  onDatasetChange,
   isVisible,
   onToggleVisibility,
   droppedPin,
@@ -180,6 +188,54 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
             isMapView ? 'bg-white/90' : 'bg-white'
           }`}>
             <div className="p-6">
+              {/* Dataset Selector */}
+              {availableDatasets.length > 0 && onDatasetChange && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-bold text-slate-700">Datasets</h4>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => onDatasetChange(availableDatasets.map(d => d.id))}
+                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
+                      >
+                        All
+                      </button>
+                      <button
+                        onClick={() => onDatasetChange([])}
+                        className="text-xs font-bold text-slate-400 hover:text-slate-600"
+                      >
+                        None
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {availableDatasets.map((dataset) => (
+                      <button
+                        key={dataset.id}
+                        onClick={() => {
+                          const isSelected = selectedDatasets.includes(dataset.id);
+                          if (isSelected) {
+                            onDatasetChange(selectedDatasets.filter(id => id !== dataset.id));
+                          } else {
+                            onDatasetChange([...selectedDatasets, dataset.id]);
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          selectedDatasets.includes(dataset.id)
+                            ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                            : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                        }`}
+                      >
+                        {dataset.name}
+                        {dataset.town && (
+                          <span className="ml-1 opacity-60">({dataset.town})</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Provider Bar - Scrollable only on map view */}
               <div className={`mb-6 ${isMapView ? 'max-h-[300px] overflow-y-auto custom-scrollbar' : ''}`}>
                 <ProviderBar
