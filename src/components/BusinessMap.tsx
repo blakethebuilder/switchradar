@@ -695,6 +695,8 @@ export const BusinessMap = React.memo(({
       return [];
     }
     
+    console.log('🗺️ MARKERS: Starting marker creation for', businesses.length, 'businesses');
+    
     const validMarkers: React.ReactElement[] = [];
     const selectedSet = new Set([selectedBusinessId, ...selectedBusinessIds].filter(Boolean));
     
@@ -722,6 +724,21 @@ export const BusinessMap = React.memo(({
               isNaN(business.coordinates.lng)) {
             console.log('🗺️ MARKERS: Skipping business - invalid coordinates', { 
               id: business.id,
+              name: business.name,
+              lat: business.coordinates.lat,
+              lng: business.coordinates.lng,
+              latType: typeof business.coordinates.lat,
+              lngType: typeof business.coordinates.lng
+            });
+            continue;
+          }
+
+          // Validate coordinate ranges
+          if (business.coordinates.lat < -90 || business.coordinates.lat > 90 ||
+              business.coordinates.lng < -180 || business.coordinates.lng > 180) {
+            console.log('🗺️ MARKERS: Skipping business - coordinates out of range', { 
+              id: business.id,
+              name: business.name,
               lat: business.coordinates.lat,
               lng: business.coordinates.lng
             });
@@ -801,7 +818,23 @@ export const BusinessMap = React.memo(({
       processChunk(i);
     }
 
-    console.log(`🗺️ MARKERS: Created ${validMarkers.length} markers out of ${businesses.length} businesses`);
+    console.log(`🗺️ MARKERS: ✅ COMPLETED - Created ${validMarkers.length} markers out of ${businesses.length} businesses`);
+    
+    if (validMarkers.length === 0 && businesses.length > 0) {
+      console.error('🗺️ MARKERS: ❌ NO MARKERS CREATED despite having businesses! Check coordinate data.');
+      // Log first few businesses for debugging
+      businesses.slice(0, 5).forEach((b, i) => {
+        console.log(`🗺️ MARKERS: Business ${i}:`, {
+          id: b.id,
+          name: b.name,
+          coordinates: b.coordinates,
+          hasCoords: !!b.coordinates,
+          coordsType: typeof b.coordinates,
+          provider: b.provider
+        });
+      });
+    }
+    
     PerformanceMonitor.endTimer('create-markers');
     return validMarkers;
   }, [

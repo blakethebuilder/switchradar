@@ -45,143 +45,136 @@ const FilterPanelComponent = ({
   };
 
   return (
-    <div className="group relative mb-6">
-      <div className="flex flex-col gap-4 lg:gap-6">
-        {/* Search Bar - Full Width with Clear Button */}
-        <div className="relative">
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-indigo-500">
-            <Search className="h-5 w-5" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search by business name, category or provider..."
-            className="h-16 w-full rounded-2xl border-2 border-slate-100 bg-white pl-14 pr-14 text-base font-medium text-slate-700 shadow-sm transition-all focus:border-indigo-500/30 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 outline-none placeholder:text-slate-400"
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-          {searchTerm && (
-            <button
-              onClick={clearSearch}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
-              title="Clear search"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
-
-        {/* Filters Row */}
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          {/* Phone Type Segment Control */}
-          <div className="flex rounded-2xl border-2 border-slate-100 bg-white p-1.5 shadow-sm">
-            <button
-              onClick={() => handlePhoneTypeChange('all')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${phoneType === 'all'
-                ? 'bg-slate-900 text-white shadow-lg scale-105'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:scale-105'
-                }`}
-            >
-              <LayoutGrid className="h-4 w-4" />
-              <span className="hidden sm:inline">All Types</span>
-              <span className="sm:hidden">All</span>
-            </button>
-            <button
-              onClick={() => handlePhoneTypeChange('landline')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${phoneType === 'landline'
-                ? 'bg-emerald-500 text-white shadow-lg scale-105'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:scale-105'
-                }`}
-            >
-              <Landmark className="h-4 w-4" />
-              <span className="hidden sm:inline">Landline</span>
-              <span className="sm:hidden">Fixed</span>
-            </button>
-            <button
-              onClick={() => handlePhoneTypeChange('mobile')}
-              className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-6 py-3 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${phoneType === 'mobile'
-                ? 'bg-rose-500 text-white shadow-lg scale-105'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 hover:scale-105'
-                }`}
-            >
-              <Smartphone className="h-4 w-4" />
-              <span className="hidden sm:inline">Mobile</span>
-              <span className="sm:hidden">Mobile</span>
-            </button>
-          </div>
-
-          {/* Category Filter with Clear Button */}
-          <div className="relative min-w-[240px]">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-indigo-500">
-              <Layers className="h-5 w-5" />
-            </div>
-            <select
-              className="h-14 w-full appearance-none rounded-2xl border-2 border-slate-100 bg-white pl-14 pr-14 text-base font-medium text-slate-700 shadow-sm transition-all focus:border-indigo-500/30 focus:bg-white focus:ring-4 focus:ring-indigo-500/5 outline-none cursor-pointer"
-              value={selectedCategory}
-              onChange={(e) => onCategoryChange(e.target.value)}
-            >
-              <option value="">All Categories ({categories.length})</option>
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-            {selectedCategory ? (
-              <button
-                onClick={clearCategory}
-                className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
-                title="Clear category filter"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            ) : (
-              <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-slate-400">
-                <SlidersHorizontal className="h-4 w-4" />
-              </div>
-            )}
-          </div>
-
-          {/* Reset All Button */}
-          {hasActiveFilters && (
-            <button
-              onClick={handleClearFilters}
-              className="flex h-14 items-center gap-3 rounded-2xl bg-gradient-to-r from-slate-100 to-slate-200 px-6 text-xs font-bold uppercase tracking-wider text-slate-600 transition-all hover:from-slate-200 hover:to-slate-300 hover:text-slate-800 hover:shadow-md active:scale-95"
-            >
-              <RotateCcw className="h-4 w-4" />
-              Reset All
-            </button>
-          )}
-        </div>
-
-        {/* Active Filters Summary */}
+    <div className="space-y-3">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Filters</h4>
         {hasActiveFilters && (
-          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
-            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Active:</span>
-            {searchTerm && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 rounded-lg text-xs font-medium">
-                Search: "{searchTerm}"
-                <button onClick={clearSearch} className="hover:bg-indigo-200 rounded p-0.5">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            {selectedCategory && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-medium">
-                Category: {selectedCategory}
-                <button onClick={clearCategory} className="hover:bg-emerald-200 rounded p-0.5">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            {phoneType !== 'all' && (
-              <span className="inline-flex items-center gap-1 px-2 py-1 bg-rose-100 text-rose-700 rounded-lg text-xs font-medium">
-                Type: {phoneType}
-                <button onClick={() => handlePhoneTypeChange('all')} className="hover:bg-rose-200 rounded p-0.5">
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
+          <button
+            onClick={handleClearFilters}
+            className="text-[10px] font-bold text-slate-400 hover:text-slate-600 px-2 py-1 rounded"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+
+      {/* Compact Search Bar */}
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <Search className="h-3 w-3" />
+        </div>
+        <input
+          type="text"
+          placeholder="Search businesses..."
+          className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-xs font-medium text-slate-700 shadow-sm transition-all focus:border-indigo-300 focus:ring-1 focus:ring-indigo-100 outline-none placeholder:text-slate-400"
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+        {searchTerm && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            title="Clear search"
+          >
+            <X className="h-2.5 w-2.5" />
+          </button>
+        )}
+      </div>
+
+      {/* Compact Phone Type Buttons */}
+      <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+        <button
+          onClick={() => handlePhoneTypeChange('all')}
+          className={`flex-1 flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${phoneType === 'all'
+            ? 'bg-slate-900 text-white shadow-sm'
+            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            }`}
+        >
+          <LayoutGrid className="h-2.5 w-2.5" />
+          All
+        </button>
+        <button
+          onClick={() => handlePhoneTypeChange('landline')}
+          className={`flex-1 flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${phoneType === 'landline'
+            ? 'bg-emerald-500 text-white shadow-sm'
+            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            }`}
+        >
+          <Landmark className="h-2.5 w-2.5" />
+          Fixed
+        </button>
+        <button
+          onClick={() => handlePhoneTypeChange('mobile')}
+          className={`flex-1 flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all duration-200 ${phoneType === 'mobile'
+            ? 'bg-rose-500 text-white shadow-sm'
+            : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+            }`}
+        >
+          <Smartphone className="h-2.5 w-2.5" />
+          Mobile
+        </button>
+      </div>
+
+      {/* Compact Category Dropdown */}
+      <div className="relative">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500">
+          <Layers className="h-3 w-3" />
+        </div>
+        <select
+          className="h-8 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-xs font-medium text-slate-700 shadow-sm transition-all focus:border-indigo-300 focus:ring-1 focus:ring-indigo-100 outline-none cursor-pointer"
+          value={selectedCategory}
+          onChange={(e) => onCategoryChange(e.target.value)}
+        >
+          <option value="">All Categories ({categories.length})</option>
+          {categories.map(cat => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+        {selectedCategory ? (
+          <button
+            onClick={clearCategory}
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            title="Clear category filter"
+          >
+            <X className="h-2.5 w-2.5" />
+          </button>
+        ) : (
+          <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+            <SlidersHorizontal className="h-2.5 w-2.5" />
           </div>
         )}
       </div>
+
+      {/* Active Filters Summary - Compact */}
+      {hasActiveFilters && (
+        <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-slate-100">
+          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Active:</span>
+          {searchTerm && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-medium">
+              "{searchTerm.length > 10 ? searchTerm.substring(0, 10) + '...' : searchTerm}"
+              <button onClick={clearSearch} className="hover:bg-indigo-200 rounded p-0.5">
+                <X className="h-2 w-2" />
+              </button>
+            </span>
+          )}
+          {selectedCategory && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[9px] font-medium">
+              {selectedCategory.length > 8 ? selectedCategory.substring(0, 8) + '...' : selectedCategory}
+              <button onClick={clearCategory} className="hover:bg-emerald-200 rounded p-0.5">
+                <X className="h-2 w-2" />
+              </button>
+            </span>
+          )}
+          {phoneType !== 'all' && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded text-[9px] font-medium">
+              {phoneType}
+              <button onClick={() => handlePhoneTypeChange('all')} className="hover:bg-rose-200 rounded p-0.5">
+                <X className="h-2 w-2" />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 };

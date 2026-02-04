@@ -170,38 +170,38 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
         </div>
 
         {/* Content - Always visible in map sidebar, collapsible in table view */}
-        <div className={`transition-all duration-300 ease-in-out flex-1 ${
+        <div className={`transition-all duration-300 ease-in-out ${
           isMapView 
-            ? 'flex flex-col overflow-hidden' 
+            ? 'flex-1 overflow-y-auto' 
             : isVisible 
               ? 'max-h-[80vh] md:max-h-[600px] opacity-100 overflow-y-auto' 
               : 'max-h-0 opacity-0 overflow-hidden'
         }`}>
           <div className={`${
-            isMapView ? 'bg-white/90 flex-1 overflow-y-auto' : 'bg-white'
+            isMapView ? 'bg-white/90 h-full' : 'bg-white'
           }`}>
-            <div className="p-6 space-y-6">
-              {/* Dataset Selector */}
+            <div className={`p-4 space-y-4 ${isMapView ? 'h-full overflow-y-auto' : ''}`}>
+              {/* Dataset Selector - Compact for sidebar */}
               {availableDatasets.length > 0 && onDatasetChange && (
-                <div className="flex-shrink-0">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-bold text-slate-700">Datasets</h4>
-                    <div className="flex gap-2">
+                <div className="bg-white/80 rounded-xl p-3 border border-white/40">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Datasets</h4>
+                    <div className="flex gap-1">
                       <button
                         onClick={() => onDatasetChange(availableDatasets.map(d => d.id))}
-                        className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
+                        className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 px-2 py-1 rounded"
                       >
                         All
                       </button>
                       <button
                         onClick={() => onDatasetChange([])}
-                        className="text-xs font-bold text-slate-400 hover:text-slate-600"
+                        className="text-[10px] font-bold text-slate-400 hover:text-slate-600 px-2 py-1 rounded"
                       >
                         None
                       </button>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1">
                     {availableDatasets.map((dataset) => (
                       <button
                         key={dataset.id}
@@ -213,16 +213,13 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                             onDatasetChange([...selectedDatasets, dataset.id]);
                           }
                         }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                        className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
                           selectedDatasets.includes(dataset.id)
                             ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
                             : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
                         }`}
                       >
-                        {dataset.name}
-                        {dataset.town && (
-                          <span className="ml-1 opacity-60">({dataset.town})</span>
-                        )}
+                        {dataset.name.length > 15 ? dataset.name.substring(0, 15) + '...' : dataset.name}
                       </button>
                     ))}
                   </div>
@@ -230,7 +227,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
               )}
 
               {/* Provider Bar - Compact for sidebar */}
-              <div className="flex-shrink-0">
+              <div className="bg-white/80 rounded-xl p-3 border border-white/40">
                 <ProviderBar
                   availableProviders={availableProviders}
                   visibleProviders={visibleProviders}
@@ -241,7 +238,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
               </div>
 
               {/* Filter Panel - Compact for sidebar */}
-              <div className="flex-shrink-0">
+              <div className="bg-white/80 rounded-xl p-3 border border-white/40">
                 <FilterPanel
                   searchTerm={searchTerm}
                   onSearchChange={onSearchChange}
@@ -256,14 +253,14 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
               
               {/* Radius Filter Control (Map View Only) */}
               {isMapView && droppedPin && radiusKm !== undefined && setRadiusKm && (
-                <div className="flex-shrink-0 pt-6 border-t border-slate-100">
-                  <div className="flex flex-col gap-3">
+                <div className="bg-white/80 rounded-xl p-3 border border-white/40">
+                  <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                      <label className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                        <div className="h-2 w-2 rounded-full bg-indigo-500"></div>
-                        Search Radius
+                      <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                        <div className="h-1.5 w-1.5 rounded-full bg-indigo-500"></div>
+                        Radius
                       </label>
-                      <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                      <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
                         {radiusKm} km
                       </span>
                     </div>
@@ -274,12 +271,12 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                       step="0.5"
                       value={radiusKm}
                       onChange={(e) => setRadiusKm(Number(e.target.value))}
-                      className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider"
+                      className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer slider"
                       style={{
                         background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${(radiusKm - 0.5) / 9.5 * 100}%, #e2e8f0 ${(radiusKm - 0.5) / 9.5 * 100}%, #e2e8f0 100%)`
                       }}
                     />
-                    <div className="flex justify-between text-xs text-slate-500">
+                    <div className="flex justify-between text-[10px] text-slate-500">
                       <span>0.5km</span>
                       <span>5km</span>
                       <span>10km</span>
