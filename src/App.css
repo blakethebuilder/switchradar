@@ -31,45 +31,40 @@
   transition: none !important;
 }
 
-/* Stable cluster styling to prevent hover glitches */
-.cluster-icon-stable {
+/* Stable cluster styling to prevent hover glitches - ONLY for clusters */
+.leaflet-marker-icon.cluster-icon-stable {
   /* Prevent any transitions or hover effects that cause glitches */
   transition: none !important;
-  transform: none !important;
   /* Ensure stable rendering */
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   /* Force hardware acceleration for stability */
   will-change: auto;
-  /* Prevent position jumping */
-  position: relative !important;
 }
 
-.cluster-icon-stable .cluster-marker-stable {
+.leaflet-marker-icon.cluster-icon-stable .cluster-marker-stable {
   /* Prevent any hover state changes */
   transition: none !important;
   transform: none !important;
   /* Stable positioning */
-  position: relative !important;
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
 }
 
-/* Prevent cluster hover effects that cause jumping */
-.cluster-icon-stable:hover .cluster-marker-stable {
+/* Prevent cluster hover effects that cause jumping - ONLY for clusters */
+.leaflet-marker-icon.cluster-icon-stable:hover .cluster-marker-stable {
   /* No hover effects to prevent glitches */
   transform: none !important;
   transition: none !important;
-  position: relative !important;
 }
 
-/* Override any leaflet cluster hover effects */
+/* Override any leaflet cluster hover effects - ONLY for clusters */
 .leaflet-marker-icon.cluster-icon-stable:hover {
   transform: none !important;
   transition: none !important;
 }
 
-/* Prevent cluster group hover effects */
+/* Prevent cluster group hover effects - ONLY for clusters */
 .marker-cluster.cluster-icon-stable:hover {
   transform: none !important;
   transition: none !important;

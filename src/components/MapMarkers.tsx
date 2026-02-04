@@ -327,8 +327,6 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
               box-shadow: 0 3px 12px rgba(0,0,0,0.3);
               font-size: ${fontSize};
               cursor: pointer;
-              position: relative;
-              transform: none;
               transition: none;
               pointer-events: auto;
               backface-visibility: hidden;
@@ -352,8 +350,6 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
               align-items: center; 
               justify-content: center; 
               font-weight: bold;
-              position: relative;
-              transform: none;
               transition: none;
               pointer-events: auto;
               backface-visibility: hidden;
