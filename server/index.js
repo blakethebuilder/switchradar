@@ -509,23 +509,47 @@ app.post('/api/businesses/sync', auth, (req, res) => {
         console.log(`📦 Chunked upload: chunk ${chunkIndex + 1}/${totalChunks}`);
     }
 
-    // Ensure default dataset exists before inserting businesses
+    // Create or find dataset for this import
+    let datasetId = 1; // Default fallback
     try {
-        let defaultDataset = db.prepare('SELECT * FROM datasets WHERE id = 1').get();
-        if (!defaultDataset) {
-            console.log('🔧 Default dataset not found, creating it...');
+        const importSource = req.body.source || req.body.fileName || 'Import';
+        const importTown = req.body.town || 'Mixed';
+        
+        // Try to find existing dataset with same name
+        let dataset = db.prepare(`
+            SELECT id FROM datasets 
+            WHERE name = ? AND created_by = ? AND is_active = 1
+        `).get(importSource, userId);
+        
+        if (!dataset) {
+            // Create new dataset for this import
+            const result = db.prepare(`
+                INSERT INTO datasets (name, description, town, province, created_by)
+                VALUES (?, ?, ?, ?, ?)
+            `).run(
+                importSource,
+                `Imported dataset: ${importSource}`,
+                importTown,
+                'Various',
+                userId
+            );
+            
+            datasetId = result.lastInsertRowid;
+            
+            // Grant admin permission to creator
             db.prepare(`
-                INSERT INTO datasets (id, name, description, created_by, business_count, is_active)
-                VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', ?, 0, 1)
-            `).run(userId);
-            console.log('✓ Created default dataset for user:', userId);
+                INSERT INTO dataset_permissions (dataset_id, user_id, permission_level, granted_by)
+                VALUES (?, ?, 'admin', ?)
+            `).run(datasetId, userId, userId);
+            
+            console.log(`✓ Created new dataset "${importSource}" with ID:`, datasetId);
+        } else {
+            datasetId = dataset.id;
+            console.log(`✓ Using existing dataset "${importSource}" with ID:`, datasetId);
         }
     } catch (error) {
-        console.error('❌ Failed to ensure default dataset exists:', error.message);
-        return res.status(500).json({ 
-            message: 'Database setup error', 
-            error: error.message 
-        });
+        console.error('❌ Failed to create/find dataset:', error.message);
+        // Continue with default dataset
     }
 
     const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
@@ -566,7 +590,7 @@ app.post('/api/businesses/sync', auth, (req, res) => {
                     metadata: JSON.stringify(business.metadata || {}),
                     importedAt: business.importedAt || new Date().toISOString(),
                     source: business.source || 'import',
-                    dataset_id: 1 // Use default dataset for now
+                    dataset_id: datasetId // Use the created/found dataset
                 });
                 successCount++;
             } catch (error) {

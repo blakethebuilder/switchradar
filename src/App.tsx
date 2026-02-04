@@ -307,7 +307,7 @@ function App() {
     setIsImporting(true);
     setImportError('');
     
-    // Show loading message
+    // Show processing message
     console.log('⏳ IMPORT: Starting data processing...');
     
     // Add a small delay to ensure UI updates
@@ -329,9 +329,18 @@ function App() {
       }
       
       console.log('🚀 IMPORT STEP 6: Processing imported data');
+      
+      // Process data in chunks with progress updates
       const processed = await processImportedData(importRows, mapping, (processed, total) => {
-        console.log(`📊 Processing progress: ${processed}/${total} (${Math.round(processed/total*100)}%)`);
+        const percentage = Math.round((processed / total) * 100);
+        console.log(`📊 Processing progress: ${processed}/${total} (${percentage}%)`);
+        
+        // Update import status for user feedback
+        if (percentage % 10 === 0) { // Update every 10%
+          setImportError(`Processing data... ${percentage}% complete`);
+        }
       });
+      
       console.log('✅ IMPORT STEP 6: Processed businesses count:', processed.length);
       console.log('📊 IMPORT STEP 6: Processed businesses sample:', processed.slice(0, 2));
       
@@ -348,6 +357,9 @@ function App() {
         console.log('❌ IMPORT STEP 6: No valid businesses found');
         throw new Error('No valid businesses found. Please check that the name field is mapped correctly.');
       }
+      
+      // Update status for server upload
+      setImportError('Uploading to server...');
       
       console.log('🚀 IMPORT STEP 7: Calling applyNewBusinesses');
       await applyNewBusinesses(validBusinesses, pendingFileName);
@@ -390,7 +402,10 @@ function App() {
       console.log('🚀 IMPORT STEP 9: Sending data to server...');
       console.log('📊 IMPORT STEP 9: Sample business data:', items[0]);
       
-      const result = await serverDataService.saveBusinesses(items, token);
+      const result = await serverDataService.saveBusinesses(items, token, {
+        source: sourceName,
+        town: items[0]?.town || 'Mixed'
+      });
       console.log('📥 IMPORT STEP 9: Server response:', result);
       
       if (!result.success) {
@@ -666,11 +681,25 @@ function App() {
         />
         
         <main className="flex-1 flex flex-col overflow-hidden relative">
-          {loading ? (
+          {loading || isImporting ? (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                <p className="text-slate-600">Loading businesses...</p>
+                <p className="text-slate-600">
+                  {isImporting ? (importError && importError.includes('%') ? importError : 'Processing import...') : 'Loading businesses...'}
+                </p>
+                {isImporting && importError && importError.includes('%') && (
+                  <div className="mt-4 w-64 mx-auto">
+                    <div className="bg-slate-200 rounded-full h-2">
+                      <div 
+                        className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                        style={{ 
+                          width: `${importError.match(/(\d+)%/)?.[1] || 0}%` 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ) : businesses.length > 0 ? (

@@ -106,11 +106,12 @@ class ServerDataService {
     }
   }
 
-  async saveBusinesses(businesses: Business[], token: string): Promise<ServerDataResult> {
+  async saveBusinesses(businesses: Business[], token: string, metadata?: { source?: string; town?: string }): Promise<ServerDataResult> {
     console.log('🚀 API: saveBusinesses called');
     console.log('📊 API: Business count:', businesses.length);
     console.log('🔐 API: Token present:', !!token, 'length:', token?.length);
     console.log('🌐 API: API URL:', this.getApiUrl('/api/businesses/sync'));
+    console.log('📊 API: Metadata:', metadata);
     console.log('📊 API: First business sample:', businesses[0] ? {
       id: businesses[0].id,
       name: businesses[0].name,
@@ -120,14 +121,17 @@ class ServerDataService {
     // If dataset is large (>1000 businesses), use chunked upload
     if (businesses.length > 1000) {
       console.log('📦 API: Large dataset detected, using chunked upload...');
-      return this.saveBusinessesChunked(businesses, token);
+      return this.saveBusinessesChunked(businesses, token, 500, metadata);
     }
 
     try {
       const headers = this.getAuthHeaders(token);
       console.log('📤 API: Request headers prepared');
 
-      const requestBody = { businesses };
+      const requestBody = { 
+        businesses,
+        ...metadata // Include source and town metadata
+      };
       const bodySize = JSON.stringify(requestBody).length;
       console.log('📦 API: Request body size:', bodySize, 'characters', (bodySize / 1024 / 1024).toFixed(2), 'MB');
 
@@ -174,7 +178,7 @@ class ServerDataService {
     }
   }
 
-  private async saveBusinessesChunked(businesses: Business[], token: string, chunkSize: number = 500): Promise<ServerDataResult> {
+  private async saveBusinessesChunked(businesses: Business[], token: string, chunkSize: number = 500, metadata?: { source?: string; town?: string }): Promise<ServerDataResult> {
     console.log(`🔄 Starting chunked upload: ${businesses.length} businesses in chunks of ${chunkSize}`);
     
     const chunks = [];
@@ -210,7 +214,8 @@ class ServerDataService {
               isChunked: true,
               chunkIndex: i,
               totalChunks: chunks.length,
-              clearFirst: false // We already cleared above
+              clearFirst: false, // We already cleared above
+              ...metadata // Include source and town metadata
             })
           });
           

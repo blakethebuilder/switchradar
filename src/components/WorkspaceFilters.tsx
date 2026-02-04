@@ -117,8 +117,8 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
         )}
         glass-card rounded-[2rem] shadow-2xl overflow-hidden transition-all duration-300 ${
           isMapView 
-            ? 'border border-white/50 backdrop-blur-xl md:max-w-sm' 
-            : 'border border-slate-100'
+            ? 'border border-white/50 backdrop-blur-xl md:max-w-sm md:w-80' 
+            : 'border border-slate-100 w-full'
         } ${isVisible ? 'shadow-2xl' : 'shadow-lg'}
         ${isMapView && isVisible ? 'md:rounded-[2rem] rounded-none md:m-0 m-4 md:mt-0 mt-20' : ''}
       `}>

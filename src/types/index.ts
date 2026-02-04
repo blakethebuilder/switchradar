@@ -43,6 +43,7 @@ export interface Business {
   phoneTypeOverride?: 'landline' | 'mobile';
   metadata: BusinessMetadata;
   mapsLink?: string;
+  dataset?: string; // Dataset name for filtering
 }
 
 export type ViewMode = 'table' | 'map' | 'stats' | 'settings' | 'route' | 'seen' | 'present';

@@ -31,6 +31,14 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
   const towns = new Set(businesses.map(b => b.town)).size;
   const categories = new Set(businesses.map(b => b.category)).size;
 
+  // If not admin, only show database tab
+  // Redirect non-admin users to database tab
+  useEffect(() => {
+    if (!isAdmin && activeTab !== 'database') {
+      setActiveTab('database');
+    }
+  }, [isAdmin, activeTab]);
+
   // Process town data for admin view
   useEffect(() => {
     const townMap = new Map<string, TownData>();
@@ -105,7 +113,9 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
             <Settings className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Admin Console</h1>
+            <h1 className="text-2xl font-black text-slate-900">
+              {isAdmin ? 'Admin Console' : 'Database Settings'}
+            </h1>
             <p className="text-sm font-medium text-slate-400">
               {isAdmin ? 'Full system management and oversight' : 'Database settings and sync'}
             </p>
@@ -119,55 +129,59 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
         </button>
       </div>
 
-      {/* Enhanced Tab Navigation */}
+      {/* Enhanced Tab Navigation - Only show admin tabs if user is admin */}
       <div className="flex gap-1 mb-8 bg-slate-100 p-1 rounded-xl overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
-            activeTab === 'overview'
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <Database className="h-4 w-4" />
-          Overview
-        </button>
         {isAdmin && (
-          <>
-            <button
-              onClick={() => setActiveTab('towns')}
-              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
-                activeTab === 'towns'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <MapPin className="h-4 w-4" />
-              Towns ({towns})
-            </button>
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
-                activeTab === 'users'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Users className="h-4 w-4" />
-              Users
-            </button>
-            <button
-              onClick={() => setActiveTab('userdata')}
-              className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
-                activeTab === 'userdata'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <UserCheck className="h-4 w-4" />
-              User Data
-            </button>
-          </>
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === 'overview'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Database className="h-4 w-4" />
+            Overview
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('towns')}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === 'towns'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <MapPin className="h-4 w-4" />
+            Towns ({towns})
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('users')}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === 'users'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Users className="h-4 w-4" />
+            Users
+          </button>
+        )}
+        {isAdmin && (
+          <button
+            onClick={() => setActiveTab('userdata')}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ${
+              activeTab === 'userdata'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <UserCheck className="h-4 w-4" />
+            User Data
+          </button>
         )}
         <button
           onClick={() => setActiveTab('database')}

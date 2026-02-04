@@ -193,7 +193,25 @@ export const useBusinessData = () => {
         if (!businesses.length) return [];
         
         return PerformanceMonitor.measure('filterBusinesses', () => {
-            return filterBusinesses(businesses, {
+            // First filter by selected datasets
+            let datasetFilteredBusinesses = businesses;
+            if (selectedDatasets.length > 0 && availableDatasets.length > 0) {
+                const selectedDatasetNames = availableDatasets
+                    .filter(d => selectedDatasets.includes(d.id))
+                    .map(d => d.name);
+                
+                datasetFilteredBusinesses = businesses.filter(business => {
+                    // Check if business belongs to any selected dataset
+                    // This assumes businesses have a 'dataset' field or we match by town
+                    return selectedDatasetNames.some(datasetName => 
+                        business.dataset === datasetName || 
+                        business.town === datasetName ||
+                        datasetName.toLowerCase().includes(business.town?.toLowerCase() || '')
+                    );
+                });
+            }
+            
+            return filterBusinesses(datasetFilteredBusinesses, {
                 searchTerm,
                 selectedCategory,
                 visibleProviders,
@@ -202,7 +220,7 @@ export const useBusinessData = () => {
                 radiusKm
             });
         });
-    }, [businesses, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
+    }, [businesses, selectedDatasets, availableDatasets, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
 
     return {
         businesses,
