@@ -445,6 +445,29 @@ app.get('/api/businesses', auth, (req, res) => {
         const queryTime = Date.now() - queryStart;
         console.log('⚡ Query executed in', queryTime, 'ms, found', businesses.length, 'businesses');
         
+        // Transform the data to match frontend expectations
+        const transformedBusinesses = businesses.map(business => ({
+            ...business,
+            coordinates: business.lat && business.lng ? {
+                lat: parseFloat(business.lat),
+                lng: parseFloat(business.lng)
+            } : null,
+            notes: business.notes ? JSON.parse(business.notes) : [],
+            metadata: business.metadata ? JSON.parse(business.metadata) : {}
+        }));
+        
+        console.log('🔄 Transformed businesses with coordinates:', {
+            total: transformedBusinesses.length,
+            withCoordinates: transformedBusinesses.filter(b => b.coordinates).length,
+            sampleCoordinates: transformedBusinesses.slice(0, 3).map(b => ({
+                id: b.id,
+                name: b.name,
+                coordinates: b.coordinates,
+                rawLat: b.lat,
+                rawLng: b.lng
+            }))
+        });
+        
         // Get total count for pagination (simplified)
         let countQuery = `SELECT COUNT(*) as total FROM leads l WHERE 1=1`;
         let countParams = [];
@@ -464,7 +487,7 @@ app.get('/api/businesses', auth, (req, res) => {
         console.log('✅ GET /api/businesses completed in', totalTime, 'ms');
         
         res.json({
-            data: businesses,
+            data: transformedBusinesses,
             pagination: {
                 page: parseInt(page),
                 limit: parseInt(limit),
@@ -474,7 +497,7 @@ app.get('/api/businesses', auth, (req, res) => {
             performance: {
                 queryTime,
                 totalTime,
-                resultCount: businesses.length
+                resultCount: transformedBusinesses.length
             }
         });
         
