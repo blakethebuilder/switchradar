@@ -46,6 +46,7 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     // Always ensure we have a valid provider string
     const safeProvider = (provider && typeof provider === 'string') ? provider.trim() : 'Unknown';
     if (!safeProvider) {
+      console.warn('🗺️ ICON: Empty provider, using fallback');
       return createFallbackIcon();
     }
 
@@ -55,6 +56,8 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     if (iconCache[cacheKey]) {
       return iconCache[cacheKey];
     }
+
+    console.log('🗺️ ICON: Creating new icon for provider:', safeProvider, 'selected:', isSelected);
 
     // Get color and label with fallbacks
     let color: string;
@@ -84,6 +87,8 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     const borderWidth = isSelected ? 3 : 2;
     const fontSize = isSelected ? '10px' : '8px';
     
+    console.log('🗺️ ICON: Creating icon with', { provider: safeProvider, color, label, size });
+    
     // Create the icon with maximum safety
     const iconOptions = {
       className: 'custom-marker',
@@ -110,16 +115,17 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     
     // Verify the icon was created successfully
     if (!icon) {
-      console.error('L.divIcon returned null/undefined');
+      console.error('🗺️ ICON: L.divIcon returned null/undefined');
       return createFallbackIcon();
     }
 
     // Cache the successful icon
     iconCache[cacheKey] = icon;
+    console.log('🗺️ ICON: Successfully created and cached icon for', safeProvider);
     return icon;
     
   } catch (error) {
-    console.error('Critical error in createProviderIcon:', error, { provider, isSelected });
+    console.error('🗺️ ICON: Critical error in createProviderIcon:', error, { provider, isSelected });
     // Always return a fallback icon, never null
     return createFallbackIcon();
   }

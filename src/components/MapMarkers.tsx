@@ -19,16 +19,30 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
   selectedBusinessIds = [],
   onBusinessSelect
 }) => {
+  console.log('🗺️ MAPMARKERS: Component render', {
+    businessesCount: businesses?.length || 0,
+    businessesSample: businesses?.slice(0, 2)?.map(b => ({
+      id: b.id,
+      name: b.name,
+      provider: b.provider,
+      hasCoords: !!b.coordinates,
+      coords: b.coordinates
+    }))
+  });
+
   // Memoize markers for performance
   const markers = React.useMemo(() => {
-    console.log('🗺️ MARKERS: Creating markers for', businesses.length, 'businesses');
+    console.log('🗺️ MARKERS: useMemo triggered - Creating markers for', businesses?.length || 0, 'businesses');
     
     if (!businesses || businesses.length === 0) {
+      console.log('🗺️ MARKERS: No businesses provided, returning empty array');
       return [];
     }
     
     const validMarkers: React.ReactElement[] = [];
     const selectedSet = new Set([selectedBusinessId, ...selectedBusinessIds].filter(Boolean));
+    let validCount = 0;
+    let invalidCount = 0;
     
     for (let i = 0; i < businesses.length; i++) {
       const business = businesses[i];
@@ -36,6 +50,13 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
       try {
         // Validate business data
         if (!business?.id || !business.coordinates) {
+          invalidCount++;
+          console.log('🗺️ MARKERS: Invalid business (no id/coords)', {
+            index: i,
+            id: business?.id,
+            hasCoords: !!business?.coordinates,
+            business: business
+          });
           continue;
         }
         
@@ -43,12 +64,30 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
             typeof business.coordinates.lng !== 'number' ||
             isNaN(business.coordinates.lat) || 
             isNaN(business.coordinates.lng)) {
+          invalidCount++;
+          console.log('🗺️ MARKERS: Invalid coordinates', {
+            index: i,
+            id: business.id,
+            name: business.name,
+            lat: business.coordinates.lat,
+            lng: business.coordinates.lng,
+            latType: typeof business.coordinates.lat,
+            lngType: typeof business.coordinates.lng
+          });
           continue;
         }
 
         // Validate coordinate ranges
         if (business.coordinates.lat < -90 || business.coordinates.lat > 90 ||
             business.coordinates.lng < -180 || business.coordinates.lng > 180) {
+          invalidCount++;
+          console.log('🗺️ MARKERS: Coordinates out of range', {
+            index: i,
+            id: business.id,
+            name: business.name,
+            lat: business.coordinates.lat,
+            lng: business.coordinates.lng
+          });
           continue;
         }
 
@@ -59,14 +98,19 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
           icon = createProviderIcon(business.provider || 'Unknown', isSelected);
           
           if (!icon) {
+            console.warn('🗺️ MARKERS: createProviderIcon returned null, using fallback');
             icon = createFallbackIcon();
           }
         } catch (iconError) {
-          console.error(`Error creating icon for business ${business.id}:`, iconError);
+          console.error(`🗺️ MARKERS: Error creating icon for business ${business.id}:`, iconError);
           icon = createFallbackIcon();
         }
 
-        if (!icon) continue;
+        if (!icon) {
+          invalidCount++;
+          console.error('🗺️ MARKERS: No icon created for business', business.id);
+          continue;
+        }
 
         // Throttled click handler
         const throttledClick = throttle((e: L.LeafletMouseEvent) => {
@@ -92,17 +136,32 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         );
 
         validMarkers.push(marker);
+        validCount++;
+        
+        // Log progress for large datasets
+        if (validCount % 500 === 0) {
+          console.log(`🗺️ MARKERS: Progress - ${validCount} valid markers created so far...`);
+        }
         
       } catch (error) {
-        console.error(`Error creating marker for business ${business.id}:`, error);
+        invalidCount++;
+        console.error(`🗺️ MARKERS: Error creating marker for business ${business.id}:`, error);
         continue;
       }
     }
 
-    console.log(`🗺️ MARKERS: Created ${validMarkers.length} valid markers`);
+    console.log(`🗺️ MARKERS: ✅ COMPLETED - Created ${validCount} valid markers, ${invalidCount} invalid/skipped out of ${businesses.length} total businesses`);
+    
+    if (validCount === 0 && businesses.length > 0) {
+      console.error('🗺️ MARKERS: ❌ CRITICAL: NO VALID MARKERS CREATED despite having businesses!');
+      console.log('🗺️ MARKERS: First 3 businesses for debugging:', businesses.slice(0, 3));
+    }
+    
     return validMarkers;
   }, [businesses, selectedBusinessId, selectedBusinessIds, onBusinessSelect]);
 
+  console.log('🗺️ MAPMARKERS: Returning', markers.length, 'markers to render');
+  
   return (
     <MarkerClusterGroup
       chunkedLoading={true}

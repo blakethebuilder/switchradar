@@ -57,9 +57,17 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
 
   console.log('🗺️ MAP: BusinessMap render', {
     businessesCount: businesses?.length || 0,
+    businessesSample: businesses?.slice(0, 2)?.map(b => ({
+      id: b.id,
+      name: b.name,
+      provider: b.provider,
+      hasCoords: !!b.coordinates,
+      coords: b.coordinates
+    })),
     fullScreen,
     selectedBusinessId,
-    selectedBusinessIds: selectedBusinessIds.length
+    selectedBusinessIds: selectedBusinessIds.length,
+    timestamp: new Date().toISOString()
   });
 
   // Handle map ready
@@ -258,6 +266,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
 
         {/* Business markers */}
         <MapMarkers
+          key={`markers-${businesses.length}-${businesses.map(b => b.id).slice(0, 3).join('-')}`}
           businesses={businesses}
           selectedBusinessId={selectedBusinessId}
           selectedBusinessIds={selectedBusinessIds}
