@@ -183,6 +183,8 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
       spiderfyShapePositions={undefined}
       zoomToBoundsOnClick={false}
       maxZoom={18}
+      // Disable hover effects that cause glitches
+      singleMarkerMode={false}
       // Additional options for better spiderfy behavior
       polygonOptions={{
         fillColor: '#3b82f6',
@@ -311,7 +313,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
           const fontSize = size > 50 ? '14px' : size > 40 ? '12px' : size > 35 ? '11px' : '10px';
           
           return L.divIcon({
-            html: `<div style="
+            html: `<div class="cluster-marker-stable" style="
               background: ${bgColor};
               color: white;
               border-radius: 50%;
@@ -325,8 +327,14 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
               box-shadow: 0 3px 12px rgba(0,0,0,0.3);
               font-size: ${fontSize};
               cursor: pointer;
+              position: relative;
+              transform: none;
+              transition: none;
+              pointer-events: auto;
+              backface-visibility: hidden;
+              -webkit-backface-visibility: hidden;
             ">${count}</div>`,
-            className: 'cluster-icon',
+            className: 'cluster-icon-stable',
             iconSize: [size, size],
             iconAnchor: [size/2, size/2]
           });
@@ -334,7 +342,24 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
           console.error('Cluster icon error:', error);
           const fallbackSize = 32;
           return L.divIcon({
-            html: `<div style="background: #6b7280; color: white; border-radius: 50%; width: ${fallbackSize}px; height: ${fallbackSize}px; display: flex; align-items: center; justify-content: center; font-weight: bold;">•</div>`,
+            html: `<div class="cluster-marker-stable" style="
+              background: #6b7280; 
+              color: white; 
+              border-radius: 50%; 
+              width: ${fallbackSize}px; 
+              height: ${fallbackSize}px; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              font-weight: bold;
+              position: relative;
+              transform: none;
+              transition: none;
+              pointer-events: auto;
+              backface-visibility: hidden;
+              -webkit-backface-visibility: hidden;
+            ">•</div>`,
+            className: 'cluster-icon-stable',
             iconSize: [fallbackSize, fallbackSize],
             iconAnchor: [fallbackSize/2, fallbackSize/2]
           });
