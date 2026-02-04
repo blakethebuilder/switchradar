@@ -390,7 +390,19 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
 
             <BusinessMap
               key={`map-${viewMode}`}
-              businesses={filteredBusinesses}
+              businesses={React.useMemo(() => {
+                // Always include the selected business in the map, even if it's filtered out
+                // This prevents markers from disappearing when clicked
+                if (selectedBusiness && !filteredBusinesses.find(b => b.id === selectedBusiness.id)) {
+                  console.log('🗺️ MAP: Adding selected business to map businesses', {
+                    selectedBusinessId: selectedBusiness.id,
+                    selectedBusinessName: selectedBusiness.name,
+                    filteredCount: filteredBusinesses.length
+                  });
+                  return [...filteredBusinesses, selectedBusiness];
+                }
+                return filteredBusinesses;
+              }, [filteredBusinesses, selectedBusiness])}
               targetLocation={mapTarget?.center}
               zoom={mapTarget?.zoom}
               fullScreen={true}

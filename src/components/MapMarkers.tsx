@@ -118,26 +118,25 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
     });
   }, [validBusinesses, selectedBusinessId, selectedBusinessIds, onBusinessSelect]);
 
-  // Progressive clustering radius - scatter at zoom 15 (14.5+ range)
-  /* TEMPORARILY DISABLED - TESTING WITHOUT CLUSTERING
+  // Progressive clustering radius - optimized for large datasets (9000+ businesses)
   const getClusterRadius = React.useCallback((zoom: number) => {
+    // More aggressive clustering for large datasets to improve performance
     // Consistent clustering across all devices for better UX
-    // No mobile/desktop differences - same experience everywhere
     
-    // Progressive clustering - businesses scatter at zoom 15 (14.5+ range)
-    // Zoom range: 5-17, clustering disabled at 15+
-    if (zoom <= 5) return 150;  // Very clustered at country level
-    if (zoom <= 7) return 120;  // Clustered at province level
-    if (zoom <= 9) return 100;  // Moderate clustering at city level
-    if (zoom <= 11) return 80;  // Less clustering at district level
-    if (zoom <= 13) return 60;  // Minimal clustering at neighborhood level
-    if (zoom <= 14) return 40;  // Very minimal clustering at street level
+    // Progressive clustering - businesses scatter at zoom 16 (increased for performance)
+    // Zoom range: 5-17, clustering disabled at 16+
+    if (zoom <= 5) return 200;  // Very clustered at country level (increased for large datasets)
+    if (zoom <= 7) return 150;  // Clustered at province level (increased)
+    if (zoom <= 9) return 120;  // Moderate clustering at city level (increased)
+    if (zoom <= 11) return 100; // Less clustering at district level (increased)
+    if (zoom <= 13) return 80;  // Minimal clustering at neighborhood level (increased)
+    if (zoom <= 15) return 60;  // Very minimal clustering at street level (increased)
     
-    // Zoom 15+ = No clustering (handled by disableClusteringAtZoom)
-    return 25; // This won't be used due to disableClusteringAtZoom=15
+    // Zoom 16+ = No clustering (handled by disableClusteringAtZoom)
+    return 40; // This won't be used due to disableClusteringAtZoom=16
   }, []);
 
-  // Custom cluster icon with better visibility
+  // Custom cluster icon with better visibility - optimized for performance
   const createClusterIcon = React.useCallback((cluster: any) => {
     const count = cluster.getChildCount();
     
@@ -147,22 +146,27 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
     let textColor = 'white';
     let borderColor = '#1e40af';
     
-    if (count >= 100) {
-      size = 55;
+    // Adjusted thresholds for large datasets
+    if (count >= 500) {
+      size = 60;
       bgColor = '#dc2626';
       borderColor = '#991b1b';
-    } else if (count >= 50) {
-      size = 52;
+    } else if (count >= 200) {
+      size = 55;
       bgColor = '#ea580c';
       borderColor = '#c2410c';
-    } else if (count >= 20) {
-      size = 48;
+    } else if (count >= 100) {
+      size = 52;
       bgColor = '#f59e0b';
       borderColor = '#d97706';
-    } else if (count >= 10) {
-      size = 45;
+    } else if (count >= 50) {
+      size = 48;
       bgColor = '#10b981';
       borderColor = '#059669';
+    } else if (count >= 20) {
+      size = 45;
+      bgColor = '#8b5cf6';
+      borderColor = '#7c3aed';
     }
 
     // Consistent size across devices - no mobile adjustment for better UX
@@ -177,19 +181,19 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        font-size: ${size > 50 ? '16px' : '14px'};
+        font-size: ${size > 55 ? '18px' : size > 50 ? '16px' : '14px'};
         border: 3px solid white;
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
         cursor: pointer;
-        transition: transform 0.2s ease;
-      " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">${count}</div>`,
+        transition: none; // Disable transitions for better performance
+      ">${count}</div>`,
       className: 'custom-cluster-icon',
       iconSize: [size, size],
       iconAnchor: [size / 2, size / 2]
     });
   }, []);
 
-  // Simple and predictable cluster click handler - just zoom in with limits
+  // Simple and predictable cluster click handler - optimized for large datasets
   const handleClusterClick = React.useCallback((cluster: any) => {
     try {
       const clusterLayer = cluster.layer || cluster.target;
@@ -217,15 +221,14 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
       }
       
       map.setView(clusterLatLng, targetZoom, { 
-        animate: true, 
-        duration: 0.5 
+        animate: false, // Disable animation for better performance with large datasets
+        duration: 0 
       });
       
     } catch (error) {
       console.error('🗺️ CLUSTER CLICK ERROR:', error);
     }
   }, []);
-  */
 
   console.log('🗺️ MAPMARKERS: Rendering', markers.length, 'valid markers');
 
@@ -233,36 +236,33 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
     return <MarkerClusterGroup>{[]}</MarkerClusterGroup>;
   }
 
-  // TEMPORARY: Disable clustering to test if that's causing the disappearing issue
-  // Return markers directly without clustering
-  return (
-    <>
-      {markers}
-    </>
-  );
-
-  /* ORIGINAL CLUSTERING CODE - TEMPORARILY DISABLED
+  // For large datasets (>1000 businesses), we NEED clustering for performance
+  // Re-enable clustering with optimized settings for large datasets
   return (
     <MarkerClusterGroup
-      // Core clustering settings - Scatter at zoom 15 (effectively 14.5+)
+      // Optimized clustering settings for large datasets (9000+ businesses)
       maxClusterRadius={getClusterRadius}
-      disableClusteringAtZoom={15} // Scatter businesses at zoom 15 (14.5+ range)
-      minimumClusterSize={2}
+      disableClusteringAtZoom={16} // Increased from 15 to 16 for better performance with large datasets
+      minimumClusterSize={3} // Increased from 2 to 3 for better clustering with large datasets
       
-      // Performance settings
+      // Performance settings optimized for large datasets
       chunkedLoading={true}
-      removeOutsideVisibleBounds={true}
-      animate={true}
+      removeOutsideVisibleBounds={true} // Critical for performance with 9000+ markers
+      animate={false} // Disable animations for better performance
       animateAddingMarkers={false}
       
-      // Disable all spiderfying - keep it simple
+      // Disable all spiderfying - keep it simple and fast
       spiderfyOnMaxZoom={false}
       spiderfyOnEveryZoom={false}
       
-      // Visual settings
+      // Visual settings optimized for performance
       showCoverageOnHover={false}
       zoomToBoundsOnClick={false} // Use our custom click handler
       singleMarkerMode={false}
+      
+      // Prevent clustering from interfering with marker selection
+      // This is key to fixing the disappearing marker issue
+      key={`cluster-${selectedBusinessId || 'none'}`} // Force re-render when selection changes
       
       // Custom icon and event handlers
       iconCreateFunction={createClusterIcon}
@@ -273,5 +273,4 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
       {markers}
     </MarkerClusterGroup>
   );
-  */
 });

@@ -49,8 +49,11 @@ export const useAppState = () => {
     console.log('🎯 SELECT BUSINESS: selectBusinessForDetails called', {
       businessId: business.id,
       businessName: business.name,
+      businessTown: business.town,
+      businessProvider: business.provider,
       timestamp: new Date().toISOString()
     });
+    
     setSelectedBusiness(business);
     // Don't change view mode or map target - just show the client details modal
   }, []);
