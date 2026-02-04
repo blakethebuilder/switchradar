@@ -107,10 +107,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
       {/* Main Filter Panel - Sidebar for Map View */}
       <div className={`
         ${isMapView ? (
-          // Map view: Sidebar layout with proper scrolling
-          `fixed top-0 left-0 h-full w-80 transform transition-transform duration-300 ease-in-out z-50 ${
+          // Map view: Full height sidebar layout with proper scrolling
+          `fixed top-0 left-0 h-screen w-80 transform transition-transform duration-300 ease-in-out z-50 ${
             isVisible ? 'translate-x-0' : '-translate-x-full'
-          } md:relative md:translate-x-0 md:w-80 md:h-auto md:max-h-screen md:overflow-hidden flex flex-col`
+          } md:relative md:translate-x-0 md:w-80 md:h-screen md:overflow-hidden flex flex-col`
         ) : (
           // Table view: Normal block layout
           'block w-full max-w-none'
@@ -180,10 +180,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
           <div className={`${
             isMapView ? 'bg-white/90 h-full' : 'bg-white'
           }`}>
-            <div className={`p-4 space-y-4 ${isMapView ? 'h-full overflow-y-auto' : ''}`}>
+            <div className={`p-4 space-y-4 ${isMapView ? 'h-full flex flex-col' : ''}`}>
               {/* Dataset Selector - Compact for sidebar */}
               {availableDatasets.length > 0 && onDatasetChange && (
-                <div className="bg-white/80 rounded-xl p-3 border border-white/40">
+                <div className="bg-white/80 rounded-xl p-3 border border-white/40 flex-shrink-0">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Datasets</h4>
                     <div className="flex gap-1">
@@ -226,8 +226,8 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                 </div>
               )}
 
-              {/* Provider Bar - Compact for sidebar */}
-              <div className="bg-white/80 rounded-xl p-3 border border-white/40">
+              {/* Provider Bar - Expanded for better visibility */}
+              <div className={`bg-white/80 rounded-xl p-3 border border-white/40 ${isMapView ? 'flex-1 min-h-0' : ''}`}>
                 <ProviderBar
                   availableProviders={availableProviders}
                   visibleProviders={visibleProviders}
@@ -237,23 +237,9 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                 />
               </div>
 
-              {/* Filter Panel - Compact for sidebar */}
-              <div className="bg-white/80 rounded-xl p-3 border border-white/40">
-                <FilterPanel
-                  searchTerm={searchTerm}
-                  onSearchChange={onSearchChange}
-                  selectedCategory={selectedCategory}
-                  onCategoryChange={onCategoryChange}
-                  phoneType={phoneType}
-                  onPhoneTypeChange={onPhoneTypeChange}
-                  categories={categories}
-                  onClearFilters={onClearFilters}
-                />
-              </div>
-              
-              {/* Radius Filter Control (Map View Only) */}
+              {/* Radius Filter Control (Map View Only) - Moved up */}
               {isMapView && droppedPin && radiusKm !== undefined && setRadiusKm && (
-                <div className="bg-white/80 rounded-xl p-3 border border-white/40">
+                <div className="bg-white/80 rounded-xl p-3 border border-white/40 flex-shrink-0">
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
                       <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
@@ -284,6 +270,20 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                   </div>
                 </div>
               )}
+
+              {/* Filter Panel - Moved to bottom */}
+              <div className="bg-white/80 rounded-xl p-3 border border-white/40 flex-shrink-0">
+                <FilterPanel
+                  searchTerm={searchTerm}
+                  onSearchChange={onSearchChange}
+                  selectedCategory={selectedCategory}
+                  onCategoryChange={onCategoryChange}
+                  phoneType={phoneType}
+                  onPhoneTypeChange={onPhoneTypeChange}
+                  categories={categories}
+                  onClearFilters={onClearFilters}
+                />
+              </div>
             </div>
           </div>
         </div>
