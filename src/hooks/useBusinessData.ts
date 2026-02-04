@@ -206,7 +206,20 @@ export const useBusinessData = () => {
     }, [availableProviders, visibleProviders.length, hasUserInteracted]);
 
     const filteredBusinesses = useMemo(() => {
-        if (!businesses.length) return [];
+        console.log('🔍 FILTER: Starting filteredBusinesses calculation', {
+            businessesCount: businesses.length,
+            selectedDatasets: selectedDatasets,
+            availableDatasets: availableDatasets,
+            searchTerm,
+            selectedCategory,
+            visibleProviders: visibleProviders.length,
+            phoneType
+        });
+        
+        if (!businesses.length) {
+            console.log('🔍 FILTER: No businesses, returning empty array');
+            return [];
+        }
         
         return PerformanceMonitor.measure('filterBusinesses', () => {
             // First filter by selected datasets
@@ -216,18 +229,43 @@ export const useBusinessData = () => {
                     .filter(d => selectedDatasets.includes(d.id))
                     .map(d => d.name);
                 
+                console.log('🔍 FILTER: Dataset filtering active', {
+                    selectedDatasetNames,
+                    selectedDatasets,
+                    availableDatasets
+                });
+                
                 datasetFilteredBusinesses = businesses.filter(business => {
                     // Check if business belongs to any selected dataset
                     // This assumes businesses have a 'dataset' field or we match by town
-                    return selectedDatasetNames.some(datasetName => 
+                    const matches = selectedDatasetNames.some(datasetName => 
                         business.dataset === datasetName || 
                         business.town === datasetName ||
                         datasetName.toLowerCase().includes(business.town?.toLowerCase() || '')
                     );
+                    
+                    // Log first few matches/non-matches for debugging
+                    if (businesses.indexOf(business) < 5) {
+                        console.log(`🔍 FILTER: Business ${business.name} dataset match:`, {
+                            businessDataset: business.dataset,
+                            businessTown: business.town,
+                            selectedDatasetNames,
+                            matches
+                        });
+                    }
+                    
+                    return matches;
                 });
+                
+                console.log('🔍 FILTER: After dataset filtering:', {
+                    originalCount: businesses.length,
+                    filteredCount: datasetFilteredBusinesses.length
+                });
+            } else {
+                console.log('🔍 FILTER: No dataset filtering (no selected datasets or no available datasets)');
             }
             
-            return filterBusinesses(datasetFilteredBusinesses, {
+            const finalFiltered = filterBusinesses(datasetFilteredBusinesses, {
                 searchTerm,
                 selectedCategory,
                 visibleProviders,
@@ -235,6 +273,18 @@ export const useBusinessData = () => {
                 droppedPin: droppedPin ?? undefined,
                 radiusKm
             });
+            
+            console.log('🔍 FILTER: Final filtering result:', {
+                afterDatasetFilter: datasetFilteredBusinesses.length,
+                finalCount: finalFiltered.length,
+                sampleBusiness: finalFiltered[0] ? {
+                    id: finalFiltered[0].id,
+                    name: finalFiltered[0].name,
+                    coordinates: finalFiltered[0].coordinates
+                } : null
+            });
+            
+            return finalFiltered;
         });
     }, [businesses, selectedDatasets, availableDatasets, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
 
