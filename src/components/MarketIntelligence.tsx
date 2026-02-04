@@ -208,7 +208,12 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({
                             <BarChart 
                                 data={providerData} 
                                 layout="vertical" 
-                                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                                margin={{ 
+                                    top: 20, 
+                                    right: 30, 
+                                    left: 0, // Remove left margin for mobile
+                                    bottom: 20 
+                                }}
                                 barCategoryGap="10%"
                             >
                                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
@@ -222,14 +227,15 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({
                                         fontSize: 10, 
                                         fontWeight: 700, 
                                         fill: '#64748b',
-                                        textAnchor: 'end'
+                                        textAnchor: 'start' // Align to start for mobile
                                     }}
-                                    width={200}
+                                    width={window.innerWidth < 768 ? 120 : 200} // Responsive width
                                     interval={0}
                                     tickFormatter={(value) => {
-                                        // Truncate long provider names to fit
-                                        if (value.length > 15) {
-                                            return value.substring(0, 15) + '...';
+                                        // Truncate long provider names to fit mobile
+                                        const maxLength = window.innerWidth < 768 ? 12 : 15;
+                                        if (value.length > maxLength) {
+                                            return value.substring(0, maxLength) + '...';
                                         }
                                         return value;
                                     }}

@@ -10,6 +10,7 @@ import ManualSyncPanel from './ManualSyncPanel';
 interface DbSettingsPageProps {
   businesses: Business[];
   onClose: () => void;
+  onImport?: () => void; // Add import callback
 }
 
 interface TownData {
@@ -19,7 +20,7 @@ interface TownData {
   categories: string[];
 }
 
-export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onClose }) => {
+export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onClose, onImport }) => {
   const { user, token, isAuthenticated, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<'overview' | 'towns' | 'users' | 'userdata' | 'database'>('overview');
   const [townData, setTownData] = useState<TownData[]>([]);
@@ -215,7 +216,15 @@ export const DbSettingsPage: React.FC<DbSettingsPageProps> = ({ businesses, onCl
                   Delete Selected ({selectedTowns.length})
                 </button>
               )}
-              <button className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors">
+              <button 
+                onClick={() => {
+                  if (onImport) {
+                    onImport();
+                    onClose(); // Close settings and open import modal
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors"
+              >
                 <Plus className="h-4 w-4" />
                 Import New Dataset
               </button>

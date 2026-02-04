@@ -639,8 +639,15 @@ export const BusinessMap = React.memo(({
 
   // CRITICAL PERFORMANCE OPTIMIZATION: Memoize markers with stable dependencies and chunked processing
   const memoizedMarkers = React.useMemo(() => {
+    console.log('🗺️ MARKERS: Creating markers...', {
+      markersLoaded,
+      businessesCount: businesses?.length || 0,
+      businessesSample: businesses?.slice(0, 2)?.map(b => ({ id: b.id, name: b.name, hasCoords: !!b.coordinates }))
+    });
+    
     // Don't create markers until they should be loaded
     if (!markersLoaded) {
+      console.log('🗺️ MARKERS: Markers not loaded yet, returning empty array');
       return [];
     }
     
@@ -648,6 +655,7 @@ export const BusinessMap = React.memo(({
     
     // Return empty array if no businesses
     if (!businesses || !Array.isArray(businesses) || businesses.length === 0) {
+      console.log('🗺️ MARKERS: No businesses available', { businesses: businesses?.length });
       PerformanceMonitor.endTimer('create-markers');
       return [];
     }
@@ -665,12 +673,23 @@ export const BusinessMap = React.memo(({
         
         try {
           // Extensive validation of business data
-          if (!business?.id || !business.coordinates) continue;
+          if (!business?.id || !business.coordinates) {
+            console.log('🗺️ MARKERS: Skipping business - missing id or coordinates', { 
+              id: business?.id, 
+              hasCoords: !!business?.coordinates 
+            });
+            continue;
+          }
           
           if (typeof business.coordinates.lat !== 'number' || 
               typeof business.coordinates.lng !== 'number' ||
               isNaN(business.coordinates.lat) || 
               isNaN(business.coordinates.lng)) {
+            console.log('🗺️ MARKERS: Skipping business - invalid coordinates', { 
+              id: business.id,
+              lat: business.coordinates.lat,
+              lng: business.coordinates.lng
+            });
             continue;
           }
 
@@ -747,13 +766,13 @@ export const BusinessMap = React.memo(({
       processChunk(i);
     }
 
-    console.log(`Performance: Created ${validMarkers.length} markers out of ${businesses.length} businesses`);
+    console.log(`🗺️ MARKERS: Created ${validMarkers.length} markers out of ${businesses.length} businesses`);
     PerformanceMonitor.endTimer('create-markers');
     return validMarkers;
   }, [
     // CRITICAL: Only depend on essential data that actually affects marker rendering
     markersLoaded, // Include markersLoaded in dependencies
-    businesses.length, // Only re-render if count changes
+    businesses, // Use full businesses array instead of just length
     selectedBusinessId, 
     selectedBusinessIds.join(','), // Stable string representation
     onBusinessSelect

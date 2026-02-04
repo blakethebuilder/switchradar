@@ -943,7 +943,11 @@ function App() {
                 <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
                   <Suspense fallback={<LoadingSpinner />}>
                     <ManualSyncPanel />
-                    <DbSettingsPage businesses={businesses} onClose={() => setViewMode('table')} />
+                    <DbSettingsPage 
+                      businesses={businesses} 
+                      onClose={() => setViewMode('table')} 
+                      onImport={openImportModal}
+                    />
                   </Suspense>
                 </div>
               </div>
