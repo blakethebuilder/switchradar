@@ -72,33 +72,60 @@ try {
   // Column already exists, ignore
 }
 
+// Check current datasets table schema
+try {
+  const tableInfo = db.prepare("PRAGMA table_info(datasets)").all();
+  const columnNames = tableInfo.map(col => col.name);
+  console.log('📊 Current datasets table columns:', columnNames);
+  
+  // Check if we have the old schema (with userId) or new schema (with created_by)
+  const hasUserId = columnNames.includes('userId');
+  const hasCreatedBy = columnNames.includes('created_by');
+  
+  console.log('📊 Schema check:', { hasUserId, hasCreatedBy });
+  
+  if (hasUserId && !hasCreatedBy) {
+    console.log('🔄 Migrating from old schema to new schema...');
+    // Rename userId to created_by for consistency
+    db.exec(`ALTER TABLE datasets RENAME COLUMN userId TO created_by;`);
+    console.log('✅ Renamed userId to created_by');
+  }
+} catch (e) {
+  console.log('📊 Datasets table does not exist yet, will be created');
+}
+
 // Add missing columns to existing datasets table
 try {
   db.exec(`ALTER TABLE datasets ADD COLUMN created_by INTEGER;`);
+  console.log('✅ Added created_by column');
 } catch (e) {
   // Column already exists, ignore
 }
 
 try {
   db.exec(`ALTER TABLE datasets ADD COLUMN business_count INTEGER DEFAULT 0;`);
+  console.log('✅ Added business_count column');
 } catch (e) {
   // Column already exists, ignore
 }
 
 try {
   db.exec(`ALTER TABLE datasets ADD COLUMN is_active BOOLEAN DEFAULT 1;`);
+  console.log('✅ Added is_active column');
 } catch (e) {
   // Column already exists, ignore
 }
 
 try {
   db.exec(`ALTER TABLE datasets ADD COLUMN town TEXT;`);
+  console.log('✅ Added town column');
 } catch (e) {
   // Column already exists, ignore
 }
 
 try {
   db.exec(`ALTER TABLE datasets ADD COLUMN province TEXT;`);
+  console.log('✅ Added province column');
 } catch (e) {
   // Column already exists, ignore
 }

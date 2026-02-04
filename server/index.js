@@ -88,9 +88,9 @@ const seedDefaultUsers = async () => {
             const firstUser = db.prepare('SELECT * FROM users ORDER BY id LIMIT 1').get();
             if (firstUser) {
                 db.prepare(`
-                    INSERT INTO datasets (id, name, description, userId, created_by, business_count, is_active)
-                    VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', ?, ?, 0, 1)
-                `).run(firstUser.id, firstUser.id);
+                    INSERT INTO datasets (id, name, description, created_by, business_count, is_active)
+                    VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', ?, 0, 1)
+                `).run(firstUser.id);
                 console.log(`✓ Created default dataset with creator ID: ${firstUser.id}`);
             } else {
                 console.error('✗ No users found to create default dataset');
@@ -270,9 +270,9 @@ app.post('/api/datasets', auth, (req, res) => {
         }
         
         const result = db.prepare(`
-            INSERT INTO datasets (name, description, town, province, userId, created_by)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `).run(name, description, town, province, userId, userId);
+            INSERT INTO datasets (name, description, town, province, created_by)
+            VALUES (?, ?, ?, ?, ?)
+        `).run(name, description, town, province, userId);
         
         // Grant admin permission to creator
         db.prepare(`
@@ -519,6 +519,17 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     console.log('Username:', req.userData.username);
     console.log('Request body keys:', Object.keys(req.body));
     
+    // Debug: Check datasets table
+    try {
+        const datasets = db.prepare('SELECT * FROM datasets').all();
+        console.log('📊 Available datasets:', datasets);
+        
+        const defaultDataset = db.prepare('SELECT * FROM datasets WHERE id = 1').get();
+        console.log('📊 Default dataset (id=1):', defaultDataset);
+    } catch (error) {
+        console.error('❌ Error checking datasets:', error.message);
+    }
+    
     const { businesses, isChunked, chunkIndex, totalChunks, clearFirst } = req.body;
     const userId = req.userData.userId;
 
@@ -538,6 +549,22 @@ app.post('/api/businesses/sync', auth, (req, res) => {
         const importSource = req.body.source || req.body.fileName || 'Import';
         const importTown = req.body.town || 'Mixed';
         
+        // First, ensure default dataset exists
+        let defaultDataset = db.prepare('SELECT * FROM datasets WHERE id = 1').get();
+        if (!defaultDataset) {
+            console.log('🔧 Creating missing default dataset...');
+            try {
+                db.prepare(`
+                    INSERT INTO datasets (id, name, description, created_by, business_count, is_active)
+                    VALUES (1, 'Default Dataset', 'Default dataset for imported businesses', ?, 0, 1)
+                `).run(userId);
+                console.log('✅ Created default dataset with ID: 1');
+            } catch (createError) {
+                console.error('❌ Failed to create default dataset:', createError.message);
+                // Continue with datasetId = 1, might work anyway
+            }
+        }
+        
         // Try to find existing dataset with same name
         let dataset = db.prepare(`
             SELECT id FROM datasets 
@@ -547,14 +574,13 @@ app.post('/api/businesses/sync', auth, (req, res) => {
         if (!dataset) {
             // Create new dataset for this import
             const result = db.prepare(`
-                INSERT INTO datasets (name, description, town, province, userId, created_by)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO datasets (name, description, town, province, created_by)
+                VALUES (?, ?, ?, ?, ?)
             `).run(
                 importSource,
                 `Imported dataset: ${importSource}`,
                 importTown,
                 'Various',
-                userId,
                 userId
             );
             
@@ -574,6 +600,7 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     } catch (error) {
         console.error('❌ Failed to create/find dataset:', error.message);
         // Continue with default dataset
+        datasetId = 1;
     }
 
     const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
