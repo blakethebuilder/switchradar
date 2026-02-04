@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Database, Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, User as UserIcon, LogOut, Menu, X, Route, Settings, Eye, Presentation, Home } from 'lucide-react';
+import { Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, User as UserIcon, LogOut, Menu, X, Route, Settings, Eye, Presentation, Home } from 'lucide-react';
 import type { ViewMode } from '../types';
 import { useAuth } from '../context/AuthContext';
 
@@ -10,7 +10,6 @@ interface TopNavProps {
   onExportClick: () => void;
   onClearData: () => void;
   totalCount: number;
-  lastImportName?: string;
   onLoginClick: () => void;
   routeItemsCount?: number; // Add route items count
 }
@@ -22,7 +21,6 @@ export const TopNav = ({
   onExportClick,
   onClearData,
   totalCount,
-  lastImportName,
   onLoginClick,
   routeItemsCount = 0, // Add default value
 }: TopNavProps) => {
@@ -43,14 +41,7 @@ export const TopNav = ({
             <h1 className="text-sm md:text-xl font-extrabold tracking-tight text-slate-900 lg:text-2xl truncate">
               Switch<span className="text-indigo-600">Radar</span>
             </h1>
-            {lastImportName ? (
-              <p className="hidden lg:flex items-center gap-1.5 text-[9px] md:text-xs font-semibold text-slate-500 truncate">
-                <Database className="h-2.5 w-2.5 md:h-3 md:w-3 shrink-0" />
-                <span className="truncate">{lastImportName}</span> • {totalCount.toLocaleString()}
-              </p>
-            ) : (
-              <p className="hidden lg:block text-[9px] md:text-xs font-semibold text-slate-400 truncate">Powered by Smart Integrate</p>
-            )}
+            <p className="hidden lg:block text-[9px] md:text-xs font-semibold text-slate-400 truncate">Powered by Smart Integrate</p>
           </div>
         </div>
 

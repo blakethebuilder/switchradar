@@ -513,6 +513,35 @@ class ServerDataService {
     }
   }
 
+  // Remove duplicates
+  async removeDuplicates(token: string, dryRun = false): Promise<ServerDataResult> {
+    try {
+      const response = await this.makeRequest(this.getApiUrl('/api/businesses/remove-duplicates'), {
+        method: 'POST',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify({ dryRun })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to remove duplicates:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to remove duplicates'
+      };
+    }
+  }
+
   // Connection test with detailed diagnostics
   async testConnection(): Promise<boolean> {
     try {

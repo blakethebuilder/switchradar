@@ -706,8 +706,8 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     try {
         const result = transaction(businesses);
         
-        // Update user's last sync timestamp
-        db.prepare('UPDATE users SET last_sync = CURRENT_TIMESTAMP WHERE id = ?').run(userId);
+        // Update user statistics (business count and storage)
+        updateUserStats(userId);
         
         console.log('🎉 Business sync transaction completed successfully');
         
@@ -881,6 +881,9 @@ app.delete('/api/users/:userId/businesses/:businessId', auth, (req, res) => {
             return res.status(404).json({ message: 'Business not found' });
         }
         
+        // Update user statistics
+        updateUserStats(userId);
+        
         res.json({ message: 'Business deleted successfully' });
     } catch (error) {
         console.error('Failed to delete business:', error);
@@ -898,6 +901,9 @@ app.delete('/api/users/:userId/businesses', auth, (req, res) => {
     
     try {
         const result = db.prepare('DELETE FROM leads WHERE userId = ?').run(userId);
+        
+        // Update user statistics
+        updateUserStats(userId);
         
         res.json({ 
             message: 'All user businesses deleted successfully',
@@ -1086,6 +1092,9 @@ app.post('/api/share/towns', auth, (req, res) => {
         
         transaction();
         
+        // Update statistics for target user
+        updateUserStats(targetUserId);
+        
         res.json({
             message: `Successfully shared ${copiedCount} businesses from ${towns.length} towns`,
             sharedTowns: towns,
@@ -1173,6 +1182,9 @@ app.post('/api/share/businesses', auth, (req, res) => {
         
         transaction();
         
+        // Update statistics for target user
+        updateUserStats(targetUserId);
+        
         res.json({
             message: `Successfully shared ${copiedCount} businesses`,
             businessesShared: copiedCount,
@@ -1213,6 +1225,169 @@ app.get('/api/share/towns', auth, (req, res) => {
     } catch (error) {
         console.error('Failed to fetch towns:', error);
         res.status(500).json({ message: 'Failed to fetch towns', error: error.message });
+    }
+});
+
+// Helper function to update user statistics
+const updateUserStats = (userId) => {
+    try {
+        // Count businesses for this user
+        const businessCount = db.prepare('SELECT COUNT(*) as count FROM leads WHERE userId = ?').get(userId);
+        
+        // Calculate storage used (rough estimate based on data size)
+        const storageQuery = db.prepare(`
+            SELECT 
+                COUNT(*) * 2 + 
+                SUM(LENGTH(COALESCE(name, '')) + LENGTH(COALESCE(address, '')) + 
+                    LENGTH(COALESCE(phone, '')) + LENGTH(COALESCE(email, '')) + 
+                    LENGTH(COALESCE(notes, '')) + LENGTH(COALESCE(metadata, ''))) / 1024 as storage_kb
+            FROM leads WHERE userId = ?
+        `).get(userId);
+        
+        const storageMB = Math.round((storageQuery?.storage_kb || 0) / 1024 * 100) / 100;
+        
+        // Update user statistics
+        db.prepare(`
+            UPDATE users 
+            SET total_businesses = ?, storage_used_mb = ?, last_sync = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        `).run(businessCount?.count || 0, storageMB, userId);
+        
+        console.log(`📊 Updated stats for user ${userId}: ${businessCount?.count || 0} businesses, ${storageMB} MB`);
+        
+        return { businessCount: businessCount?.count || 0, storageMB };
+    } catch (error) {
+        console.error('❌ Failed to update user stats:', error);
+        return null;
+    }
+};
+
+// Remove duplicates endpoint
+app.post('/api/businesses/remove-duplicates', auth, (req, res) => {
+    const userId = req.userData.userId;
+    const { dryRun = false } = req.body; // Allow dry run to preview duplicates
+    
+    console.log('🔍 Remove duplicates request for user:', userId, 'dryRun:', dryRun);
+    
+    try {
+        // Find duplicates based on name + phone combination (most reliable)
+        const duplicateQuery = `
+            SELECT 
+                id, name, phone, address, town, provider, 
+                COUNT(*) as duplicate_count,
+                MIN(importedAt) as first_imported,
+                MAX(importedAt) as last_imported,
+                GROUP_CONCAT(id) as all_ids
+            FROM leads 
+            WHERE userId = ? 
+                AND name IS NOT NULL 
+                AND name != ''
+                AND phone IS NOT NULL 
+                AND phone != ''
+            GROUP BY LOWER(TRIM(name)), TRIM(phone)
+            HAVING COUNT(*) > 1
+            ORDER BY duplicate_count DESC, name
+        `;
+        
+        const duplicateGroups = db.prepare(duplicateQuery).all(userId);
+        
+        console.log(`📊 Found ${duplicateGroups.length} duplicate groups`);
+        
+        if (duplicateGroups.length === 0) {
+            return res.json({
+                message: 'No duplicates found',
+                duplicateGroups: [],
+                totalDuplicates: 0,
+                wouldRemove: 0
+            });
+        }
+        
+        let totalDuplicates = 0;
+        let wouldRemove = 0;
+        const duplicateDetails = [];
+        
+        for (const group of duplicateGroups) {
+            const allIds = group.all_ids.split(',');
+            totalDuplicates += group.duplicate_count;
+            wouldRemove += (group.duplicate_count - 1); // Keep one, remove the rest
+            
+            // Get full details for each duplicate in this group
+            const groupDetails = db.prepare(`
+                SELECT id, name, phone, address, town, provider, category, 
+                       importedAt, source, metadata, notes
+                FROM leads 
+                WHERE id IN (${allIds.map(() => '?').join(',')}) AND userId = ?
+                ORDER BY importedAt ASC
+            `).all(...allIds, userId);
+            
+            duplicateDetails.push({
+                key: `${group.name} - ${group.phone}`,
+                count: group.duplicate_count,
+                keepId: groupDetails[0].id, // Keep the oldest one
+                removeIds: groupDetails.slice(1).map(d => d.id),
+                businesses: groupDetails.map(d => ({
+                    id: d.id,
+                    name: d.name,
+                    phone: d.phone,
+                    address: d.address,
+                    town: d.town,
+                    provider: d.provider,
+                    category: d.category,
+                    importedAt: d.importedAt,
+                    source: d.source,
+                    hasNotes: (JSON.parse(d.notes || '[]')).length > 0,
+                    hasMetadata: Object.keys(JSON.parse(d.metadata || '{}')).length > 0
+                }))
+            });
+        }
+        
+        if (dryRun) {
+            // Just return the analysis
+            return res.json({
+                message: `Found ${duplicateGroups.length} duplicate groups`,
+                duplicateGroups: duplicateDetails,
+                totalDuplicates,
+                wouldRemove,
+                dryRun: true
+            });
+        }
+        
+        // Actually remove duplicates
+        let removedCount = 0;
+        const transaction = db.transaction(() => {
+            for (const group of duplicateDetails) {
+                if (group.removeIds.length > 0) {
+                    const deleteStmt = db.prepare(`
+                        DELETE FROM leads 
+                        WHERE id IN (${group.removeIds.map(() => '?').join(',')}) AND userId = ?
+                    `);
+                    const result = deleteStmt.run(...group.removeIds, userId);
+                    removedCount += result.changes;
+                    
+                    console.log(`🗑️ Removed ${result.changes} duplicates for "${group.key}"`);
+                }
+            }
+        });
+        
+        transaction();
+        
+        // Update user statistics
+        updateUserStats(userId);
+        
+        res.json({
+            message: `Successfully removed ${removedCount} duplicate businesses`,
+            duplicateGroups: duplicateDetails,
+            totalDuplicates,
+            removedCount,
+            dryRun: false
+        });
+        
+    } catch (error) {
+        console.error('❌ Remove duplicates error:', error);
+        res.status(500).json({ 
+            message: 'Failed to remove duplicates', 
+            error: error.message 
+        });
     }
 });
 
@@ -1298,6 +1473,9 @@ app.put('/api/businesses/:businessId', auth, (req, res) => {
         
         console.log('✅ Business updated successfully, changes:', result.changes);
         
+        // Update user statistics
+        updateUserStats(userId);
+        
         // Return the updated business in the expected format
         const updatedBusinessResponse = {
             id: businessId,
@@ -1346,6 +1524,10 @@ app.post('/api/businesses/bulk', auth, (req, res) => {
             `);
             
             const result = stmt.run(userId, ...businessIds);
+            
+            // Update user statistics
+            updateUserStats(userId);
+            
             res.json({ message: 'Bulk delete successful', affected: result.changes });
             
         } else {

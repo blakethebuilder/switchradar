@@ -380,7 +380,6 @@ function App() {
           onExportClick={handleExport}
           onClearData={handleClearAll}
           totalCount={businesses.length}
-          lastImportName={lastImportName}
           onLoginClick={() => setIsLoginOpen(true)}
           routeItemsCount={routeItems.length}
         />

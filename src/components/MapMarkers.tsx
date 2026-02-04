@@ -58,14 +58,31 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
         icon = createFallbackIcon();
       }
 
-      // Optimized click handler that doesn't reset map view
-      const handleClick = React.useCallback((e: L.LeafletMouseEvent) => {
-        e.originalEvent?.stopPropagation();
-        // Prevent map view reset by not triggering navigation
-        if (onBusinessSelect) {
-          onBusinessSelect(business);
+      // Stable click handler that prevents clustering issues
+      const handleClick = (e: L.LeafletMouseEvent) => {
+        console.log('🗺️ MARKER CLICK: Business clicked', {
+          businessId: business.id,
+          businessName: business.name,
+          onBusinessSelectExists: !!onBusinessSelect,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Prevent event bubbling that might interfere with clustering
+        if (e.originalEvent) {
+          e.originalEvent.stopPropagation();
+          e.originalEvent.preventDefault();
         }
-      }, [business, onBusinessSelect]);
+        
+        // Use setTimeout to defer the state update and prevent clustering interference
+        setTimeout(() => {
+          if (onBusinessSelect) {
+            console.log('🗺️ MARKER CLICK: Calling onBusinessSelect for', business.name);
+            onBusinessSelect(business);
+          } else {
+            console.warn('🗺️ MARKER CLICK: No onBusinessSelect handler provided');
+          }
+        }, 0);
+      };
 
       return (
         <Marker

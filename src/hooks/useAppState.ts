@@ -46,6 +46,11 @@ export const useAppState = () => {
 
   // Handler for table business selection - only shows client details, doesn't change view
   const selectBusinessForDetails = useCallback((business: Business) => {
+    console.log('🎯 SELECT BUSINESS: selectBusinessForDetails called', {
+      businessId: business.id,
+      businessName: business.name,
+      timestamp: new Date().toISOString()
+    });
     setSelectedBusiness(business);
     // Don't change view mode or map target - just show the client details modal
   }, []);
