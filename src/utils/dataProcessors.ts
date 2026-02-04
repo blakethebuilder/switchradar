@@ -310,6 +310,7 @@ export const filterBusinesses = (
   filters: {
     searchTerm: string;
     selectedCategory: string;
+    selectedTown: string;
     visibleProviders: string[];
     phoneType?: 'all' | 'landline' | 'mobile';
     droppedPin?: { lat: number, lng: number };
@@ -322,7 +323,7 @@ export const filterBusinesses = (
     return filterCache.get(cacheKey)!;
   }
 
-  const { droppedPin, radiusKm, searchTerm, selectedCategory, visibleProviders, phoneType } = filters;
+  const { droppedPin, radiusKm, searchTerm, selectedCategory, selectedTown, visibleProviders, phoneType } = filters;
   
   // Early exit if no providers selected
   if (visibleProviders.length === 0) {
@@ -335,6 +336,11 @@ export const filterBusinesses = (
   // Apply other filters in order of selectivity
   if (selectedCategory) {
     filtered = filtered.filter(biz => biz.category === selectedCategory);
+  }
+  
+  // Town filtering
+  if (selectedTown) {
+    filtered = filtered.filter(biz => biz.town === selectedTown);
   }
   
   // Provider filtering with Set for O(1) lookup

@@ -1,14 +1,17 @@
 import { memo } from 'react';
-import { Search, X, SlidersHorizontal, Smartphone, Landmark, LayoutGrid, Layers } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Smartphone, Landmark, LayoutGrid, Layers, MapPin } from 'lucide-react';
 
 interface FilterPanelProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   selectedCategory: string;
   onCategoryChange: (category: string) => void;
+  selectedTown: string;
+  onTownChange: (town: string) => void;
   phoneType: 'all' | 'landline' | 'mobile';
   onPhoneTypeChange: (type: 'all' | 'landline' | 'mobile') => void;
   categories: string[];
+  availableTowns: string[];
   onClearFilters: () => void;
 }
 
@@ -17,12 +20,15 @@ const FilterPanelComponent = ({
   onSearchChange,
   selectedCategory,
   onCategoryChange,
+  selectedTown,
+  onTownChange,
   phoneType,
   onPhoneTypeChange,
   categories,
+  availableTowns,
   onClearFilters
 }: FilterPanelProps) => {
-  const hasActiveFilters = searchTerm || selectedCategory || phoneType !== 'all';
+  const hasActiveFilters = searchTerm || selectedCategory || selectedTown || phoneType !== 'all';
 
   const clearSearch = () => {
     console.log('FilterPanel: Clear search');
@@ -32,6 +38,11 @@ const FilterPanelComponent = ({
   const clearCategory = () => {
     console.log('FilterPanel: Clear category');
     onCategoryChange('');
+  };
+
+  const clearTown = () => {
+    console.log('FilterPanel: Clear town');
+    onTownChange('');
   };
 
   const handlePhoneTypeChange = (type: 'all' | 'landline' | 'mobile') => {
@@ -81,6 +92,70 @@ const FilterPanelComponent = ({
         )}
       </div>
 
+      {/* Town Selector */}
+      {availableTowns.length > 0 && (
+        <div className="relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500">
+            <MapPin className="h-3 w-3" />
+          </div>
+          <select
+            className="h-8 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-xs font-medium text-slate-700 shadow-sm transition-all focus:border-blue-300 focus:ring-1 focus:ring-blue-100 outline-none cursor-pointer"
+            value={selectedTown}
+            onChange={(e) => onTownChange(e.target.value)}
+          >
+            <option value="">All Towns ({availableTowns.length})</option>
+            {availableTowns.map(town => (
+              <option key={town} value={town}>{town}</option>
+            ))}
+          </select>
+          {selectedTown ? (
+            <button
+              onClick={clearTown}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              title="Clear town filter"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          ) : (
+            <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+              <SlidersHorizontal className="h-2.5 w-2.5" />
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Compact Category Dropdown */}
+      {categories.length > 0 && (
+        <div className="relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500">
+            <Layers className="h-3 w-3" />
+          </div>
+          <select
+            className="h-8 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-xs font-medium text-slate-700 shadow-sm transition-all focus:border-indigo-300 focus:ring-1 focus:ring-indigo-100 outline-none cursor-pointer"
+            value={selectedCategory}
+            onChange={(e) => onCategoryChange(e.target.value)}
+          >
+            <option value="">All Categories ({categories.length})</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+          {selectedCategory ? (
+            <button
+              onClick={clearCategory}
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+              title="Clear category filter"
+            >
+              <X className="h-2.5 w-2.5" />
+            </button>
+          ) : (
+            <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
+              <SlidersHorizontal className="h-2.5 w-2.5" />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Compact Phone Type Buttons */}
       <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
         <button
@@ -115,36 +190,6 @@ const FilterPanelComponent = ({
         </button>
       </div>
 
-      {/* Compact Category Dropdown */}
-      <div className="relative">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500">
-          <Layers className="h-3 w-3" />
-        </div>
-        <select
-          className="h-8 w-full appearance-none rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-xs font-medium text-slate-700 shadow-sm transition-all focus:border-indigo-300 focus:ring-1 focus:ring-indigo-100 outline-none cursor-pointer"
-          value={selectedCategory}
-          onChange={(e) => onCategoryChange(e.target.value)}
-        >
-          <option value="">All Categories ({categories.length})</option>
-          {categories.map(cat => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
-        {selectedCategory ? (
-          <button
-            onClick={clearCategory}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
-            title="Clear category filter"
-          >
-            <X className="h-2.5 w-2.5" />
-          </button>
-        ) : (
-          <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400">
-            <SlidersHorizontal className="h-2.5 w-2.5" />
-          </div>
-        )}
-      </div>
-
       {/* Active Filters Summary - Compact */}
       {hasActiveFilters && (
         <div className="flex flex-wrap items-center gap-1 pt-1 border-t border-slate-100">
@@ -153,6 +198,14 @@ const FilterPanelComponent = ({
             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[9px] font-medium">
               "{searchTerm.length > 10 ? searchTerm.substring(0, 10) + '...' : searchTerm}"
               <button onClick={clearSearch} className="hover:bg-indigo-200 rounded p-0.5">
+                <X className="h-2 w-2" />
+              </button>
+            </span>
+          )}
+          {selectedTown && (
+            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[9px] font-medium">
+              {selectedTown.length > 8 ? selectedTown.substring(0, 8) + '...' : selectedTown}
+              <button onClick={clearTown} className="hover:bg-blue-200 rounded p-0.5">
                 <X className="h-2 w-2" />
               </button>
             </span>

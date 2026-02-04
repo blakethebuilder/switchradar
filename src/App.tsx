@@ -53,11 +53,14 @@ function App() {
     routeItems,
     filteredBusinesses,
     categories,
+    availableTowns,
     availableProviders,
     searchTerm,
     setSearchTerm,
     selectedCategory,
     setSelectedCategory,
+    selectedTown,
+    setSelectedTown,
     visibleProviders,
     setVisibleProviders,
     setHasUserInteracted,
@@ -480,6 +483,7 @@ function App() {
     setHasUserInteracted(true);
     setSearchTerm('');
     setSelectedCategory('');
+    setSelectedTown('');
     setPhoneType('all');
     setVisibleProviders(availableProviders);
   }, [availableProviders, setHasUserInteracted]);
@@ -740,9 +744,12 @@ function App() {
                     onSearchChange={setSearchTerm}
                     selectedCategory={selectedCategory}
                     onCategoryChange={setSelectedCategory}
+                    selectedTown={selectedTown}
+                    onTownChange={setSelectedTown}
                     phoneType={phoneType}
                     onPhoneTypeChange={setPhoneType}
                     categories={categories}
+                    availableTowns={availableTowns}
                     availableProviders={availableProviders}
                     visibleProviders={visibleProviders}
                     onToggleProvider={handleToggleProvider}
@@ -828,9 +835,12 @@ function App() {
                   onSearchChange={setSearchTerm}
                   selectedCategory={selectedCategory}
                   onCategoryChange={setSelectedCategory}
+                  selectedTown={selectedTown}
+                  onTownChange={setSelectedTown}
                   phoneType={phoneType}
                   onPhoneTypeChange={setPhoneType}
                   categories={categories}
+                  availableTowns={availableTowns}
                   availableProviders={availableProviders}
                   visibleProviders={visibleProviders}
                   onToggleProvider={handleToggleProvider}

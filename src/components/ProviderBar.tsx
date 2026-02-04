@@ -8,6 +8,7 @@ interface ProviderBarProps {
   onToggleProvider: (provider: string) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
+  compact?: boolean;
 }
 
 const ProviderBarComponent: React.FC<ProviderBarProps> = ({
@@ -15,7 +16,8 @@ const ProviderBarComponent: React.FC<ProviderBarProps> = ({
   visibleProviders,
   onToggleProvider,
   onSelectAll,
-  onClearAll
+  onClearAll,
+  compact = false
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -120,7 +122,9 @@ const ProviderBarComponent: React.FC<ProviderBarProps> = ({
 
       {/* Scrollable Provider Pills Container - Optimized for sidebar */}
       <div className="relative">
-        <div className="flex gap-1.5 flex-wrap max-h-48 overflow-y-auto custom-scrollbar pb-2">
+        <div className={`flex gap-1.5 flex-wrap overflow-y-auto custom-scrollbar pb-2 ${
+          compact ? 'max-h-32' : 'max-h-48'
+        }`}>
           {filteredProviders.map(provider => {
             const isActive = visibleProviders.includes(provider);
             const color = getProviderColor(provider);
@@ -129,21 +133,29 @@ const ProviderBarComponent: React.FC<ProviderBarProps> = ({
               <button
                 key={provider}
                 onClick={() => handleToggleProvider(provider)}
-                className={`group relative flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-all duration-200 hover:scale-105 shrink-0 ${isActive
+                className={`group relative flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-all duration-200 hover:scale-105 shrink-0 ${
+                  compact ? 'text-[9px]' : 'text-[10px]'
+                } ${isActive
                   ? 'border-indigo-200 bg-white shadow-md ring-1 ring-indigo-100'
                   : 'border-slate-200 bg-slate-50 hover:border-slate-300 opacity-70 hover:opacity-100 hover:shadow-sm'
                   }`}
                 title={`${isActive ? 'Hide' : 'Show'} ${provider} businesses`}
               >
                 <div
-                  className="h-2.5 w-2.5 rounded-full ring-1 ring-white shadow-sm transition-transform group-hover:scale-110 flex-shrink-0"
+                  className={`rounded-full ring-1 ring-white shadow-sm transition-transform group-hover:scale-110 flex-shrink-0 ${
+                    compact ? 'h-2 w-2' : 'h-2.5 w-2.5'
+                  }`}
                   style={{ backgroundColor: color }}
                 />
-                <span className={`text-[10px] font-bold tracking-tight ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>
-                  {provider}
+                <span className={`font-bold tracking-tight ${
+                  compact ? 'text-[9px]' : 'text-[10px]'
+                } ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>
+                  {compact && provider.length > 8 ? provider.substring(0, 8) + '...' : provider}
                 </span>
                 {isActive && (
-                  <CheckCircle2 className="h-2.5 w-2.5 text-indigo-500 flex-shrink-0" />
+                  <CheckCircle2 className={`text-indigo-500 flex-shrink-0 ${
+                    compact ? 'h-2 w-2' : 'h-2.5 w-2.5'
+                  }`} />
                 )}
               </button>
             );

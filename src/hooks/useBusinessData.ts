@@ -83,6 +83,7 @@ export const useBusinessData = () => {
     const searchTerm = useDebounce(searchInput, 300);
 
     const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedTown, setSelectedTown] = useState('');
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
     const [hasUserInteracted, setHasUserInteracted] = useState(false);
     const [phoneType, setPhoneType] = useState<'all' | 'landline' | 'mobile'>('all');
@@ -181,6 +182,23 @@ export const useBusinessData = () => {
         [businesses]
     );
 
+    // Memoized towns calculation with better performance
+    const availableTowns = useMemo(
+        () => {
+            if (!businesses.length) return [];
+            return PerformanceMonitor.measure('calculateTowns', () => {
+                const townSet = new Set<string>();
+                for (const business of businesses) {
+                    if (business.town) {
+                        townSet.add(business.town);
+                    }
+                }
+                return Array.from(townSet).sort();
+            });
+        },
+        [businesses]
+    );
+
     // Memoized providers calculation with better performance
     const availableProviders = useMemo(
         () => {
@@ -212,6 +230,7 @@ export const useBusinessData = () => {
             availableDatasets: availableDatasets,
             searchTerm,
             selectedCategory,
+            selectedTown,
             visibleProviders: visibleProviders.length,
             phoneType
         });
@@ -268,6 +287,7 @@ export const useBusinessData = () => {
             const finalFiltered = filterBusinesses(datasetFilteredBusinesses, {
                 searchTerm,
                 selectedCategory,
+                selectedTown,
                 visibleProviders,
                 phoneType,
                 droppedPin: droppedPin ?? undefined,
@@ -286,18 +306,21 @@ export const useBusinessData = () => {
             
             return finalFiltered;
         });
-    }, [businesses, selectedDatasets, availableDatasets, searchTerm, selectedCategory, visibleProviders, phoneType, droppedPin, radiusKm]);
+    }, [businesses, selectedDatasets, availableDatasets, searchTerm, selectedCategory, selectedTown, visibleProviders, phoneType, droppedPin, radiusKm]);
 
     return {
         businesses,
         routeItems,
         filteredBusinesses,
         categories,
+        availableTowns,
         availableProviders,
         searchTerm: searchInput, 
         setSearchTerm: setSearchInput,
         selectedCategory,
         setSelectedCategory,
+        selectedTown,
+        setSelectedTown,
         visibleProviders,
         setVisibleProviders,
         setHasUserInteracted,
