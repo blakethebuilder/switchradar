@@ -70,6 +70,41 @@
   transition: none !important;
 }
 
+/* More comprehensive cluster hover prevention */
+.leaflet-marker-icon.cluster-icon-stable,
+.leaflet-marker-icon.cluster-icon-stable:hover,
+.leaflet-marker-icon.cluster-icon-stable:focus,
+.leaflet-marker-icon.cluster-icon-stable:active {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+  will-change: auto !important;
+}
+
+/* Prevent any Leaflet default cluster animations */
+.leaflet-marker-icon.cluster-icon-stable * {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Override MarkerCluster default hover styles */
+.marker-cluster-small.cluster-icon-stable,
+.marker-cluster-medium.cluster-icon-stable,
+.marker-cluster-large.cluster-icon-stable {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
+.marker-cluster-small.cluster-icon-stable:hover,
+.marker-cluster-medium.cluster-icon-stable:hover,
+.marker-cluster-large.cluster-icon-stable:hover {
+  transform: none !important;
+  transition: none !important;
+  animation: none !important;
+}
+
 .leaflet-popup-content-wrapper {
   border-radius: 12px;
 }

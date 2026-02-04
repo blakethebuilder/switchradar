@@ -160,7 +160,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
       chunkedLoading={true}
       spiderfyOnMaxZoom={true}
       showCoverageOnHover={false}
-      animate={true}
+      animate={false}
       animateAddingMarkers={false}
       removeOutsideVisibleBounds={true}
       disableClusteringAtZoom={17}
@@ -328,9 +328,10 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
               font-size: ${fontSize};
               cursor: pointer;
               transition: none;
-              pointer-events: auto;
               backface-visibility: hidden;
               -webkit-backface-visibility: hidden;
+              transform: none;
+              animation: none;
             ">${count}</div>`,
             className: 'cluster-icon-stable',
             iconSize: [size, size],
@@ -351,9 +352,10 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
               justify-content: center; 
               font-weight: bold;
               transition: none;
-              pointer-events: auto;
               backface-visibility: hidden;
               -webkit-backface-visibility: hidden;
+              transform: none;
+              animation: none;
             ">•</div>`,
             className: 'cluster-icon-stable',
             iconSize: [fallbackSize, fallbackSize],
