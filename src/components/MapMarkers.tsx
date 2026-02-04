@@ -21,21 +21,13 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
 }) => {
   console.log('🗺️ MAPMARKERS: Component render', {
     businessesCount: businesses?.length || 0,
-    businessesSample: businesses?.slice(0, 3)?.map(b => ({
-      id: b.id,
-      name: b.name,
-      provider: b.provider,
-      hasCoords: !!b.coordinates,
-      coords: b.coordinates,
-      coordsType: typeof b.coordinates?.lat + ',' + typeof b.coordinates?.lng
-    })),
     selectedBusinessId,
     selectedBusinessIdsCount: selectedBusinessIds.length
   });
 
   // Memoize markers for performance
   const markers = React.useMemo(() => {
-    console.log('🗺️ MARKERS: useMemo triggered - Creating markers for', businesses?.length || 0, 'businesses');
+    console.log('🗺️ MARKERS: Creating markers for', businesses?.length || 0, 'businesses');
     
     if (!businesses || businesses.length === 0) {
       console.log('🗺️ MARKERS: No businesses provided, returning empty array');
@@ -46,114 +38,46 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
     const selectedSet = new Set([selectedBusinessId, ...selectedBusinessIds].filter(Boolean));
     let validCount = 0;
     let invalidCount = 0;
-    let coordinateIssues = 0;
-    let iconIssues = 0;
     
-    console.log('🗺️ MARKERS: Starting marker creation loop...');
-    console.log('🗺️ MARKERS: First 3 businesses data:', businesses.slice(0, 3).map(b => ({
-      id: b.id,
-      name: b.name,
-      provider: b.provider,
-      coordinates: b.coordinates,
-      coordinatesType: typeof b.coordinates,
-      hasLat: b.coordinates && 'lat' in b.coordinates,
-      hasLng: b.coordinates && 'lng' in b.coordinates,
-      latValue: b.coordinates?.lat,
-      lngValue: b.coordinates?.lng,
-      latType: typeof b.coordinates?.lat,
-      lngType: typeof b.coordinates?.lng
-    })));
-    
-    for (let i = 0; i < Math.min(businesses.length, 10); i++) { // Only process first 10 for debugging
+    for (let i = 0; i < businesses.length; i++) {
       const business = businesses[i];
       
       try {
-        console.log(`🗺️ MARKERS: Processing business ${i}:`, {
-          id: business.id,
-          name: business.name,
-          provider: business.provider,
-          coordinates: business.coordinates,
-          hasCoords: !!business.coordinates
-        });
-        
         // Validate business data
         if (!business?.id || !business.coordinates) {
           invalidCount++;
-          console.log(`🗺️ MARKERS: ❌ Invalid business ${i} (no id/coords):`, {
-            hasId: !!business?.id,
-            hasCoords: !!business?.coordinates,
-            business: business
-          });
           continue;
         }
         
-        // More detailed coordinate validation
+        // Validate coordinates
         const { lat, lng } = business.coordinates;
-        console.log(`🗺️ MARKERS: Business ${i} coordinates check:`, {
-          lat: lat,
-          lng: lng,
-          latType: typeof lat,
-          lngType: typeof lng,
-          latIsNumber: typeof lat === 'number',
-          lngIsNumber: typeof lng === 'number',
-          latIsNaN: isNaN(lat),
-          lngIsNaN: isNaN(lng)
-        });
-        
         if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
-          coordinateIssues++;
-          console.log(`🗺️ MARKERS: ❌ Invalid coordinates for business ${i}:`, {
-            id: business.id,
-            name: business.name,
-            lat: lat,
-            lng: lng,
-            latType: typeof lat,
-            lngType: typeof lng,
-            latIsNaN: isNaN(lat),
-            lngIsNaN: isNaN(lng)
-          });
+          invalidCount++;
           continue;
         }
 
         // Validate coordinate ranges
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-          coordinateIssues++;
-          console.log(`🗺️ MARKERS: ❌ Coordinates out of range for business ${i}:`, {
-            id: business.id,
-            name: business.name,
-            lat: lat,
-            lng: lng
-          });
+          invalidCount++;
           continue;
         }
 
-        // Create icon with detailed error handling
+        // Create icon
         let icon;
         try {
           const isSelected = selectedSet.has(business.id);
-          console.log(`🗺️ MARKERS: Creating icon for business ${i}:`, {
-            provider: business.provider,
-            isSelected: isSelected
-          });
-          
           icon = createProviderIcon(business.provider || 'Unknown', isSelected);
           
           if (!icon) {
-            console.warn(`🗺️ MARKERS: createProviderIcon returned null for business ${i}, using fallback`);
             icon = createFallbackIcon();
-            iconIssues++;
           }
-          
-          console.log(`🗺️ MARKERS: ✅ Icon created successfully for business ${i}`);
         } catch (iconError) {
           console.error(`🗺️ MARKERS: Error creating icon for business ${i}:`, iconError);
           icon = createFallbackIcon();
-          iconIssues++;
         }
 
         if (!icon) {
           invalidCount++;
-          console.error(`🗺️ MARKERS: ❌ No icon created for business ${i}`);
           continue;
         }
 
@@ -170,7 +94,6 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         }, 150);
 
         // Create the marker element
-        console.log(`🗺️ MARKERS: Creating marker element for business ${i} at position [${lat}, ${lng}]`);
         const marker = (
           <Marker
             key={`marker-${business.id}`}
@@ -185,23 +108,18 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         validMarkers.push(marker);
         validCount++;
         
-        console.log(`🗺️ MARKERS: ✅ Successfully created marker ${validCount} for business ${i}`);
-        
       } catch (error) {
         invalidCount++;
-        console.error(`🗺️ MARKERS: ❌ Error creating marker for business ${i}:`, error);
+        console.error(`🗺️ MARKERS: Error creating marker for business ${i}:`, error);
         continue;
       }
     }
 
-    console.log(`🗺️ MARKERS: ✅ MARKER CREATION COMPLETED (first 10 only)`);
+    console.log(`🗺️ MARKERS: Marker creation completed`);
     console.log(`🗺️ MARKERS: Summary:`, {
       totalBusinesses: businesses.length,
-      processedBusinesses: Math.min(businesses.length, 10),
       validMarkers: validCount,
       invalidBusinesses: invalidCount,
-      coordinateIssues: coordinateIssues,
-      iconIssues: iconIssues,
       markersReturned: validMarkers.length
     });
     
@@ -215,47 +133,8 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
   console.log('🗺️ MAPMARKERS: About to return', markers.length, 'markers to MarkerClusterGroup');
   
   if (markers.length === 0) {
-    console.log('🗺️ MAPMARKERS: ❌ NO MARKERS TO RENDER - returning empty MarkerClusterGroup');
+    console.log('🗺️ MAPMARKERS: No markers to render - returning empty MarkerClusterGroup');
     return <MarkerClusterGroup>{[]}</MarkerClusterGroup>;
-  }
-
-  // Debug: Try rendering first few markers directly without clustering
-  if (businesses.length > 0 && businesses.length <= 10) {
-    console.log('🗺️ MAPMARKERS: 🧪 TESTING - Rendering first few markers directly without clustering');
-    const directMarkers = businesses.slice(0, 3).map((business) => {
-      if (!business.coordinates || 
-          typeof business.coordinates.lat !== 'number' || 
-          typeof business.coordinates.lng !== 'number') {
-        return null;
-      }
-      
-      return (
-        <Marker
-          key={`direct-${business.id}`}
-          position={[business.coordinates.lat, business.coordinates.lng]}
-          icon={L.icon({
-            iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-            iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-            shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-          })}
-        />
-      );
-    }).filter(Boolean);
-    
-    console.log('🗺️ MAPMARKERS: 🧪 Created', directMarkers.length, 'direct markers');
-    
-    return (
-      <>
-        {directMarkers}
-        <MarkerClusterGroup>
-          {markers}
-        </MarkerClusterGroup>
-      </>
-    );
   }
   
   return (
@@ -286,27 +165,67 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
       maxZoom={17}
       eventHandlers={{
         clusterclick: (cluster: any) => {
-          const clusterGroup = cluster.target;
-          const map = clusterGroup._map;
-          const currentZoom = map.getZoom();
-          const childCount = clusterGroup.getChildCount();
-          
-          if (cluster.originalEvent) {
-            cluster.originalEvent.preventDefault();
-            cluster.originalEvent.stopPropagation();
+          try {
+            console.log('🗺️ CLUSTER: Click event triggered', cluster);
+            
+            // Get the cluster layer from the event
+            const clusterLayer = cluster.layer || cluster.target;
+            if (!clusterLayer) {
+              console.warn('🗺️ CLUSTER: No cluster layer found');
+              return false;
+            }
+            
+            // Check if it has the required methods
+            if (typeof clusterLayer.getChildCount !== 'function') {
+              console.warn('🗺️ CLUSTER: Cluster layer missing getChildCount method');
+              return false;
+            }
+            
+            const map = clusterLayer._map;
+            if (!map) {
+              console.warn('🗺️ CLUSTER: No map found on cluster layer');
+              return false;
+            }
+            
+            const currentZoom = map.getZoom();
+            const childCount = clusterLayer.getChildCount();
+            const clusterLatLng = clusterLayer.getLatLng();
+            
+            console.log('🗺️ CLUSTER: Processing click', {
+              currentZoom,
+              childCount,
+              clusterLatLng
+            });
+            
+            // Prevent default behavior
+            if (cluster.originalEvent) {
+              cluster.originalEvent.preventDefault();
+              cluster.originalEvent.stopPropagation();
+            }
+            
+            // Smart zoom behavior based on zoom level and cluster size
+            if (currentZoom <= 8) {
+              const targetZoom = Math.min(currentZoom + 2, 10);
+              map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.8 });
+            } else if (currentZoom <= 10 && childCount > 20) {
+              const targetZoom = Math.min(currentZoom + 2, 13);
+              map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.6 });
+            } else {
+              // Try to spiderfy if available
+              if (typeof clusterLayer.spiderfy === 'function') {
+                clusterLayer.spiderfy();
+              } else {
+                // Fallback: zoom in one level
+                const targetZoom = Math.min(currentZoom + 1, 16);
+                map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.5 });
+              }
+            }
+            
+            return false;
+          } catch (error) {
+            console.error('🗺️ CLUSTER: Error in cluster click handler:', error);
+            return false;
           }
-          
-          if (currentZoom <= 8) {
-            const targetZoom = Math.min(currentZoom + 2, 10);
-            map.setView(clusterGroup.getLatLng(), targetZoom, { animate: true, duration: 0.8 });
-          } else if (currentZoom <= 10 && childCount > 20) {
-            const targetZoom = Math.min(currentZoom + 2, 13);
-            map.setView(clusterGroup.getLatLng(), targetZoom, { animate: true, duration: 0.6 });
-          } else {
-            clusterGroup.spiderfy();
-          }
-          
-          return false;
         }
       }}
       iconCreateFunction={(cluster: any) => {

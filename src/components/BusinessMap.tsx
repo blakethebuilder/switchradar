@@ -57,24 +57,9 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
 
   console.log('🗺️ MAP: BusinessMap render', {
     businessesCount: businesses?.length || 0,
-    businessesSample: businesses?.slice(0, 3)?.map(b => ({
-      id: b.id,
-      name: b.name,
-      provider: b.provider,
-      hasCoords: !!b.coordinates,
-      coords: b.coordinates,
-      coordsValid: b.coordinates && 
-        typeof b.coordinates.lat === 'number' && 
-        typeof b.coordinates.lng === 'number' &&
-        !isNaN(b.coordinates.lat) && 
-        !isNaN(b.coordinates.lng) &&
-        b.coordinates.lat >= -90 && b.coordinates.lat <= 90 &&
-        b.coordinates.lng >= -180 && b.coordinates.lng <= 180
-    })),
     fullScreen,
     selectedBusinessId,
-    selectedBusinessIds: selectedBusinessIds.length,
-    timestamp: new Date().toISOString()
+    selectedBusinessIds: selectedBusinessIds.length
   });
 
   // Handle map ready
@@ -279,39 +264,6 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           selectedBusinessIds={selectedBusinessIds}
           onBusinessSelect={onBusinessSelect}
         />
-        
-        {/* Debug: Add a test marker to verify map is working */}
-        {businesses.length > 0 && (
-          <>
-            <Marker
-              position={[-26.8521, 26.6667]}
-              icon={L.icon({
-                iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-                iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-                shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-              })}
-            />
-            {/* Debug: Add a simple test marker with business coordinates if available */}
-            {businesses[0]?.coordinates && (
-              <Marker
-                position={[businesses[0].coordinates.lat, businesses[0].coordinates.lng]}
-                icon={L.icon({
-                  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-                  iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
-                  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-                  iconSize: [25, 41],
-                  iconAnchor: [12, 41],
-                  popupAnchor: [1, -34],
-                  shadowSize: [41, 41]
-                })}
-              />
-            )}
-          </>
-        )}
       </MapContainer>
 
       {/* Map controls */}
