@@ -1,5 +1,5 @@
 import { memo } from 'react';
-import { Search, X, SlidersHorizontal, Smartphone, Landmark, LayoutGrid, Layers, RotateCcw } from 'lucide-react';
+import { Search, X, SlidersHorizontal, Smartphone, Landmark, LayoutGrid, Layers } from 'lucide-react';
 
 interface FilterPanelProps {
   searchTerm: string;

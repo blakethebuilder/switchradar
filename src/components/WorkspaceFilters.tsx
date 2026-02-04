@@ -74,9 +74,9 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
   
   return (
     <>
-      {/* Mobile Filter Toggle Button - Only visible on mobile for map view */}
+      {/* Mobile Filter Toggle Button - Visible on all screens for map view */}
       {isMapView && (
-        <div className="md:hidden fixed top-20 left-4 z-50">
+        <div className="fixed top-20 left-4 z-50">
           <button
             onClick={onToggleVisibility}
             className={`h-12 w-12 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 ${
@@ -99,9 +99,9 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
         </div>
       )}
 
-      {/* Mobile Overlay - Only on mobile when visible */}
+      {/* Overlay - On all screens when visible and not minimized */}
       {isVisible && isMapView && (
-        <div className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={onToggleVisibility} />
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={onToggleVisibility} />
       )}
 
       {/* Main Filter Panel - Sidebar for Map View */}
