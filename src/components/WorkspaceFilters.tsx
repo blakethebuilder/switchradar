@@ -197,13 +197,13 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
     );
   }
 
-  // Map view - Completely redesigned sidebar
+  // Map view - Completely redesigned responsive sidebar
   return (
     <>
-      {/* Mobile Toggle Button - Fixed position */}
+      {/* Toggle Button - Fixed position for all screen sizes */}
       <button
         onClick={onToggleVisibility}
-        className={`fixed top-24 left-4 z-[60] h-12 w-12 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 md:hidden ${
+        className={`fixed top-24 left-4 z-[60] h-12 w-12 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 ${
           hasActiveFilters 
             ? 'bg-indigo-600 text-white shadow-indigo-200' 
             : 'bg-white/90 backdrop-blur-xl text-slate-700 shadow-slate-200'
@@ -221,20 +221,20 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
         )}
       </button>
 
-      {/* Mobile Overlay */}
+      {/* Overlay for all screen sizes when visible */}
       {isVisible && (
         <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[50] md:hidden" 
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[50]" 
           onClick={onToggleVisibility} 
         />
       )}
 
-      {/* Sidebar - Properly positioned and sized */}
+      {/* Sidebar - Responsive for all screen sizes */}
       <div className={`
-        fixed top-0 left-0 h-screen w-80 bg-white/95 backdrop-blur-xl border-r border-white/40 shadow-2xl z-[55]
+        fixed top-0 left-0 h-screen bg-white/95 backdrop-blur-xl border-r border-white/40 shadow-2xl z-[55]
         transform transition-transform duration-300 ease-in-out
         ${isVisible ? 'translate-x-0' : '-translate-x-full'}
-        md:relative md:translate-x-0 md:w-80 md:h-full md:shadow-none md:border-r-0
+        w-80 sm:w-96 md:w-80 lg:w-96
         flex flex-col
       `}>
         {/* Header - Account for navbar height */}
@@ -260,19 +260,19 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
           </div>
           <button 
             onClick={onToggleVisibility}
-            className="md:hidden p-2 rounded-lg transition-all duration-200 hover:bg-white/50 text-slate-700 active:scale-95"
+            className="p-2 rounded-lg transition-all duration-200 hover:bg-white/50 text-slate-700 active:scale-95"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Content - Scrollable area with proper spacing */}
-        <div className="flex-1 overflow-y-auto pb-20 md:pb-4">
+        <div className="flex-1 overflow-y-auto pb-4">
           <div className="p-4 space-y-4">
-            {/* Dataset Selector - Compact */}
+            {/* Dataset Selector - Full width */}
             {availableDatasets.length > 0 && onDatasetChange && (
-              <div className="bg-white/80 rounded-xl p-3 border border-white/40 shadow-sm">
-                <div className="flex items-center justify-between mb-2">
+              <div className="bg-white/80 rounded-xl p-4 border border-white/40 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
                   <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Datasets</h4>
                   <div className="flex gap-1">
                     <button
@@ -289,7 +289,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                     </button>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-1">
+                <div className="grid grid-cols-2 gap-2">
                   {availableDatasets.map((dataset) => (
                     <button
                       key={dataset.id}
@@ -301,7 +301,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                           onDatasetChange([...selectedDatasets, dataset.id]);
                         }
                       }}
-                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
+                      className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all text-center ${
                         selectedDatasets.includes(dataset.id)
                           ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
                           : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
@@ -314,28 +314,62 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
               </div>
             )}
 
-            {/* Provider Bar - Compact pills */}
-            <div className="bg-white/80 rounded-xl p-3 border border-white/40 shadow-sm">
-              <ProviderBar
-                availableProviders={availableProviders}
-                visibleProviders={visibleProviders}
-                onToggleProvider={onToggleProvider}
-                onSelectAll={onSelectAllProviders}
-                onClearAll={onClearProviders}
-                compact={true}
-              />
+            {/* Provider Bar - Full width with grid layout */}
+            <div className="bg-white/80 rounded-xl p-4 border border-white/40 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">Providers</h4>
+                  <span className="text-[10px] font-bold text-slate-500">
+                    {visibleProviders.length}/{availableProviders.length}
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={onSelectAllProviders}
+                    className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 px-2 py-1 rounded"
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={onClearProviders}
+                    className="text-[10px] font-bold text-slate-400 hover:text-slate-600 px-2 py-1 rounded"
+                  >
+                    None
+                  </button>
+                </div>
+              </div>
+              
+              {/* Provider Pills - Full width grid */}
+              <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                {availableProviders.map(provider => {
+                  const isActive = visibleProviders.includes(provider);
+                  return (
+                    <button
+                      key={provider}
+                      onClick={() => onToggleProvider(provider)}
+                      className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all text-center ${
+                        isActive
+                          ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                          : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                      }`}
+                    >
+                      {provider.length > 12 ? provider.substring(0, 12) + '...' : provider}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Radius Filter Control - Only when pin is dropped */}
             {droppedPin && radiusKm !== undefined && setRadiusKm && (
-              <div className="bg-white/80 rounded-xl p-3 border border-white/40 shadow-sm">
-                <div className="flex flex-col gap-2">
+              <div className="bg-white/80 rounded-xl p-4 border border-white/40 shadow-sm">
+                <div className="flex flex-col gap-3">
                   <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
-                      <MapPin className="h-3 w-3 text-red-500" />
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-red-500" />
                       Radius Filter
                     </label>
-                    <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                    <span className="text-sm font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-lg">
                       {radiusKm} km
                     </span>
                   </div>
@@ -346,7 +380,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                     step="0.5"
                     value={radiusKm}
                     onChange={(e) => setRadiusKm(Number(e.target.value))}
-                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer slider"
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer slider"
                     style={{
                       background: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(radiusKm - 0.5) / 9.5 * 100}%, #e2e8f0 ${(radiusKm - 0.5) / 9.5 * 100}%, #e2e8f0 100%)`
                     }}
@@ -361,7 +395,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
             )}
 
             {/* Filter Panel - Search, Category, Town, Phone Type */}
-            <div className="bg-white/80 rounded-xl p-3 border border-white/40 shadow-sm">
+            <div className="bg-white/80 rounded-xl p-4 border border-white/40 shadow-sm">
               <FilterPanel
                 searchTerm={searchTerm}
                 onSearchChange={onSearchChange}
