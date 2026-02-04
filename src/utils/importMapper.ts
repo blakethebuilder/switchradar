@@ -1,17 +1,31 @@
 import type { Business } from '../types';
 
 const findCoordinatesFromUrl = (url: string) => {
+  console.log('🗺️ COORDS: Extracting coordinates from URL:', url);
+  
   // Pattern 1: @-26.8521,26.6667
   const match1 = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (match1) return { lat: Number(match1[1]), lng: Number(match1[2]) };
+  if (match1) {
+    const coords = { lat: Number(match1[1]), lng: Number(match1[2]) };
+    console.log('🗺️ COORDS: Pattern 1 match (@lat,lng):', coords);
+    return coords;
+  }
 
   // Pattern 2: !3d-26.85007!4d26.67659 (also handles 3d and 4d independently)
   const match2 = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
-  if (match2) return { lat: Number(match2[1]), lng: Number(match2[2]) };
+  if (match2) {
+    const coords = { lat: Number(match2[1]), lng: Number(match2[2]) };
+    console.log('🗺️ COORDS: Pattern 2 match (!3d!4d):', coords);
+    return coords;
+  }
 
   // Pattern 3: q=-26.8521,26.6667 or ll=-26.8521,26.6667
   const match3 = url.match(/[?&](?:q|ll)=(-?\d+\.\d+),(-?\d+\.\d+)/);
-  if (match3) return { lat: Number(match3[1]), lng: Number(match3[2]) };
+  if (match3) {
+    const coords = { lat: Number(match3[1]), lng: Number(match3[2]) };
+    console.log('🗺️ COORDS: Pattern 3 match (q= or ll=):', coords);
+    return coords;
+  }
 
   // Pattern 4: General comma separated extraction (fallback)
   // Looks for "number,number" where numbers are float-like coordinates
@@ -21,20 +35,37 @@ const findCoordinatesFromUrl = (url: string) => {
     const lat = Number(match4[1]);
     const lng = Number(match4[2]);
     if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-      return { lat, lng };
+      const coords = { lat, lng };
+      console.log('🗺️ COORDS: Pattern 4 match (general):', coords);
+      return coords;
     }
   }
 
+  console.log('🗺️ COORDS: ❌ No coordinate patterns matched for URL:', url);
   return null;
 };
 
 export const deriveCoordinates = (row: Record<string, unknown>, fallback: { lat: number; lng: number }) => {
+  console.log('🗺️ DERIVE: Starting coordinate derivation for row:', {
+    maps_link: row.maps_link,
+    maps_address: row.maps_address,
+    maps_url: row.maps_url,
+    google_maps_url: row.google_maps_url,
+    map_link: row.map_link
+  });
+  
   const possibleUrl = row.maps_link || row.maps_address || row.maps_url || row.google_maps_url || row.map_link;
-  if (typeof possibleUrl === 'string') {
+  if (typeof possibleUrl === 'string' && possibleUrl.trim() !== '') {
+    console.log('🗺️ DERIVE: Found URL to process:', possibleUrl);
     const coords = findCoordinatesFromUrl(possibleUrl);
     if (coords) {
+      console.log('🗺️ DERIVE: ✅ Successfully extracted coordinates:', coords);
       return coords;
+    } else {
+      console.log('🗺️ DERIVE: ❌ Failed to extract coordinates, using fallback:', fallback);
     }
+  } else {
+    console.log('🗺️ DERIVE: ❌ No valid URL found, using fallback:', fallback);
   }
   return fallback;
 };

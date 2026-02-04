@@ -106,6 +106,14 @@ const toNumber = (value: unknown) => {
 };
 
 const buildCoordinates = (row: Record<string, unknown>, mapping: ImportMapping) => {
+  console.log('🗺️ BUILD: Building coordinates for row with mapping:', {
+    mapping: mapping,
+    rowKeys: Object.keys(row),
+    latValue: getValue(row, mapping.lat),
+    lngValue: getValue(row, mapping.lng),
+    mapsLinkValue: getValue(row, mapping.mapsLink)
+  });
+  
   const latValue = getValue(row, mapping.lat);
   const lngValue = getValue(row, mapping.lng);
 
@@ -113,17 +121,25 @@ const buildCoordinates = (row: Record<string, unknown>, mapping: ImportMapping) 
   const lng = toNumber(lngValue);
 
   if (lat !== undefined && lng !== undefined) {
+    console.log('🗺️ BUILD: ✅ Using direct lat/lng values:', { lat, lng });
     return { lat, lng };
   }
 
   const mapsLinkValue = getValue(row, mapping.mapsLink);
   if (typeof mapsLinkValue === 'string' && mapsLinkValue.trim() !== '') {
+    console.log('🗺️ BUILD: Attempting to extract from maps link:', mapsLinkValue);
     const coords = deriveCoordinates({ maps_link: mapsLinkValue }, DEFAULT_COORDINATES);
     if (coords !== DEFAULT_COORDINATES) {
+      console.log('🗺️ BUILD: ✅ Successfully extracted from maps link:', coords);
       return coords;
+    } else {
+      console.log('🗺️ BUILD: ❌ Failed to extract from maps link, using default');
     }
+  } else {
+    console.log('🗺️ BUILD: ❌ No valid maps link found');
   }
 
+  console.log('🗺️ BUILD: Using default coordinates:', DEFAULT_COORDINATES);
   return DEFAULT_COORDINATES;
 };
 
@@ -132,14 +148,22 @@ export const processImportedData = async (
   mapping?: ImportMapping,
   onProgress?: (processed: number, total: number) => void
 ): Promise<Business[]> => {
+  console.log('🚀 PROCESS: processImportedData started', {
+    rowsCount: rows.length,
+    mapping: mapping,
+    hasProgressCallback: !!onProgress,
+    timestamp: new Date().toISOString()
+  });
+  
   const now = Date.now();
   const results: Business[] = [];
   const chunkSize = 100; // Process in chunks to avoid blocking UI
   
-  console.log('🚀 Processing', rows.length, 'rows in chunks of', chunkSize);
+  console.log('🚀 PROCESS: Processing', rows.length, 'rows in chunks of', chunkSize);
   
   for (let i = 0; i < rows.length; i += chunkSize) {
     const chunk = rows.slice(i, i + chunkSize);
+    console.log(`🚀 PROCESS: Processing chunk ${Math.floor(i/chunkSize) + 1}/${Math.ceil(rows.length/chunkSize)} (${chunk.length} rows)`);
     
     // Process chunk
     const chunkResults = chunk.map((row, chunkIndex) => {
@@ -149,7 +173,7 @@ export const processImportedData = async (
       const town = getValue(row, resolvedMapping.town) ?? 'Unknown';
       const provider = getValue(row, resolvedMapping.provider) ?? 'Unknown';
 
-      return {
+      const business = {
         id: `import-${now}-${index}`,
         name: String(name),
         address: String(getValue(row, resolvedMapping.address) ?? ''),
@@ -172,12 +196,31 @@ export const processImportedData = async (
         metadata: row,
         mapsLink: resolvedMapping.mapsLink ? String(getValue(row, resolvedMapping.mapsLink) ?? '') : undefined
       };
+      
+      // Log coordinate extraction for first few businesses
+      if (index < 10) {
+        console.log(`🚀 PROCESS: Business ${index} detailed info:`, {
+          name: business.name,
+          provider: business.provider,
+          coordinates: business.coordinates,
+          mapsLink: business.mapsLink,
+          rawRow: row,
+          rawCoords: {
+            lat: getValue(row, resolvedMapping.lat),
+            lng: getValue(row, resolvedMapping.lng)
+          },
+          mapping: resolvedMapping
+        });
+      }
+      
+      return business;
     });
     
     results.push(...chunkResults);
     
     // Report progress
     if (onProgress) {
+      console.log(`🚀 PROCESS: Progress callback - ${results.length}/${rows.length} processed`);
       onProgress(results.length, rows.length);
     }
     
@@ -187,7 +230,17 @@ export const processImportedData = async (
     }
   }
   
-  console.log('✅ Processed', results.length, 'businesses');
+  console.log('✅ PROCESS: processImportedData completed', {
+    inputRows: rows.length,
+    outputBusinesses: results.length,
+    sampleBusiness: results[0] ? {
+      id: results[0].id,
+      name: results[0].name,
+      coordinates: results[0].coordinates,
+      provider: results[0].provider
+    } : null
+  });
+  
   return results;
 };
 

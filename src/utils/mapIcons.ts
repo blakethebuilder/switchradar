@@ -54,6 +54,7 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     
     // Check cache first
     if (iconCache[cacheKey]) {
+      console.log('🗺️ ICON: Using cached icon for:', safeProvider);
       return iconCache[cacheKey];
     }
 
@@ -66,20 +67,22 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     try {
       color = getProviderColor(safeProvider);
       if (!color || typeof color !== 'string') {
+        console.warn('🗺️ ICON: Invalid color returned, using default');
         color = '#6b7280'; // Default gray
       }
     } catch (error) {
-      console.error('Error getting provider color:', error);
+      console.error('🗺️ ICON: Error getting provider color:', error);
       color = '#6b7280';
     }
 
     try {
       label = getProviderLabel(safeProvider);
       if (!label || typeof label !== 'string') {
+        console.warn('🗺️ ICON: Invalid label returned, using default');
         label = '?';
       }
     } catch (error) {
-      console.error('Error getting provider label:', error);
+      console.error('🗺️ ICON: Error getting provider label:', error);
       label = '?';
     }
     
@@ -87,7 +90,13 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     const borderWidth = isSelected ? 3 : 2;
     const fontSize = isSelected ? '10px' : '8px';
     
-    console.log('🗺️ ICON: Creating icon with', { provider: safeProvider, color, label, size });
+    console.log('🗺️ ICON: Creating icon with params:', { 
+      provider: safeProvider, 
+      color, 
+      label, 
+      size, 
+      isSelected 
+    });
     
     // Create the icon with maximum safety
     const iconOptions = {
@@ -121,7 +130,7 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
 
     // Cache the successful icon
     iconCache[cacheKey] = icon;
-    console.log('🗺️ ICON: Successfully created and cached icon for', safeProvider);
+    console.log('🗺️ ICON: ✅ Successfully created and cached icon for', safeProvider);
     return icon;
     
   } catch (error) {
