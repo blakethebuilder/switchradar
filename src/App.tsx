@@ -1009,7 +1009,7 @@ function App() {
           // Show dataset selector when datasets are available but no businesses loaded
           <Suspense fallback={<LoadingSpinner />}>
             <DatasetSelector
-              onDatasetSelected={(datasetIds) => {
+              onDatasetSelected={(datasetIds: number[]) => {
                 console.log('📊 DATASET SELECTOR: Selected datasets:', datasetIds);
                 setSelectedDatasets(datasetIds);
                 // Force refresh data after dataset selection

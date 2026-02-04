@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, CheckCircle2, Loader2, MapPin, Users, Calendar } from 'lucide-react';
+import { Database, CheckCircle2, MapPin, Users, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { environmentConfig } from '../config/environment';
 
@@ -254,3 +254,5 @@ export const DatasetSelector: React.FC<DatasetSelectorProps> = ({
     </div>
   );
 };
+
+export default DatasetSelector;
