@@ -163,31 +163,30 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
       animate={false}
       animateAddingMarkers={false}
       removeOutsideVisibleBounds={true}
-      disableClusteringAtZoom={17}
+      disableClusteringAtZoom={15}
       maxClusterRadius={(zoom: number) => {
-        // Improved clustering that shows icons at all zoom levels
+        // Better clustering that keeps markers grouped longer
         const isMobile = window.innerWidth < 768;
-        const baseMultiplier = isMobile ? 0.8 : 1.0;
+        const baseMultiplier = isMobile ? 0.9 : 1.0;
         
-        // More reasonable clustering that doesn't hide icons
-        if (zoom <= 6) return Math.round(80 * baseMultiplier);
-        if (zoom <= 8) return Math.round(70 * baseMultiplier);
-        if (zoom <= 10) return Math.round(60 * baseMultiplier);
-        if (zoom <= 12) return Math.round(50 * baseMultiplier);
-        if (zoom <= 14) return Math.round(40 * baseMultiplier);
-        if (zoom <= 15) return Math.round(30 * baseMultiplier);
-        if (zoom <= 16) return Math.round(20 * baseMultiplier);
+        // Keep larger cluster radius at higher zoom levels
+        if (zoom <= 6) return Math.round(120 * baseMultiplier);
+        if (zoom <= 8) return Math.round(100 * baseMultiplier);
+        if (zoom <= 10) return Math.round(80 * baseMultiplier);
+        if (zoom <= 12) return Math.round(70 * baseMultiplier);
+        if (zoom <= 13) return Math.round(60 * baseMultiplier);
+        if (zoom <= 14) return Math.round(50 * baseMultiplier);
         
-        // At high zoom, still allow some clustering for very close markers
-        return Math.round(15 * baseMultiplier);
+        // Only at very high zoom allow individual markers
+        return Math.round(30 * baseMultiplier);
       }}
       spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.2 : 1.5}
       spiderfyOnEveryZoom={false}
       spiderfyShapePositions={undefined}
       zoomToBoundsOnClick={false}
       maxZoom={18}
-      // Reduce minimum cluster size to show more individual markers
-      minimumClusterSize={3}
+      // Increase minimum cluster size to keep clusters together longer
+      minimumClusterSize={5}
       // Disable hover effects that cause glitches
       singleMarkerMode={false}
       // Additional options for better spiderfy behavior
@@ -245,33 +244,29 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
               cluster.originalEvent.stopPropagation();
             }
             
-            // Improved zoom vs spiderfy logic for better visibility
-            if (currentZoom <= 8) {
-              // At low zoom levels, always zoom in significantly
-              const targetZoom = Math.min(currentZoom + 4, 12);
+            // Improved zoom vs spiderfy logic for better clustering behavior
+            if (currentZoom <= 10) {
+              // At low zoom levels, always zoom in to reveal more detail
+              const targetZoom = Math.min(currentZoom + 3, 13);
               map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.8 });
-            } else if (currentZoom <= 12 && childCount > 20) {
+            } else if (currentZoom <= 12 && childCount > 15) {
               // Medium zoom with many items, zoom in more
-              const targetZoom = Math.min(currentZoom + 3, 15);
+              const targetZoom = Math.min(currentZoom + 2, 14);
               map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.6 });
-            } else if (currentZoom <= 14 && childCount > 10) {
-              // Higher zoom with moderate items, zoom in
-              const targetZoom = Math.min(currentZoom + 2, 16);
+            } else if (currentZoom <= 13 && childCount > 8) {
+              // Higher zoom with moderate items, zoom in once more
+              const targetZoom = Math.min(currentZoom + 1, 15);
               map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.5 });
-            } else if (childCount > 5) {
-              // Use spiderfy for small groups
+            } else {
+              // At zoom 14+ or small groups, use spiderfy
               if (typeof clusterLayer.spiderfy === 'function') {
                 console.log('🗺️ CLUSTER: Using spiderfy for', childCount, 'items at zoom', currentZoom);
                 clusterLayer.spiderfy();
               } else {
-                // Fallback: small zoom
-                const targetZoom = Math.min(currentZoom + 1, 17);
+                // Fallback: small zoom to break cluster
+                const targetZoom = Math.min(currentZoom + 1, 16);
                 map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.3 });
               }
-            } else {
-              // Very small groups, just zoom in slightly
-              const targetZoom = Math.min(currentZoom + 1, 17);
-              map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.3 });
             }
             
             return false;

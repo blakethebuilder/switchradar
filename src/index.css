@@ -127,6 +127,27 @@
   @apply !bg-indigo-600 !text-white !font-bold rounded-full;
 }
 
+/* Custom stable cluster icon styling */
+.cluster-icon-stable {
+  background: transparent !important;
+  border: none !important;
+  pointer-events: auto !important;
+}
+
+.cluster-marker-stable {
+  transition: none !important;
+  backface-visibility: hidden !important;
+  -webkit-backface-visibility: hidden !important;
+  transform: none !important;
+  animation: none !important;
+  will-change: auto !important;
+}
+
+.cluster-icon-stable:hover .cluster-marker-stable {
+  transform: scale(1.05) !important;
+  transition: transform 0.1s ease !important;
+}
+
 /* Custom cluster icon styling */
 .custom-cluster-icon {
   background: transparent !important;
@@ -174,7 +195,8 @@
   }
   
   .custom-marker,
-  .custom-cluster-icon {
+  .custom-cluster-icon,
+  .cluster-icon-stable {
     will-change: transform;
     /* Optimize for mobile rendering */
     -webkit-backface-visibility: hidden;
@@ -184,8 +206,10 @@
   /* Reduce animations on mobile for better performance */
   .marker-cluster-small,
   .marker-cluster-medium,
-  .marker-cluster-large {
+  .marker-cluster-large,
+  .cluster-marker-stable {
     transition: none !important;
+    animation: none !important;
   }
   
   /* Optimize spiderfy animations for mobile */
