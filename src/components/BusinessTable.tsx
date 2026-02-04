@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Building2, Mail, Map, Trash2, Landmark, Smartphone, Route, CheckSquare, Square } from 'lucide-react';
+import { Building2, Mail, Map, Trash2, Landmark, Smartphone, Route, CheckSquare, Square, MoreVertical } from 'lucide-react';
 import type { Business } from '../types';
 import { ProviderBadge } from './ProviderBadge';
 import { BulkActions } from './BulkActions';
@@ -37,17 +37,37 @@ export const BusinessTable = React.memo(({
 }: BusinessTableProps) => {
   const [selectedBusinessIds, setSelectedBusinessIds] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const [isSmallTablet, setIsSmallTablet] = useState(false);
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(600);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
-  // Detect mobile screen size
+  // Detect screen sizes
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+    const checkScreenSize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setIsTablet(width >= 768 && width < 1200);
+      setIsSmallTablet(width >= 768 && width < 900);
     };
     
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setOpenDropdown(null);
+    };
+
+    if (openDropdown) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [openDropdown]);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -169,10 +189,10 @@ export const BusinessTable = React.memo(({
             className="overflow-auto custom-scrollbar h-full"
             onScroll={handleScroll}
           >
-            <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
+            <table className={`w-full text-left border-collapse table-fixed ${isSmallTablet ? 'min-w-[800px]' : isTablet ? 'min-w-[900px]' : 'min-w-[1200px]'}`}>
               <thead className="sticky top-0 z-10">
                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="w-[4%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <th className={`${isSmallTablet ? 'w-[4%]' : isTablet ? 'w-[4%]' : 'w-[4%]'} px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400`}>
                     <button
                       onClick={selectedBusinessIds.length === businesses.length ? handleClearSelection : handleSelectAll}
                       className="flex items-center justify-center"
@@ -184,11 +204,11 @@ export const BusinessTable = React.memo(({
                       )}
                     </button>
                   </th>
-                  <th className="w-[28%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Business Details</th>
-                  <th className="w-[20%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</th>
-                  <th className="w-[18%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Location</th>
-                  <th className="w-[15%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Network</th>
-                  <th className="w-[15%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-center">Actions</th>
+                  <th className={`${isSmallTablet ? 'w-[32%]' : isTablet ? 'w-[30%]' : 'w-[28%]'} px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400`}>Business Details</th>
+                  <th className={`${isSmallTablet ? 'w-[24%]' : isTablet ? 'w-[22%]' : 'w-[20%]'} px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400`}>Contact</th>
+                  <th className={`${isSmallTablet ? 'w-[20%]' : isTablet ? 'w-[18%]' : 'w-[18%]'} px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400`}>Location</th>
+                  <th className={`${isSmallTablet ? 'w-[14%]' : isTablet ? 'w-[14%]' : 'w-[15%]'} px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400`}>Network</th>
+                  <th className={`${isSmallTablet ? 'w-[6%]' : isTablet ? 'w-[12%]' : 'w-[15%]'} px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-center`}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,30 +307,85 @@ export const BusinessTable = React.memo(({
                     <ProviderBadge provider={business.provider} className="scale-90 origin-left" />
                   </td>
 
-                  <td className="px-2 md:px-6 py-3">
-                    <div className="flex items-center justify-end gap-0.5 md:gap-1 pr-2 md:pr-6">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onBusinessSelect?.(business); }}
-                        className="p-1.5 md:p-2 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-white hover:shadow-md transition-all"
-                        title="Show on map"
-                      >
-                        <Map className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onAddToRoute?.(business.id); }}
-                        className="p-1.5 md:p-2 rounded-lg text-slate-300 hover:text-green-600 hover:bg-white hover:shadow-md transition-all"
-                        title="Add to Route"
-                      >
-                        <Route className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); onDelete?.(business.id); }}
-                        className="p-1.5 md:p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-white hover:shadow-md transition-all"
-                        title="Delete business"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                      </button>
-                    </div>
+                  <td className="px-4 py-3">
+                    {isSmallTablet ? (
+                      // Dropdown menu for small tablets
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenDropdown(openDropdown === business.id ? null : business.id);
+                          }}
+                          className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all"
+                          title="Actions"
+                        >
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                        
+                        {openDropdown === business.id && (
+                          <div className="absolute right-0 top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg z-20 min-w-[140px]">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onBusinessSelect?.(business);
+                                setOpenDropdown(null);
+                              }}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
+                            >
+                              <Map className="w-4 h-4" />
+                              Show on map
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAddToRoute?.(business.id);
+                                setOpenDropdown(null);
+                              }}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-green-50 hover:text-green-600 transition-colors"
+                            >
+                              <Route className="w-4 h-4" />
+                              Add to Route
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete?.(business.id);
+                                setOpenDropdown(null);
+                              }}
+                              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-slate-700 hover:bg-rose-50 hover:text-rose-600 transition-colors border-t border-slate-100"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      // Regular button layout for larger screens
+                      <div className={`flex items-center justify-center ${isTablet ? 'gap-1' : 'gap-2'}`}>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onBusinessSelect?.(business); }}
+                          className={`${isTablet ? 'p-1.5' : 'p-2'} rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all group/btn`}
+                          title="Show on map"
+                        >
+                          <Map className={`${isTablet ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onAddToRoute?.(business.id); }}
+                          className={`${isTablet ? 'p-1.5' : 'p-2'} rounded-lg text-slate-400 hover:text-green-600 hover:bg-green-50 transition-all group/btn`}
+                          title="Add to Route"
+                        >
+                          <Route className={`${isTablet ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onDelete?.(business.id); }}
+                          className={`${isTablet ? 'p-1.5' : 'p-2'} rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all group/btn`}
+                          title="Delete business"
+                        >
+                          <Trash2 className={`${isTablet ? 'w-3.5 h-3.5' : 'w-4 h-4'}`} />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               );
