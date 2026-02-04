@@ -210,7 +210,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
   // Debug: Try rendering first few markers directly without clustering
   if (businesses.length > 0 && businesses.length <= 10) {
     console.log('🗺️ MAPMARKERS: 🧪 TESTING - Rendering first few markers directly without clustering');
-    const directMarkers = businesses.slice(0, 3).map((business, index) => {
+    const directMarkers = businesses.slice(0, 3).map((business) => {
       if (!business.coordinates || 
           typeof business.coordinates.lat !== 'number' || 
           typeof business.coordinates.lng !== 'number') {
