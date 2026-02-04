@@ -528,17 +528,25 @@ export const BusinessMap = React.memo(({
 
   // Lazy load markers after map is ready for better initial performance
   useEffect(() => {
-    console.log('🗺️ MAP: Markers loading effect', { mapInstance: !!mapInstance, markersLoaded, businessesCount: businesses.length });
-    if (mapInstance && !markersLoaded && businesses.length > 0) {
+    console.log('🗺️ MAP: Markers loading effect', { 
+      mapInstance: !!mapInstance, 
+      markersLoaded, 
+      businessesCount: businesses.length,
+      hasMapAndNotLoaded: mapInstance && !markersLoaded
+    });
+    
+    // Load markers when map is ready, regardless of business count
+    // This allows the marker creation logic to handle empty arrays properly
+    if (mapInstance && !markersLoaded) {
       // Delay marker loading slightly to let map render first
       const timer = setTimeout(() => {
-        console.log('🗺️ MAP: Setting markersLoaded to true');
+        console.log('🗺️ MAP: Setting markersLoaded to true (map ready)');
         setMarkersLoaded(true);
       }, 300);
       
       return () => clearTimeout(timer);
     }
-  }, [mapInstance, markersLoaded, businesses.length]);
+  }, [mapInstance, markersLoaded]); // Removed businesses.length dependency
 
   // Handle map invalidation when fullScreen changes
   useEffect(() => {
@@ -1111,7 +1119,15 @@ export const BusinessMap = React.memo(({
               }
             }}
           >
-            {memoizedMarkers.length > 0 ? memoizedMarkers : []}
+            {(() => {
+              console.log('🗺️ RENDER: About to render markers in MarkerClusterGroup', {
+                markersLoaded,
+                memoizedMarkersLength: memoizedMarkers.length,
+                businessesLength: businesses.length,
+                renderingMarkers: memoizedMarkers.length > 0
+              });
+              return memoizedMarkers.length > 0 ? memoizedMarkers : [];
+            })()}
           </MarkerClusterGroup>
         )}
       </MapContainer>
