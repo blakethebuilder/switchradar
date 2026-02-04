@@ -677,6 +677,7 @@ function App() {
           totalCount={businesses.length}
           lastImportName={lastImportName}
           onLoginClick={() => setIsLoginOpen(true)}
+          routeItemsCount={routeItems.length}
         />
         
         <main className="flex-1 flex flex-col overflow-hidden relative">

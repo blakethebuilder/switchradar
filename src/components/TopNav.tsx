@@ -12,6 +12,7 @@ interface TopNavProps {
   totalCount: number;
   lastImportName?: string;
   onLoginClick: () => void;
+  routeItemsCount?: number; // Add route items count
 }
 
 export const TopNav = ({
@@ -23,6 +24,7 @@ export const TopNav = ({
   totalCount,
   lastImportName,
   onLoginClick,
+  routeItemsCount = 0, // Add default value
 }: TopNavProps) => {
   const { user, isAuthenticated, logout } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -89,7 +91,7 @@ export const TopNav = ({
           </button>
           <button
             onClick={() => onViewModeChange('route')}
-            className={`flex items-center gap-1 md:gap-2 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold transition-all ${viewMode === 'route'
+            className={`flex items-center gap-1 md:gap-2 rounded-xl px-2 md:px-3 py-1.5 md:py-2 text-xs md:text-sm font-bold transition-all relative ${viewMode === 'route'
               ? 'bg-white text-indigo-600 shadow-sm'
               : 'text-slate-500 hover:text-slate-700'
               }`}
@@ -97,6 +99,11 @@ export const TopNav = ({
           >
             <Route className="h-3.5 w-3.5 md:h-4 md:w-4" />
             <span className="hidden lg:inline">Route</span>
+            {routeItemsCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                {routeItemsCount > 99 ? '99+' : routeItemsCount}
+              </span>
+            )}
           </button>
           <button
             onClick={() => onViewModeChange('seen')}

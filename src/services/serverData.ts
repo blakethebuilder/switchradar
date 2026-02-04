@@ -748,6 +748,89 @@ class ServerDataService {
       };
     }
   }
+
+  // Sharing Operations
+  async getAvailableTowns(token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/share/towns'), {
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result.towns || [],
+        count: result.towns?.length || 0
+      };
+    } catch (error) {
+      console.error('Failed to fetch available towns:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch available towns'
+      };
+    }
+  }
+
+  async shareTowns(targetUserId: number, towns: string[], token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/share/towns'), {
+        method: 'POST',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify({ targetUserId, towns })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to share towns:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to share towns'
+      };
+    }
+  }
+
+  async shareBusinesses(targetUserId: number, businessIds: string[], token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/share/businesses'), {
+        method: 'POST',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify({ targetUserId, businessIds })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to share businesses:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to share businesses'
+      };
+    }
+  }
 }
 
 export const serverDataService = new ServerDataService();

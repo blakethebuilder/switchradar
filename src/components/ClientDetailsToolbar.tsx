@@ -267,6 +267,16 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                 >
                   <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
                 </a>
+              ) : business.coordinates ? (
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${business.coordinates.lat},${business.coordinates.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 md:p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                  title="Open in Google Maps"
+                >
+                  <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
+                </a>
               ) : (
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address + ', ' + business.town + ', ' + business.province)}`}
@@ -527,15 +537,9 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <input
                         type="text"
                         value={business.metadata?.lengthWithCurrentProvider || ''}
-                        onChange={(e) => {
-                          console.log('Length input changed:', e.target.value);
-                          handleUpdateTextMetadata('lengthWithCurrentProvider', e.target.value);
-                        }}
-                        onFocus={() => console.log('Length input focused')}
+                        onChange={(e) => handleUpdateTextMetadata('lengthWithCurrentProvider', e.target.value)}
                         placeholder="e.g., 2 years, 6 months"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
-                        disabled={false}
-                        readOnly={false}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors bg-white"
                       />
                     </div>
 
@@ -545,15 +549,9 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <input
                         type="text"
                         value={business.metadata?.ispProvider || ''}
-                        onChange={(e) => {
-                          console.log('ISP input changed:', e.target.value);
-                          handleUpdateTextMetadata('ispProvider', e.target.value);
-                        }}
-                        onFocus={() => console.log('ISP input focused')}
+                        onChange={(e) => handleUpdateTextMetadata('ispProvider', e.target.value)}
                         placeholder="e.g., Telkom, Vodacom, MTN"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
-                        disabled={false}
-                        readOnly={false}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors bg-white"
                       />
                     </div>
 
@@ -563,15 +561,9 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       <input
                         type="text"
                         value={business.metadata?.pabxProvider || ''}
-                        onChange={(e) => {
-                          console.log('PABX input changed:', e.target.value);
-                          handleUpdateTextMetadata('pabxProvider', e.target.value);
-                        }}
-                        onFocus={() => console.log('PABX input focused')}
+                        onChange={(e) => handleUpdateTextMetadata('pabxProvider', e.target.value)}
                         placeholder="e.g., Panasonic, Avaya, Cisco"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
-                        disabled={false}
-                        readOnly={false}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors bg-white"
                       />
                     </div>
 
@@ -621,40 +613,6 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                         </button>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Business Interest Section */}
-                <div className="bg-white rounded-xl p-4 shadow-sm">
-                  <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4" />
-                    Business Interest
-                  </h4>
-                  <div className="grid grid-cols-1 gap-2">
-                    {INTEREST_OPTIONS.map(option => (
-                      <button
-                        key={option.value}
-                        onClick={() => handleUpdateInterest(option.value)}
-                        disabled={isUpdating === `interest-${option.value}`}
-                        className={`flex items-center justify-center gap-2 p-3 h-12 rounded-xl transition-all transform active:scale-95 relative ${
-                          isUpdating === `interest-${option.value}`
-                            ? `bg-slate-300 text-slate-600 scale-95 animate-pulse`
-                            : business.metadata?.interest === option.value
-                            ? `bg-white border-2 ${option.border} ${option.color} shadow-lg shadow-slate-200/50 hover:shadow-lg ring-1 ring-current`
-                            : `bg-white/50 border border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200 hover:shadow-md`
-                        }`}
-                      >
-                        {business.metadata?.interest === option.value && (
-                          <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${option.color === 'text-emerald-600' ? 'bg-emerald-500' : option.color === 'text-yellow-600' ? 'bg-yellow-500' : 'bg-rose-500'}`}></div>
-                        )}
-                        {isUpdating === `interest-${option.value}` ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <option.icon className={`h-4 w-4 ${business.metadata?.interest === option.value ? option.color : 'text-slate-400'}`} />
-                        )}
-                        <span className={`text-xs font-bold uppercase tracking-widest ${business.metadata?.interest === option.value ? option.color : 'text-slate-600'}`}>{option.label}</span>
-                      </button>
-                    ))}
                   </div>
                 </div>
 

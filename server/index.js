@@ -1010,6 +1010,210 @@ app.get('/api/workspaces', auth, (req, res) => {
     }
 });
 
+// Sharing endpoints - Share towns with users
+app.post('/api/share/towns', auth, (req, res) => {
+    const { role } = req.userData;
+    const { targetUserId, towns } = req.body;
+    const sharedBy = req.userData.userId;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    if (!targetUserId || !towns || !Array.isArray(towns)) {
+        return res.status(400).json({ message: 'Target user ID and towns array required' });
+    }
+    
+    try {
+        // Check if target user exists
+        const targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(targetUserId);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Target user not found' });
+        }
+        
+        // Get businesses from specified towns
+        const townPlaceholders = towns.map(() => '?').join(',');
+        const businesses = db.prepare(`
+            SELECT * FROM leads 
+            WHERE userId = ? AND town IN (${townPlaceholders})
+            ORDER BY town, name
+        `).all(sharedBy, ...towns);
+        
+        if (businesses.length === 0) {
+            return res.status(404).json({ message: 'No businesses found in specified towns' });
+        }
+        
+        // Copy businesses to target user
+        const insertStmt = db.prepare(`
+            INSERT INTO leads (id, userId, name, address, phone, email, website, provider, category, town, province, lat, lng, status, notes, importedAt, source, metadata, dataset_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        let copiedCount = 0;
+        const transaction = db.transaction(() => {
+            for (const business of businesses) {
+                const newId = `shared_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                try {
+                    insertStmt.run(
+                        newId,
+                        targetUserId,
+                        business.name,
+                        business.address,
+                        business.phone,
+                        business.email,
+                        business.website,
+                        business.provider,
+                        business.category,
+                        business.town,
+                        business.province,
+                        business.lat,
+                        business.lng,
+                        business.status,
+                        business.notes,
+                        new Date().toISOString(),
+                        `shared_from_${req.userData.username}`,
+                        business.metadata,
+                        business.dataset_id || 1
+                    );
+                    copiedCount++;
+                } catch (error) {
+                    console.error('Failed to copy business:', business.id, error.message);
+                }
+            }
+        });
+        
+        transaction();
+        
+        res.json({
+            message: `Successfully shared ${copiedCount} businesses from ${towns.length} towns`,
+            sharedTowns: towns,
+            businessesShared: copiedCount,
+            targetUser: targetUser.username
+        });
+        
+    } catch (error) {
+        console.error('Failed to share towns:', error);
+        res.status(500).json({ message: 'Failed to share towns', error: error.message });
+    }
+});
+
+// Share specific businesses with users
+app.post('/api/share/businesses', auth, (req, res) => {
+    const { role } = req.userData;
+    const { targetUserId, businessIds } = req.body;
+    const sharedBy = req.userData.userId;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    if (!targetUserId || !businessIds || !Array.isArray(businessIds)) {
+        return res.status(400).json({ message: 'Target user ID and business IDs array required' });
+    }
+    
+    try {
+        // Check if target user exists
+        const targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(targetUserId);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Target user not found' });
+        }
+        
+        // Get specified businesses
+        const businessPlaceholders = businessIds.map(() => '?').join(',');
+        const businesses = db.prepare(`
+            SELECT * FROM leads 
+            WHERE userId = ? AND id IN (${businessPlaceholders})
+            ORDER BY name
+        `).all(sharedBy, ...businessIds);
+        
+        if (businesses.length === 0) {
+            return res.status(404).json({ message: 'No businesses found with specified IDs' });
+        }
+        
+        // Copy businesses to target user
+        const insertStmt = db.prepare(`
+            INSERT INTO leads (id, userId, name, address, phone, email, website, provider, category, town, province, lat, lng, status, notes, importedAt, source, metadata, dataset_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        let copiedCount = 0;
+        const transaction = db.transaction(() => {
+            for (const business of businesses) {
+                const newId = `shared_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                try {
+                    insertStmt.run(
+                        newId,
+                        targetUserId,
+                        business.name,
+                        business.address,
+                        business.phone,
+                        business.email,
+                        business.website,
+                        business.provider,
+                        business.category,
+                        business.town,
+                        business.province,
+                        business.lat,
+                        business.lng,
+                        business.status,
+                        business.notes,
+                        new Date().toISOString(),
+                        `shared_from_${req.userData.username}`,
+                        business.metadata,
+                        business.dataset_id || 1
+                    );
+                    copiedCount++;
+                } catch (error) {
+                    console.error('Failed to copy business:', business.id, error.message);
+                }
+            }
+        });
+        
+        transaction();
+        
+        res.json({
+            message: `Successfully shared ${copiedCount} businesses`,
+            businessesShared: copiedCount,
+            targetUser: targetUser.username
+        });
+        
+    } catch (error) {
+        console.error('Failed to share businesses:', error);
+        res.status(500).json({ message: 'Failed to share businesses', error: error.message });
+    }
+});
+
+// Get available towns for sharing
+app.get('/api/share/towns', auth, (req, res) => {
+    const { role } = req.userData;
+    const userId = req.userData.userId;
+    
+    if (role !== 'admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    try {
+        const towns = db.prepare(`
+            SELECT town, COUNT(*) as businessCount
+            FROM leads 
+            WHERE userId = ? AND town IS NOT NULL AND town != ''
+            GROUP BY town
+            ORDER BY businessCount DESC, town ASC
+        `).all(userId);
+        
+        res.json({
+            towns: towns.map(t => ({
+                name: t.town,
+                businessCount: t.businessCount
+            }))
+        });
+        
+    } catch (error) {
+        console.error('Failed to fetch towns:', error);
+        res.status(500).json({ message: 'Failed to fetch towns', error: error.message });
+    }
+});
+
 // Bulk operations endpoint
 app.post('/api/businesses/bulk', auth, (req, res) => {
     const { action, businessIds, updates } = req.body;

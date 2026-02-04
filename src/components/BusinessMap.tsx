@@ -79,18 +79,6 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
     mapInstance?.zoomOut();
   }, [mapInstance]);
 
-  // Auto-fit bounds when businesses change
-  useEffect(() => {
-    if (businesses.length > 0 && mapInstance) {
-      // Small delay to ensure markers are rendered
-      const timer = setTimeout(() => {
-        handleFitBounds();
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [businesses.length, mapInstance, handleFitBounds]);
-
   const handleFitBounds = useCallback(() => {
     if (businesses.length > 0 && mapInstance) {
       try {
@@ -143,6 +131,18 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
       console.warn('🗺️ FIT BOUNDS: No businesses or map instance available');
     }
   }, [businesses, mapInstance]);
+
+  // Auto-fit bounds when businesses change
+  useEffect(() => {
+    if (businesses.length > 0 && mapInstance) {
+      // Small delay to ensure markers are rendered
+      const timer = setTimeout(() => {
+        handleFitBounds();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [businesses.length, mapInstance, handleFitBounds]);
 
   const handleToggleDropMode = useCallback(() => {
     if (isDropMode) {
