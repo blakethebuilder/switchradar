@@ -168,7 +168,7 @@ export const processImportedData = async (
         status: normalizeStatus(getValue(row, resolvedMapping.status)),
         notes: [],
         importedAt: new Date(),
-        source: 'scraped',
+        source: 'scraped' as const,
         metadata: row,
         mapsLink: resolvedMapping.mapsLink ? String(getValue(row, resolvedMapping.mapsLink) ?? '') : undefined
       };

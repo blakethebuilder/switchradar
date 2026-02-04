@@ -79,21 +79,6 @@ export const useBusinessData = () => {
         }
     }, [token, isAuthenticated]);
 
-    // Auto-fetch on mount and auth changes
-    useEffect(() => {
-        if (isAuthenticated && token) {
-            fetchBusinesses();
-            fetchRoutes();
-            fetchDatasets();
-        } else {
-            setBusinesses([]);
-            setRouteItems([]);
-            setAvailableDatasets([]);
-            setSelectedDatasets([]);
-            setError(null);
-        }
-    }, [token, isAuthenticated, fetchBusinesses, fetchRoutes, fetchDatasets]);
-
     const [searchInput, setSearchInput] = useState('');
     const searchTerm = useDebounce(searchInput, 300);
 
@@ -142,6 +127,21 @@ export const useBusinessData = () => {
             console.error('Failed to fetch datasets:', err);
         }
     }, [token, isAuthenticated, selectedDatasets.length]);
+
+    // Auto-fetch on mount and auth changes
+    useEffect(() => {
+        if (isAuthenticated && token) {
+            fetchBusinesses();
+            fetchRoutes();
+            fetchDatasets();
+        } else {
+            setBusinesses([]);
+            setRouteItems([]);
+            setAvailableDatasets([]);
+            setSelectedDatasets([]);
+            setError(null);
+        }
+    }, [token, isAuthenticated, fetchBusinesses, fetchRoutes, fetchDatasets]);
 
     // Clear caches when businesses change
     useEffect(() => {
