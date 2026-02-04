@@ -721,6 +721,40 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                   </div>
                 </div>
 
+                {/* Business Interest Section */}
+                <div className="bg-white rounded-xl p-4 shadow-sm">
+                  <h4 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4" />
+                    Business Interest
+                  </h4>
+                  <div className="grid grid-cols-1 gap-2">
+                    {INTEREST_OPTIONS.map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => handleUpdateInterest(option.value)}
+                        disabled={isUpdating === `interest-${option.value}`}
+                        className={`flex items-center justify-center gap-2 p-3 h-12 rounded-xl transition-all transform active:scale-95 relative ${
+                          isUpdating === `interest-${option.value}`
+                            ? `bg-slate-300 text-slate-600 scale-95 animate-pulse`
+                            : business.metadata?.interest === option.value
+                            ? `bg-white border-2 ${option.border} ${option.color} shadow-lg shadow-slate-200/50 hover:shadow-lg ring-1 ring-current`
+                            : `bg-white/50 border border-slate-100 text-slate-400 hover:bg-white hover:border-slate-200 hover:shadow-md`
+                        }`}
+                      >
+                        {business.metadata?.interest === option.value && (
+                          <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${option.color === 'text-emerald-600' ? 'bg-emerald-500' : option.color === 'text-yellow-600' ? 'bg-yellow-500' : 'bg-rose-500'}`}></div>
+                        )}
+                        {isUpdating === `interest-${option.value}` ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <option.icon className={`h-4 w-4 ${business.metadata?.interest === option.value ? option.color : 'text-slate-400'}`} />
+                        )}
+                        <span className={`text-xs font-bold uppercase tracking-widest ${business.metadata?.interest === option.value ? option.color : 'text-slate-600'}`}>{option.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Action Buttons */}
                 <div className="flex gap-3">
                   <button
