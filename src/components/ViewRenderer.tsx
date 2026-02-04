@@ -448,6 +448,12 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
               onExportClick={onExportClick}
               onClearData={onClearData}
               totalCount={businesses.length}
+              businesses={businesses}
+              availableTowns={availableTowns}
+              availableProviders={availableProviders}
+              availableCategories={categories}
+              onDeleteBusiness={onDeleteBusiness}
+              onBulkDelete={onBulkDelete}
             />
           </div>
         </div>
