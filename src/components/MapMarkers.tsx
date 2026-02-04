@@ -81,12 +81,30 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
           continue;
         }
 
-        // Throttled click handler
+        // Throttled click handler that preserves spiderfy state
         const throttledClick = throttle((e: L.LeafletMouseEvent) => {
           try {
             e.originalEvent?.stopPropagation();
+            
+            // Check if this marker is part of a spiderfied cluster
+            const marker = e.target;
+            const isSpiderfied = marker._spiderfied || (marker.__parent && marker.__parent._spiderfied);
+            
             requestAnimationFrame(() => {
               onBusinessSelect?.(business);
+              
+              // If this was a spiderfied marker, try to keep the spiderfy open
+              if (isSpiderfied && marker.__parent) {
+                setTimeout(() => {
+                  try {
+                    if (typeof marker.__parent.spiderfy === 'function') {
+                      marker.__parent.spiderfy();
+                    }
+                  } catch (spiderfyError) {
+                    console.log('Could not re-spiderfy after selection:', spiderfyError);
+                  }
+                }, 100);
+              }
             });
           } catch (error) {
             console.error('Error in marker click handler:', error);
@@ -145,28 +163,45 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
       animate={true}
       animateAddingMarkers={false}
       removeOutsideVisibleBounds={true}
-      disableClusteringAtZoom={16}
+      disableClusteringAtZoom={17}
       maxClusterRadius={(zoom: number) => {
-        // Responsive clustering
+        // More aggressive clustering at lower zooms, less at higher zooms
         const isMobile = window.innerWidth < 768;
         const baseMultiplier = isMobile ? 0.8 : 1.0;
         
-        if (zoom <= 6) return Math.round(100 * baseMultiplier);
-        if (zoom <= 8) return Math.round(85 * baseMultiplier);
-        if (zoom <= 10) return Math.round(70 * baseMultiplier);
-        if (zoom <= 12) return Math.round(55 * baseMultiplier);
-        if (zoom <= 14) return Math.round(40 * baseMultiplier);
-        if (zoom <= 15) return Math.round(30 * baseMultiplier);
-        return Math.round(20 * baseMultiplier);
+        if (zoom <= 6) return Math.round(120 * baseMultiplier);
+        if (zoom <= 8) return Math.round(100 * baseMultiplier);
+        if (zoom <= 10) return Math.round(80 * baseMultiplier);
+        if (zoom <= 12) return Math.round(60 * baseMultiplier);
+        if (zoom <= 14) return Math.round(45 * baseMultiplier);
+        if (zoom <= 15) return Math.round(35 * baseMultiplier);
+        if (zoom <= 16) return Math.round(25 * baseMultiplier);
+        return Math.round(15 * baseMultiplier);
       }}
-      spiderfyDistanceMultiplier={window.innerWidth < 768 ? 0.8 : 1.0}
-      spiderfyOnEveryZoom={true}
+      spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.2 : 1.5}
+      spiderfyOnEveryZoom={false}
+      spiderfyShapePositions={undefined}
       zoomToBoundsOnClick={false}
-      maxZoom={17}
+      maxZoom={18}
+      // Additional options for better spiderfy behavior
+      polygonOptions={{
+        fillColor: '#3b82f6',
+        color: '#1e40af',
+        weight: 2,
+        opacity: 0.5,
+        fillOpacity: 0.2
+      }}
+      clockHelpingCircleOptions={{
+        fillColor: '#3b82f6',
+        color: '#1e40af',
+        weight: 1,
+        opacity: 0.3,
+        fillOpacity: 0.1
+      }}
       eventHandlers={{
         clusterclick: (cluster: any) => {
           try {
-            console.log('🗺️ CLUSTER: Click event triggered', cluster);
+            console.log('🗺️ CLUSTER: Click event triggered');
             
             // Get the cluster layer from the event
             const clusterLayer = cluster.layer || cluster.target;
@@ -203,21 +238,28 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
               cluster.originalEvent.stopPropagation();
             }
             
-            // Smart zoom behavior based on zoom level and cluster size
-            if (currentZoom <= 8) {
-              const targetZoom = Math.min(currentZoom + 2, 10);
+            // Improved zoom vs spiderfy logic
+            if (currentZoom <= 10) {
+              // At low zoom levels, always zoom in
+              const targetZoom = Math.min(currentZoom + 3, 13);
               map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.8 });
-            } else if (currentZoom <= 10 && childCount > 20) {
-              const targetZoom = Math.min(currentZoom + 2, 13);
+            } else if (currentZoom <= 13 && childCount > 15) {
+              // Medium zoom with many items, zoom in more
+              const targetZoom = Math.min(currentZoom + 2, 15);
               map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.6 });
+            } else if (currentZoom <= 15 && childCount > 8) {
+              // Higher zoom with moderate items, zoom in slightly
+              const targetZoom = Math.min(currentZoom + 1, 16);
+              map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.5 });
             } else {
-              // Try to spiderfy if available
+              // High zoom or few items, use spiderfy
               if (typeof clusterLayer.spiderfy === 'function') {
+                console.log('🗺️ CLUSTER: Using spiderfy for', childCount, 'items at zoom', currentZoom);
                 clusterLayer.spiderfy();
               } else {
-                // Fallback: zoom in one level
-                const targetZoom = Math.min(currentZoom + 1, 16);
-                map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.5 });
+                // Fallback: minimal zoom
+                const targetZoom = Math.min(currentZoom + 1, 17);
+                map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.3 });
               }
             }
             

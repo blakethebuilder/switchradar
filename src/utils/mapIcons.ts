@@ -46,7 +46,6 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     // Always ensure we have a valid provider string
     const safeProvider = (provider && typeof provider === 'string') ? provider.trim() : 'Unknown';
     if (!safeProvider) {
-      console.warn('🗺️ ICON: Empty provider, using fallback');
       return createFallbackIcon();
     }
 
@@ -54,11 +53,8 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     
     // Check cache first
     if (iconCache[cacheKey]) {
-      console.log('🗺️ ICON: Using cached icon for:', safeProvider);
       return iconCache[cacheKey];
     }
-
-    console.log('🗺️ ICON: Creating new icon for provider:', safeProvider, 'selected:', isSelected);
 
     // Get color and label with fallbacks
     let color: string;
@@ -67,22 +63,18 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     try {
       color = getProviderColor(safeProvider);
       if (!color || typeof color !== 'string') {
-        console.warn('🗺️ ICON: Invalid color returned, using default');
         color = '#6b7280'; // Default gray
       }
     } catch (error) {
-      console.error('🗺️ ICON: Error getting provider color:', error);
       color = '#6b7280';
     }
 
     try {
       label = getProviderLabel(safeProvider);
       if (!label || typeof label !== 'string') {
-        console.warn('🗺️ ICON: Invalid label returned, using default');
         label = '?';
       }
     } catch (error) {
-      console.error('🗺️ ICON: Error getting provider label:', error);
       label = '?';
     }
     
@@ -90,18 +82,10 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     const borderWidth = isSelected ? 3 : 2;
     const fontSize = isSelected ? '10px' : '8px';
     
-    console.log('🗺️ ICON: Creating icon with params:', { 
-      provider: safeProvider, 
-      color, 
-      label, 
-      size, 
-      isSelected 
-    });
-    
-    // Create the icon with maximum safety
+    // Create the icon with stable styling to prevent hover glitches
     const iconOptions = {
-      className: 'custom-marker',
-      html: `<div style="
+      className: 'custom-marker-stable',
+      html: `<div class="marker-content" style="
         background: ${color};
         width: ${size}px;
         height: ${size}px;
@@ -115,6 +99,8 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
         font-weight: bold;
         font-size: ${fontSize};
         cursor: pointer;
+        transition: none;
+        pointer-events: auto;
       ">${label}</div>`,
       iconSize: [size, size] as [number, number],
       iconAnchor: [size/2, size/2] as [number, number],
@@ -124,13 +110,11 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
     
     // Verify the icon was created successfully
     if (!icon) {
-      console.error('🗺️ ICON: L.divIcon returned null/undefined');
       return createFallbackIcon();
     }
 
     // Cache the successful icon
     iconCache[cacheKey] = icon;
-    console.log('🗺️ ICON: ✅ Successfully created and cached icon for', safeProvider);
     return icon;
     
   } catch (error) {

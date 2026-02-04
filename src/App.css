@@ -4,6 +4,33 @@
   justify-content: center;
 }
 
+/* Stable marker styling to prevent hover glitches */
+.custom-marker-stable {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Prevent hover state changes */
+  pointer-events: auto;
+}
+
+.custom-marker-stable .marker-content {
+  /* Prevent any transitions or hover effects that cause glitches */
+  transition: none !important;
+  transform: none !important;
+  /* Ensure stable rendering */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  /* Force hardware acceleration for stability */
+  will-change: auto;
+}
+
+/* Prevent marker flickering on hover */
+.custom-marker-stable:hover .marker-content {
+  /* No hover effects to prevent glitches */
+  transform: none !important;
+  transition: none !important;
+}
+
 .leaflet-popup-content-wrapper {
   border-radius: 12px;
 }
