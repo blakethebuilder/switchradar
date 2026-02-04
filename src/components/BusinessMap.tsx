@@ -79,6 +79,18 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
     mapInstance?.zoomOut();
   }, [mapInstance]);
 
+  // Auto-fit bounds when businesses change
+  useEffect(() => {
+    if (businesses.length > 0 && mapInstance) {
+      // Small delay to ensure markers are rendered
+      const timer = setTimeout(() => {
+        handleFitBounds();
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [businesses.length, mapInstance, handleFitBounds]);
+
   const handleFitBounds = useCallback(() => {
     if (businesses.length > 0 && mapInstance) {
       try {
@@ -210,8 +222,8 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
       )}
 
       <MapContainer
-        center={[-29.0000, 24.0000]}
-        zoom={6}
+        center={[-26.2041, 28.0473]} // Johannesburg center - better for SA data
+        zoom={7} // Slightly more zoomed in
         style={{ height: '100%', width: '100%', borderRadius: fullScreen ? '0' : '1.5rem' }}
         zoomControl={false}
         preferCanvas={true}
