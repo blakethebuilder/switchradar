@@ -557,10 +557,6 @@ function App() {
     });
   }, []);
 
-  const handleMultiSelect = useCallback((businesses: Business[]) => {
-    setSelectedBusinessIds(businesses.map(b => b.id));
-  }, []);
-
   const handleAddSelectedToRoute = useCallback(async () => {
     if (!token) return;
     
@@ -909,7 +905,6 @@ function App() {
                     zoom={mapTarget?.zoom}
                     fullScreen={true}
                     onBusinessSelect={handleSelectBusinessOnMap}
-                    onMultiSelect={handleMultiSelect}
                     selectedBusinessId={selectedBusiness?.id}
                     selectedBusinessIds={selectedBusinessIds}
                     droppedPin={droppedPin}
