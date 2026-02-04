@@ -1012,6 +1012,27 @@ function App() {
             }}
             onImportClick={openImportModal}
           />
+        ) : viewMode === 'settings' ? (
+          // Allow settings access even without data
+          <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
+            <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
+              <ManualSyncPanel />
+              <DbSettingsPage 
+                businesses={businesses} 
+                onClose={() => setViewMode('table')} 
+                onImport={openImportModal}
+              />
+            </div>
+          </div>
+        ) : viewMode === 'present' ? (
+          // Allow presentation view even without data
+          <div className="flex-1 h-full">
+            <Suspense fallback={<LoadingSpinner />}>
+              <PresentationView 
+                onBack={() => setViewMode('table')}
+              />
+            </Suspense>
+          </div>
         ) : (
           // Show dashboard when no data at all
           <Dashboard

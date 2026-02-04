@@ -6,3 +6,9 @@ services:
     expose:
       - "80"
     restart: always
+    volumes:
+      - switchradar_data:/app/data
+
+volumes:
+  switchradar_data:
+    driver: local
