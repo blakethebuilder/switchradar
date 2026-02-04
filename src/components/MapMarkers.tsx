@@ -50,57 +50,80 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
     let iconIssues = 0;
     
     console.log('🗺️ MARKERS: Starting marker creation loop...');
+    console.log('🗺️ MARKERS: First 3 businesses data:', businesses.slice(0, 3).map(b => ({
+      id: b.id,
+      name: b.name,
+      provider: b.provider,
+      coordinates: b.coordinates,
+      coordinatesType: typeof b.coordinates,
+      hasLat: b.coordinates && 'lat' in b.coordinates,
+      hasLng: b.coordinates && 'lng' in b.coordinates,
+      latValue: b.coordinates?.lat,
+      lngValue: b.coordinates?.lng,
+      latType: typeof b.coordinates?.lat,
+      lngType: typeof b.coordinates?.lng
+    })));
     
-    for (let i = 0; i < businesses.length; i++) {
+    for (let i = 0; i < Math.min(businesses.length, 10); i++) { // Only process first 10 for debugging
       const business = businesses[i];
       
       try {
+        console.log(`🗺️ MARKERS: Processing business ${i}:`, {
+          id: business.id,
+          name: business.name,
+          provider: business.provider,
+          coordinates: business.coordinates,
+          hasCoords: !!business.coordinates
+        });
+        
         // Validate business data
         if (!business?.id || !business.coordinates) {
           invalidCount++;
-          if (i < 5) { // Log first 5 invalid businesses
-            console.log('🗺️ MARKERS: Invalid business (no id/coords)', {
-              index: i,
-              id: business?.id,
-              hasCoords: !!business?.coordinates,
-              business: business
-            });
-          }
+          console.log(`🗺️ MARKERS: ❌ Invalid business ${i} (no id/coords):`, {
+            hasId: !!business?.id,
+            hasCoords: !!business?.coordinates,
+            business: business
+          });
           continue;
         }
         
         // More detailed coordinate validation
         const { lat, lng } = business.coordinates;
+        console.log(`🗺️ MARKERS: Business ${i} coordinates check:`, {
+          lat: lat,
+          lng: lng,
+          latType: typeof lat,
+          lngType: typeof lng,
+          latIsNumber: typeof lat === 'number',
+          lngIsNumber: typeof lng === 'number',
+          latIsNaN: isNaN(lat),
+          lngIsNaN: isNaN(lng)
+        });
+        
         if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
           coordinateIssues++;
-          if (coordinateIssues <= 5) { // Log first 5 coordinate issues
-            console.log('🗺️ MARKERS: Invalid coordinates (type/NaN)', {
-              index: i,
-              id: business.id,
-              name: business.name,
-              lat: lat,
-              lng: lng,
-              latType: typeof lat,
-              lngType: typeof lng,
-              latIsNaN: isNaN(lat),
-              lngIsNaN: isNaN(lng)
-            });
-          }
+          console.log(`🗺️ MARKERS: ❌ Invalid coordinates for business ${i}:`, {
+            id: business.id,
+            name: business.name,
+            lat: lat,
+            lng: lng,
+            latType: typeof lat,
+            lngType: typeof lng,
+            latIsNaN: isNaN(lat),
+            lngIsNaN: isNaN(lng)
+          });
           continue;
         }
 
         // Validate coordinate ranges
         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
           coordinateIssues++;
-          if (coordinateIssues <= 5) {
-            console.log('🗺️ MARKERS: Coordinates out of range', {
-              index: i,
-              id: business.id,
-              name: business.name,
-              lat: lat,
-              lng: lng
-            });
-          }
+          console.log(`🗺️ MARKERS: ❌ Coordinates out of range for business ${i}:`, {
+            id: business.id,
+            name: business.name,
+            lat: lat,
+            lng: lng
+          });
           continue;
         }
 
@@ -108,22 +131,29 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         let icon;
         try {
           const isSelected = selectedSet.has(business.id);
+          console.log(`🗺️ MARKERS: Creating icon for business ${i}:`, {
+            provider: business.provider,
+            isSelected: isSelected
+          });
+          
           icon = createProviderIcon(business.provider || 'Unknown', isSelected);
           
           if (!icon) {
-            console.warn('🗺️ MARKERS: createProviderIcon returned null, using fallback for business:', business.id);
+            console.warn(`🗺️ MARKERS: createProviderIcon returned null for business ${i}, using fallback`);
             icon = createFallbackIcon();
             iconIssues++;
           }
+          
+          console.log(`🗺️ MARKERS: ✅ Icon created successfully for business ${i}`);
         } catch (iconError) {
-          console.error(`🗺️ MARKERS: Error creating icon for business ${business.id}:`, iconError);
+          console.error(`🗺️ MARKERS: Error creating icon for business ${i}:`, iconError);
           icon = createFallbackIcon();
           iconIssues++;
         }
 
         if (!icon) {
           invalidCount++;
-          console.error('🗺️ MARKERS: No icon created for business', business.id);
+          console.error(`🗺️ MARKERS: ❌ No icon created for business ${i}`);
           continue;
         }
 
@@ -140,6 +170,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         }, 150);
 
         // Create the marker element
+        console.log(`🗺️ MARKERS: Creating marker element for business ${i} at position [${lat}, ${lng}]`);
         const marker = (
           <Marker
             key={`marker-${business.id}`}
@@ -154,32 +185,19 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
         validMarkers.push(marker);
         validCount++;
         
-        // Log first few successful markers
-        if (validCount <= 5) {
-          console.log(`🗺️ MARKERS: ✅ Created marker ${validCount}:`, {
-            id: business.id,
-            name: business.name,
-            provider: business.provider,
-            position: [lat, lng],
-            isSelected: selectedSet.has(business.id)
-          });
-        }
-        
-        // Log progress for large datasets
-        if (validCount % 500 === 0) {
-          console.log(`🗺️ MARKERS: Progress - ${validCount} valid markers created so far...`);
-        }
+        console.log(`🗺️ MARKERS: ✅ Successfully created marker ${validCount} for business ${i}`);
         
       } catch (error) {
         invalidCount++;
-        console.error(`🗺️ MARKERS: Error creating marker for business ${business.id}:`, error);
+        console.error(`🗺️ MARKERS: ❌ Error creating marker for business ${i}:`, error);
         continue;
       }
     }
 
-    console.log(`🗺️ MARKERS: ✅ MARKER CREATION COMPLETED`);
+    console.log(`🗺️ MARKERS: ✅ MARKER CREATION COMPLETED (first 10 only)`);
     console.log(`🗺️ MARKERS: Summary:`, {
       totalBusinesses: businesses.length,
+      processedBusinesses: Math.min(businesses.length, 10),
       validMarkers: validCount,
       invalidBusinesses: invalidCount,
       coordinateIssues: coordinateIssues,
@@ -189,12 +207,6 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
     
     if (validCount === 0 && businesses.length > 0) {
       console.error('🗺️ MARKERS: ❌ CRITICAL: NO VALID MARKERS CREATED despite having businesses!');
-      console.log('🗺️ MARKERS: First 3 businesses for debugging:', businesses.slice(0, 3).map(b => ({
-        id: b.id,
-        name: b.name,
-        coordinates: b.coordinates,
-        provider: b.provider
-      })));
     }
     
     return validMarkers;
