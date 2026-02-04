@@ -44,12 +44,12 @@ export const TopNav = ({
               Switch<span className="text-indigo-600">Radar</span>
             </h1>
             {lastImportName ? (
-              <p className="flex items-center gap-1.5 text-[9px] md:text-xs font-semibold text-slate-500 truncate">
+              <p className="hidden lg:flex items-center gap-1.5 text-[9px] md:text-xs font-semibold text-slate-500 truncate">
                 <Database className="h-2.5 w-2.5 md:h-3 md:w-3 shrink-0" />
                 <span className="truncate">{lastImportName}</span> • {totalCount.toLocaleString()}
               </p>
             ) : (
-              <p className="text-[9px] md:text-xs font-semibold text-slate-400 truncate">Powered by Smart Integrate</p>
+              <p className="hidden lg:block text-[9px] md:text-xs font-semibold text-slate-400 truncate">Powered by Smart Integrate</p>
             )}
           </div>
         </div>
@@ -160,7 +160,6 @@ export const TopNav = ({
                 >
                   <div className="hidden lg:flex flex-col items-end">
                     <span className="text-xs font-black text-slate-900 leading-none">{user?.username}</span>
-                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">Local Mode</span>
                   </div>
                   <UserIcon className="h-7 w-7 md:h-8 md:w-8 p-1.5 rounded-full bg-slate-100 text-slate-500" />
                 </button>
@@ -226,7 +225,6 @@ export const TopNav = ({
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-black text-slate-900">{user?.username}</p>
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Local Mode</p>
                 </div>
               </div>
               <div className="grid grid-cols-3 gap-2">

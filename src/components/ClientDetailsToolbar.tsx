@@ -267,16 +267,6 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                 >
                   <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
                 </a>
-              ) : business.coordinates ? (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${business.coordinates.lat},${business.coordinates.lng}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1.5 md:p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                  title="Open in Google Maps"
-                >
-                  <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
-                </a>
               ) : (
                 <a
                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address + ', ' + business.town + ', ' + business.province)}`}

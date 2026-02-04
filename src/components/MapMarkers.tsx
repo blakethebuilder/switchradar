@@ -4,7 +4,6 @@ import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import type { Business } from '../types';
 import { createProviderIcon, createFallbackIcon } from '../utils/mapIcons';
-import { throttle } from '../utils/performance';
 
 interface MapMarkersProps {
   businesses: Business[];
@@ -19,353 +18,221 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
   selectedBusinessIds = [],
   onBusinessSelect
 }) => {
-  console.log('🗺️ MAPMARKERS: Component render', {
-    businessesCount: businesses?.length || 0,
-    selectedBusinessId,
-    selectedBusinessIdsCount: selectedBusinessIds.length
-  });
+  console.log('🗺️ MAPMARKERS: Rendering', businesses?.length || 0, 'businesses');
 
-  // Memoize markers for performance
-  const markers = React.useMemo(() => {
-    console.log('🗺️ MARKERS: Creating markers for', businesses?.length || 0, 'businesses');
+  // Filter and validate businesses with coordinates
+  const validBusinesses = React.useMemo(() => {
+    if (!businesses || businesses.length === 0) return [];
     
-    if (!businesses || businesses.length === 0) {
-      console.log('🗺️ MARKERS: No businesses provided, returning empty array');
-      return [];
-    }
-    
-    const validMarkers: React.ReactElement[] = [];
-    const selectedSet = new Set([selectedBusinessId, ...selectedBusinessIds].filter(Boolean));
-    let validCount = 0;
-    let invalidCount = 0;
-    
-    for (let i = 0; i < businesses.length; i++) {
-      const business = businesses[i];
+    return businesses.filter(business => {
+      if (!business?.id || !business.coordinates) return false;
       
-      try {
-        // Validate business data
-        if (!business?.id || !business.coordinates) {
-          invalidCount++;
-          continue;
-        }
-        
-        // Validate coordinates
-        const { lat, lng } = business.coordinates;
-        if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
-          invalidCount++;
-          continue;
-        }
-
-        // Validate coordinate ranges
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-          invalidCount++;
-          continue;
-        }
-
-        // Create icon
-        let icon;
-        try {
-          const isSelected = selectedSet.has(business.id);
-          icon = createProviderIcon(business.provider || 'Unknown', isSelected);
-          
-          if (!icon) {
-            icon = createFallbackIcon();
-          }
-        } catch (iconError) {
-          console.error(`🗺️ MARKERS: Error creating icon for business ${i}:`, iconError);
-          icon = createFallbackIcon();
-        }
-
-        if (!icon) {
-          invalidCount++;
-          continue;
-        }
-
-        // Throttled click handler that preserves spiderfy state
-        const throttledClick = throttle((e: L.LeafletMouseEvent) => {
-          try {
-            e.originalEvent?.stopPropagation();
-            
-            // Check if this marker is part of a spiderfied cluster
-            const marker = e.target;
-            const isSpiderfied = marker._spiderfied || (marker.__parent && marker.__parent._spiderfied);
-            
-            requestAnimationFrame(() => {
-              onBusinessSelect?.(business);
-              
-              // If this was a spiderfied marker, try to keep the spiderfy open
-              if (isSpiderfied && marker.__parent) {
-                setTimeout(() => {
-                  try {
-                    if (typeof marker.__parent.spiderfy === 'function') {
-                      marker.__parent.spiderfy();
-                    }
-                  } catch (spiderfyError) {
-                    console.log('Could not re-spiderfy after selection:', spiderfyError);
-                  }
-                }, 100);
-              }
-            });
-          } catch (error) {
-            console.error('Error in marker click handler:', error);
-          }
-        }, 150);
-
-        // Create the marker element
-        const marker = (
-          <Marker
-            key={`marker-${business.id}`}
-            position={[lat, lng]}
-            icon={icon}
-            eventHandlers={{
-              click: throttledClick,
-            }}
-          />
-        );
-
-        validMarkers.push(marker);
-        validCount++;
-        
-      } catch (error) {
-        invalidCount++;
-        console.error(`🗺️ MARKERS: Error creating marker for business ${i}:`, error);
-        continue;
-      }
-    }
-
-    console.log(`🗺️ MARKERS: Marker creation completed`);
-    console.log(`🗺️ MARKERS: Summary:`, {
-      totalBusinesses: businesses.length,
-      validMarkers: validCount,
-      invalidBusinesses: invalidCount,
-      markersReturned: validMarkers.length
+      const { lat, lng } = business.coordinates;
+      
+      // Strict coordinate validation
+      if (typeof lat !== 'number' || typeof lng !== 'number') return false;
+      if (isNaN(lat) || isNaN(lng)) return false;
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return false;
+      
+      // Exclude suspicious coordinates (0,0 or very close to 0,0)
+      if (Math.abs(lat) < 0.001 && Math.abs(lng) < 0.001) return false;
+      
+      return true;
     });
-    
-    if (validCount === 0 && businesses.length > 0) {
-      console.error('🗺️ MARKERS: ❌ CRITICAL: NO VALID MARKERS CREATED despite having businesses!');
-    }
-    
-    return validMarkers;
-  }, [businesses, selectedBusinessId, selectedBusinessIds, onBusinessSelect]);
+  }, [businesses]);
 
-  console.log('🗺️ MAPMARKERS: About to return', markers.length, 'markers to MarkerClusterGroup');
-  
+  // Create markers with proper error handling
+  const markers = React.useMemo(() => {
+    const selectedSet = new Set([selectedBusinessId, ...selectedBusinessIds].filter(Boolean));
+    
+    return validBusinesses.map((business) => {
+      const isSelected = selectedSet.has(business.id);
+      
+      // Create icon with fallback
+      let icon;
+      try {
+        icon = createProviderIcon(business.provider || 'Unknown', isSelected);
+        if (!icon) icon = createFallbackIcon();
+      } catch (error) {
+        console.warn(`Failed to create icon for ${business.id}:`, error);
+        icon = createFallbackIcon();
+      }
+
+      // Simple click handler
+      const handleClick = (e: L.LeafletMouseEvent) => {
+        e.originalEvent?.stopPropagation();
+        onBusinessSelect?.(business);
+      };
+
+      return (
+        <Marker
+          key={business.id}
+          position={[business.coordinates.lat, business.coordinates.lng]}
+          icon={icon}
+          eventHandlers={{ click: handleClick }}
+        />
+      );
+    });
+  }, [validBusinesses, selectedBusinessId, selectedBusinessIds, onBusinessSelect]);
+
+  // Dynamic clustering configuration based on zoom
+  const getClusterRadius = React.useCallback((zoom: number) => {
+    const isMobile = window.innerWidth < 768;
+    const multiplier = isMobile ? 0.8 : 1.0;
+    
+    // Progressive clustering - larger radius at lower zoom
+    if (zoom <= 8) return Math.round(80 * multiplier);
+    if (zoom <= 10) return Math.round(60 * multiplier);
+    if (zoom <= 12) return Math.round(45 * multiplier);
+    if (zoom <= 14) return Math.round(35 * multiplier);
+    if (zoom <= 15) return Math.round(25 * multiplier);
+    
+    return Math.round(15 * multiplier); // Minimal clustering at high zoom
+  }, []);
+
+  // Custom cluster icon
+  const createClusterIcon = React.useCallback((cluster: any) => {
+    const count = cluster.getChildCount();
+    
+    // Size based on count
+    let size = 40;
+    let bgColor = '#3b82f6';
+    let textColor = 'white';
+    
+    if (count >= 100) {
+      size = 50;
+      bgColor = '#dc2626';
+    } else if (count >= 50) {
+      size = 45;
+      bgColor = '#ea580c';
+    } else if (count >= 20) {
+      size = 42;
+      bgColor = '#f59e0b';
+    } else if (count >= 10) {
+      size = 40;
+      bgColor = '#10b981';
+    }
+
+    // Mobile adjustment
+    if (window.innerWidth < 768) {
+      size = Math.round(size * 0.85);
+    }
+
+    return L.divIcon({
+      html: `<div style="
+        background-color: ${bgColor};
+        color: ${textColor};
+        width: ${size}px;
+        height: ${size}px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: ${size > 45 ? '14px' : '12px'};
+        border: 3px solid white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        cursor: pointer;
+      ">${count}</div>`,
+      className: 'custom-cluster-icon',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2]
+    });
+  }, []);
+
+  // Enhanced cluster click handler
+  const handleClusterClick = React.useCallback((cluster: any) => {
+    try {
+      const clusterLayer = cluster.layer || cluster.target;
+      if (!clusterLayer || !clusterLayer._map) return;
+
+      const map = clusterLayer._map;
+      const currentZoom = map.getZoom();
+      const childCount = clusterLayer.getChildCount();
+      const clusterLatLng = clusterLayer.getLatLng();
+
+      console.log('🗺️ CLUSTER CLICK:', { currentZoom, childCount });
+
+      // Prevent default behavior
+      if (cluster.originalEvent) {
+        cluster.originalEvent.preventDefault();
+        cluster.originalEvent.stopPropagation();
+      }
+
+      // Smart zoom vs spiderfy logic
+      if (currentZoom < 12) {
+        // Low zoom: Always zoom in to reveal more detail
+        const targetZoom = Math.min(currentZoom + 2, 14);
+        map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.6 });
+      } else if (currentZoom < 14 && childCount > 10) {
+        // Medium zoom with many items: Zoom in once more
+        const targetZoom = Math.min(currentZoom + 1, 15);
+        map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.5 });
+      } else {
+        // High zoom or small groups: Use spiderfy
+        if (typeof clusterLayer.spiderfy === 'function') {
+          console.log('🗺️ SPIDERFY:', childCount, 'items');
+          clusterLayer.spiderfy();
+        } else {
+          // Fallback: minimal zoom
+          const targetZoom = Math.min(currentZoom + 1, 16);
+          map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.3 });
+        }
+      }
+    } catch (error) {
+      console.error('🗺️ CLUSTER CLICK ERROR:', error);
+    }
+  }, []);
+
+  console.log('🗺️ MAPMARKERS: Rendering', markers.length, 'valid markers');
+
   if (markers.length === 0) {
-    console.log('🗺️ MAPMARKERS: No markers to render - returning empty MarkerClusterGroup');
     return <MarkerClusterGroup>{[]}</MarkerClusterGroup>;
   }
-  
+
   return (
     <MarkerClusterGroup
+      // Core clustering settings
+      maxClusterRadius={getClusterRadius}
+      disableClusteringAtZoom={16}
+      minimumClusterSize={2}
+      
+      // Performance settings
       chunkedLoading={true}
-      spiderfyOnMaxZoom={true}
-      showCoverageOnHover={false}
-      animate={false}
+      removeOutsideVisibleBounds={false}
+      animate={true}
       animateAddingMarkers={false}
-      removeOutsideVisibleBounds={true}
-      disableClusteringAtZoom={15}
-      maxClusterRadius={(zoom: number) => {
-        // Better clustering that keeps markers grouped longer
-        const isMobile = window.innerWidth < 768;
-        const baseMultiplier = isMobile ? 0.9 : 1.0;
-        
-        // Keep larger cluster radius at higher zoom levels
-        if (zoom <= 6) return Math.round(120 * baseMultiplier);
-        if (zoom <= 8) return Math.round(100 * baseMultiplier);
-        if (zoom <= 10) return Math.round(80 * baseMultiplier);
-        if (zoom <= 12) return Math.round(70 * baseMultiplier);
-        if (zoom <= 13) return Math.round(60 * baseMultiplier);
-        if (zoom <= 14) return Math.round(50 * baseMultiplier);
-        
-        // Only at very high zoom allow individual markers
-        return Math.round(30 * baseMultiplier);
-      }}
-      spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.2 : 1.5}
+      
+      // Spiderfy settings
+      spiderfyOnMaxZoom={true}
       spiderfyOnEveryZoom={false}
-      spiderfyShapePositions={undefined}
+      spiderfyDistanceMultiplier={window.innerWidth < 768 ? 1.0 : 1.3}
+      
+      // Visual settings
+      showCoverageOnHover={false}
       zoomToBoundsOnClick={false}
-      maxZoom={18}
-      // Increase minimum cluster size to keep clusters together longer
-      minimumClusterSize={5}
-      // Disable hover effects that cause glitches
       singleMarkerMode={false}
-      // Additional options for better spiderfy behavior
+      
+      // Custom icon and event handlers
+      iconCreateFunction={createClusterIcon}
+      eventHandlers={{
+        clusterclick: handleClusterClick
+      }}
+      
+      // Spiderfy styling
       polygonOptions={{
         fillColor: '#3b82f6',
         color: '#1e40af',
         weight: 2,
-        opacity: 0.5,
+        opacity: 0.6,
         fillOpacity: 0.2
       }}
       clockHelpingCircleOptions={{
         fillColor: '#3b82f6',
         color: '#1e40af',
         weight: 1,
-        opacity: 0.3,
+        opacity: 0.4,
         fillOpacity: 0.1
-      }}
-      eventHandlers={{
-        clusterclick: (cluster: any) => {
-          try {
-            console.log('🗺️ CLUSTER: Click event triggered');
-            
-            // Get the cluster layer from the event
-            const clusterLayer = cluster.layer || cluster.target;
-            if (!clusterLayer) {
-              console.warn('🗺️ CLUSTER: No cluster layer found');
-              return false;
-            }
-            
-            // Check if it has the required methods
-            if (typeof clusterLayer.getChildCount !== 'function') {
-              console.warn('🗺️ CLUSTER: Cluster layer missing getChildCount method');
-              return false;
-            }
-            
-            const map = clusterLayer._map;
-            if (!map) {
-              console.warn('🗺️ CLUSTER: No map found on cluster layer');
-              return false;
-            }
-            
-            const currentZoom = map.getZoom();
-            const childCount = clusterLayer.getChildCount();
-            const clusterLatLng = clusterLayer.getLatLng();
-            
-            console.log('🗺️ CLUSTER: Processing click', {
-              currentZoom,
-              childCount,
-              clusterLatLng
-            });
-            
-            // Prevent default behavior
-            if (cluster.originalEvent) {
-              cluster.originalEvent.preventDefault();
-              cluster.originalEvent.stopPropagation();
-            }
-            
-            // Improved zoom vs spiderfy logic for better clustering behavior
-            if (currentZoom <= 10) {
-              // At low zoom levels, always zoom in to reveal more detail
-              const targetZoom = Math.min(currentZoom + 3, 13);
-              map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.8 });
-            } else if (currentZoom <= 12 && childCount > 15) {
-              // Medium zoom with many items, zoom in more
-              const targetZoom = Math.min(currentZoom + 2, 14);
-              map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.6 });
-            } else if (currentZoom <= 13 && childCount > 8) {
-              // Higher zoom with moderate items, zoom in once more
-              const targetZoom = Math.min(currentZoom + 1, 15);
-              map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.5 });
-            } else {
-              // At zoom 14+ or small groups, use spiderfy
-              if (typeof clusterLayer.spiderfy === 'function') {
-                console.log('🗺️ CLUSTER: Using spiderfy for', childCount, 'items at zoom', currentZoom);
-                clusterLayer.spiderfy();
-              } else {
-                // Fallback: small zoom to break cluster
-                const targetZoom = Math.min(currentZoom + 1, 16);
-                map.setView(clusterLatLng, targetZoom, { animate: true, duration: 0.3 });
-              }
-            }
-            
-            return false;
-          } catch (error) {
-            console.error('🗺️ CLUSTER: Error in cluster click handler:', error);
-            return false;
-          }
-        }
-      }}
-      iconCreateFunction={(cluster: any) => {
-        try {
-          const count = cluster.getChildCount();
-          const map = cluster._group._map;
-          const currentZoom = map ? map.getZoom() : 10;
-          
-          const isMobile = window.innerWidth < 768;
-          const sizeMultiplier = isMobile ? 0.85 : 1.0;
-          
-          let size = 32;
-          let bgColor = '#3b82f6';
-          
-          if (count >= 1000) {
-            size = Math.round(60 * sizeMultiplier);
-            bgColor = '#7c2d12';
-          } else if (count >= 500) {
-            size = Math.round(55 * sizeMultiplier);
-            bgColor = '#dc2626';
-          } else if (count >= 100) {
-            size = Math.round(50 * sizeMultiplier);
-            bgColor = '#ea580c';
-          } else if (count >= 50) {
-            size = Math.round(45 * sizeMultiplier);
-            bgColor = '#d97706';
-          } else if (count >= 20) {
-            size = Math.round(40 * sizeMultiplier);
-            bgColor = '#ca8a04';
-          } else if (count >= 10) {
-            size = Math.round(36 * sizeMultiplier);
-            bgColor = '#16a34a';
-          }
-          
-          if (currentZoom >= 12) {
-            size += Math.round(4 * sizeMultiplier);
-          } else if (currentZoom <= 8) {
-            size += Math.round(2 * sizeMultiplier);
-          }
-          
-          const fontSize = size > 50 ? '14px' : size > 40 ? '12px' : size > 35 ? '11px' : '10px';
-          
-          return L.divIcon({
-            html: `<div class="cluster-marker-stable" style="
-              background: ${bgColor};
-              color: white;
-              border-radius: 50%;
-              width: ${size}px;
-              height: ${size}px;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-weight: bold;
-              border: 3px solid white;
-              box-shadow: 0 3px 12px rgba(0,0,0,0.3);
-              font-size: ${fontSize};
-              cursor: pointer;
-              transition: none;
-              backface-visibility: hidden;
-              -webkit-backface-visibility: hidden;
-              transform: none;
-              animation: none;
-            ">${count}</div>`,
-            className: 'cluster-icon-stable',
-            iconSize: [size, size],
-            iconAnchor: [size/2, size/2]
-          });
-        } catch (error) {
-          console.error('Cluster icon error:', error);
-          const fallbackSize = 32;
-          return L.divIcon({
-            html: `<div class="cluster-marker-stable" style="
-              background: #6b7280; 
-              color: white; 
-              border-radius: 50%; 
-              width: ${fallbackSize}px; 
-              height: ${fallbackSize}px; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              font-weight: bold;
-              transition: none;
-              backface-visibility: hidden;
-              -webkit-backface-visibility: hidden;
-              transform: none;
-              animation: none;
-            ">•</div>`,
-            className: 'cluster-icon-stable',
-            iconSize: [fallbackSize, fallbackSize],
-            iconAnchor: [fallbackSize/2, fallbackSize/2]
-          });
-        }
       }}
     >
       {markers}

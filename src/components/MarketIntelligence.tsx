@@ -211,7 +211,7 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({
                                 margin={{ 
                                     top: 20, 
                                     right: 30, 
-                                    left: 0, // Remove left margin for mobile
+                                    left: 150, // Increased left margin to show provider names
                                     bottom: 20 
                                 }}
                                 barCategoryGap="10%"
@@ -224,16 +224,16 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({
                                     axisLine={false}
                                     tickLine={false}
                                     tick={{ 
-                                        fontSize: 10, 
+                                        fontSize: 12, 
                                         fontWeight: 700, 
-                                        fill: '#64748b',
-                                        textAnchor: 'start' // Align to start for mobile
+                                        fill: '#475569',
+                                        textAnchor: 'end' // Align to end for better visibility
                                     }}
-                                    width={120} // Fixed width for mobile
+                                    width={140} // Adequate width for provider names
                                     interval={0}
                                     tickFormatter={(value) => {
-                                        // Truncate long provider names to fit mobile
-                                        const maxLength = 12;
+                                        // Show full provider names, truncate only if extremely long
+                                        const maxLength = 18;
                                         if (value.length > maxLength) {
                                             return value.substring(0, maxLength) + '...';
                                         }

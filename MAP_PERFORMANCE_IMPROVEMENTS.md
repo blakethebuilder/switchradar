@@ -5,29 +5,46 @@ Enhanced the BusinessMap component with significant performance improvements and
 
 ## Recent Performance Fixes (Feb 2026)
 
-### 1. Dataset Fetching Error Resolution
+### 1. Complete MapMarkers Rewrite (Latest)
+- **Rebuilt**: Entire clustering system from scratch for efficiency and reliability
+- **Smart Clustering**: Progressive zoom-based clustering with intelligent radius calculation
+- **Enhanced Click Logic**: 
+  - Low zoom (< 12): Always zoom in to reveal detail
+  - Medium zoom (12-14): Zoom in for large clusters, spiderfy for small ones
+  - High zoom (14+): Prefer spiderfy to keep markers accessible
+- **Spiderfy Persistence**: Spiderfied clusters stay open for easy business navigation
+- **Performance**: Removed throttling, simplified event handling, better coordinate validation
+- **Mobile Optimized**: Responsive cluster sizes and spiderfy distances
+
+### 2. Coordinate Validation Enhancement
+- **Strict Validation**: Enhanced coordinate checking to prevent off-map rendering
+- **Suspicious Coordinate Detection**: Filters out (0,0) and near-zero coordinates
+- **Bounds Checking**: Proper lat/lng range validation with detailed logging
+- **Result**: Eliminates clusters rendering outside map bounds
+
+### 3. Dataset Fetching Error Resolution
 - **Fixed**: `TypeError: e.map is not a function` error in DatasetSelector
 - **Solution**: Added array validation before calling `.map()` on API responses
 - **Impact**: Eliminates crashes during dataset loading
 
-### 2. Optimized Data Processing Pipeline
+### 3. Optimized Data Processing Pipeline
 - **Improved**: Dynamic chunk sizing based on dataset size (500 for small, 1000 for large datasets)
 - **Reduced**: Processing delays from 5ms to 2ms between chunks
 - **Enhanced**: Batch coordinate extraction with reduced logging overhead
 - **Result**: ~40% faster processing for large datasets (>5000 businesses)
 
-### 3. Coordinate Extraction Optimization
+### 4. Coordinate Extraction Optimization
 - **Reduced**: Logging overhead by only logging first URL instead of first 5
 - **Maintained**: All 4 regex patterns for maximum compatibility
 - **Impact**: Significant performance improvement during bulk imports
 
-### 4. Server Communication Improvements
+### 5. Server Communication Improvements
 - **Optimized**: Chunking threshold lowered to 800 businesses (from 1000)
 - **Increased**: Chunk size to 1000 businesses (from 500) for fewer HTTP requests
 - **Enhanced**: Data caching duration increased to 30 seconds
 - **Result**: Fewer server requests and better user experience
 
-### 5. Memory and Performance Optimizations
+### 6. Memory and Performance Optimizations
 - **Reduced**: Redundant data fetching with improved caching
 - **Optimized**: Filter and search result caching
 - **Enhanced**: Early exit strategies in filtering functions

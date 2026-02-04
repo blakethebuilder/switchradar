@@ -89,7 +89,10 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           !isNaN(b.coordinates.lat) && 
           !isNaN(b.coordinates.lng) &&
           b.coordinates.lat >= -90 && b.coordinates.lat <= 90 &&
-          b.coordinates.lng >= -180 && b.coordinates.lng <= 180
+          b.coordinates.lng >= -180 && b.coordinates.lng <= 180 &&
+          // Exclude suspicious coordinates like 0,0
+          !(Math.abs(b.coordinates.lat) < 0.001 && Math.abs(b.coordinates.lng) < 0.001) &&
+          !(b.coordinates.lat === 0 && b.coordinates.lng === 0)
         );
         
         console.log('🗺️ FIT BOUNDS: Valid businesses:', validBusinesses.length, 'out of', businesses.length);
