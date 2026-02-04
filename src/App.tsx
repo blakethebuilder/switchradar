@@ -594,7 +594,7 @@ function App() {
     const nextBusiness = filteredBusinesses[nextIndex];
     setSelectedBusiness(nextBusiness);
     // If we're on map view, also update the map target
-    if (viewMode === 'map') {
+    if (viewMode === 'map' && nextBusiness.coordinates && typeof nextBusiness.coordinates.lat === 'number' && typeof nextBusiness.coordinates.lng === 'number') {
       setMapTarget({ center: [nextBusiness.coordinates.lat, nextBusiness.coordinates.lng], zoom: 15 });
     }
   }, [filteredBusinesses, currentBusinessIndex, viewMode]);
@@ -605,7 +605,7 @@ function App() {
     const prevBusiness = filteredBusinesses[prevIndex];
     setSelectedBusiness(prevBusiness);
     // If we're on map view, also update the map target
-    if (viewMode === 'map') {
+    if (viewMode === 'map' && prevBusiness.coordinates && typeof prevBusiness.coordinates.lat === 'number' && typeof prevBusiness.coordinates.lng === 'number') {
       setMapTarget({ center: [prevBusiness.coordinates.lat, prevBusiness.coordinates.lng], zoom: 15 });
     }
   }, [filteredBusinesses, currentBusinessIndex, viewMode]);
@@ -763,7 +763,9 @@ function App() {
                   onBusinessSelect={(b) => {
                     setSelectedBusiness(b);
                     setViewMode('map');
-                    setMapTarget({ center: [b.coordinates.lat, b.coordinates.lng], zoom: 15 });
+                    if (b.coordinates && typeof b.coordinates.lat === 'number' && typeof b.coordinates.lng === 'number') {
+                      setMapTarget({ center: [b.coordinates.lat, b.coordinates.lng], zoom: 15 });
+                    }
                   }}
                   onDelete={handleDeleteBusiness}
                   onTogglePhoneType={handleTogglePhoneType}
@@ -880,7 +882,7 @@ function App() {
                               // Navigate through selected businesses
                               if (selectedBusinessIds.length > 0) {
                                 const firstSelected = businesses.find(b => b.id === selectedBusinessIds[0]);
-                                if (firstSelected) {
+                                if (firstSelected && firstSelected.coordinates && typeof firstSelected.coordinates.lat === 'number' && typeof firstSelected.coordinates.lng === 'number') {
                                   setSelectedBusiness(firstSelected);
                                   setMapTarget({ center: [firstSelected.coordinates.lat, firstSelected.coordinates.lng], zoom: 15 });
                                 }
@@ -988,7 +990,9 @@ function App() {
                     onViewOnMap={(business) => {
                       setSelectedBusiness(business);
                       setViewMode('map');
-                      setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
+                      if (business.coordinates && typeof business.coordinates.lat === 'number' && typeof business.coordinates.lng === 'number') {
+                        setMapTarget({ center: [business.coordinates.lat, business.coordinates.lng], zoom: 15 });
+                      }
                     }}
                   />
                 </Suspense>

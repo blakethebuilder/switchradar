@@ -82,8 +82,13 @@ export const RouteView: React.FC<RouteViewProps> = ({
       <div className="p-4 border-t border-slate-100 bg-white">
         <button
           onClick={() => {
-            const coords = routeBusinesses.map(b => `${b.coordinates.lat},${b.coordinates.lng}`).join('/');
-            window.open(`https://www.google.com/maps/dir/${coords}`, '_blank');
+            const coords = routeBusinesses
+              .filter(b => b.coordinates && typeof b.coordinates.lat === 'number' && typeof b.coordinates.lng === 'number')
+              .map(b => `${b.coordinates.lat},${b.coordinates.lng}`)
+              .join('/');
+            if (coords) {
+              window.open(`https://www.google.com/maps/dir/${coords}`, '_blank');
+            }
           }}
           className="w-full h-14 flex items-center justify-center gap-3 rounded-2xl bg-indigo-600 text-white text-sm font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-200"
         >
