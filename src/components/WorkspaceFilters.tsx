@@ -74,53 +74,48 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
   
   return (
     <>
-      {/* Mobile Filter Toggle Button - Only visible on mobile */}
-      <div className={`md:hidden fixed top-4 left-4 z-50 ${isMapView ? 'block' : 'hidden'}`}>
-        <button
-          onClick={onToggleVisibility}
-          className={`h-12 w-12 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 ${
-            hasActiveFilters 
-              ? 'bg-indigo-600 text-white shadow-indigo-200' 
-              : 'bg-white/90 backdrop-blur-xl text-slate-700 shadow-slate-200'
-          } ${isVisible ? 'scale-110' : 'hover:scale-105'} active:scale-95`}
-        >
-          {hasActiveFilters ? (
-            <div className="relative">
-              <Filter className="h-5 w-5" />
-              <div className="absolute -top-1 -right-1 h-3 w-3 bg-white text-indigo-600 rounded-full flex items-center justify-center text-[10px] font-black">
-                {activeFilterCount}
+      {/* Mobile Filter Toggle Button - Only visible on mobile for map view */}
+      {isMapView && (
+        <div className="md:hidden fixed top-20 left-4 z-50">
+          <button
+            onClick={onToggleVisibility}
+            className={`h-12 w-12 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 ${
+              hasActiveFilters 
+                ? 'bg-indigo-600 text-white shadow-indigo-200' 
+                : 'bg-white/90 backdrop-blur-xl text-slate-700 shadow-slate-200'
+            } ${isVisible ? 'scale-110' : 'hover:scale-105'} active:scale-95`}
+          >
+            {hasActiveFilters ? (
+              <div className="relative">
+                <Filter className="h-5 w-5" />
+                <div className="absolute -top-1 -right-1 h-3 w-3 bg-white text-indigo-600 rounded-full flex items-center justify-center text-[10px] font-black">
+                  {activeFilterCount}
+                </div>
               </div>
-            </div>
-          ) : (
-            <SlidersHorizontal className="h-5 w-5" />
-          )}
-        </button>
-      </div>
+            ) : (
+              <SlidersHorizontal className="h-5 w-5" />
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Mobile Overlay - Only on mobile when visible */}
       {isVisible && isMapView && (
         <div className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={onToggleVisibility} />
       )}
 
-      {/* Main Filter Panel */}
+      {/* Main Filter Panel - Sidebar for Map View */}
       <div className={`
         ${isMapView ? (
-          // Map view: Mobile modal, desktop sidebar
-          `md:relative md:block ${
-            isVisible 
-              ? 'fixed top-0 left-0 right-0 bottom-0 md:relative md:top-auto md:left-auto md:right-auto md:bottom-auto z-50 md:z-auto' 
-              : 'hidden md:block'
-          }`
+          // Map view: Sidebar layout
+          `fixed top-0 left-0 h-full w-80 transform transition-transform duration-300 ease-in-out z-50 ${
+            isVisible ? 'translate-x-0' : '-translate-x-full'
+          } md:relative md:translate-x-0 md:w-80 md:h-auto md:max-h-screen md:overflow-y-auto`
         ) : (
-          // Table view: Always visible, responsive
-          'block'
+          // Table view: Normal block layout
+          'block w-full max-w-none'
         )}
-        glass-card rounded-[2rem] shadow-2xl overflow-hidden transition-all duration-300 ${
-          isMapView 
-            ? 'border border-white/50 backdrop-blur-xl md:max-w-sm md:w-80' 
-            : 'border border-slate-100 w-full max-w-none'
-        } ${isVisible ? 'shadow-2xl' : 'shadow-lg'}
-        ${isMapView && isVisible ? 'md:rounded-[2rem] rounded-none md:m-0 m-4 md:mt-0 mt-20' : ''}
+        glass-card ${isMapView ? 'rounded-none md:rounded-r-[2rem]' : 'rounded-[2rem]'} shadow-2xl overflow-hidden border-white/50 backdrop-blur-xl
       `}>
         {/* Header */}
         <div className={`p-4 border-b flex items-center justify-between transition-all ${
@@ -152,37 +147,35 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Desktop toggle button */}
-            <button 
-              onClick={onToggleVisibility}
-              className={`hidden md:block p-2 rounded-lg transition-all duration-200 ${
-                isMapView 
-                  ? 'hover:bg-white/50 text-slate-700 active:scale-95' 
-                  : 'hover:bg-slate-50 text-slate-600 active:scale-95'
-              } ${isVisible ? 'rotate-180' : ''}`}
-            >
-              <ChevronDown className="h-4 w-4" />
-            </button>
-            
             {/* Mobile close button */}
-            <button 
-              onClick={onToggleVisibility}
-              className={`md:hidden p-2 rounded-lg transition-all duration-200 ${
-                isMapView 
-                  ? 'hover:bg-white/50 text-slate-700 active:scale-95' 
-                  : 'hover:bg-slate-50 text-slate-600 active:scale-95'
-              }`}
-            >
-              <X className="h-4 w-4" />
-            </button>
+            {isMapView && (
+              <button 
+                onClick={onToggleVisibility}
+                className="md:hidden p-2 rounded-lg transition-all duration-200 hover:bg-white/50 text-slate-700 active:scale-95"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+            
+            {/* Desktop toggle button for table view only */}
+            {!isMapView && (
+              <button 
+                onClick={onToggleVisibility}
+                className="p-2 rounded-lg transition-all duration-200 hover:bg-slate-50 text-slate-600 active:scale-95"
+              >
+                <ChevronDown className={`h-4 w-4 transition-transform ${isVisible ? 'rotate-180' : ''}`} />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Content with smooth animation */}
+        {/* Content - Always visible in map sidebar, collapsible in table view */}
         <div className={`transition-all duration-300 ease-in-out ${
-          isVisible 
-            ? 'max-h-[80vh] md:max-h-[600px] opacity-100 overflow-y-auto' 
-            : 'max-h-0 opacity-0 overflow-hidden'
+          isMapView 
+            ? 'max-h-none opacity-100 overflow-y-auto' 
+            : isVisible 
+              ? 'max-h-[80vh] md:max-h-[600px] opacity-100 overflow-y-auto' 
+              : 'max-h-0 opacity-0 overflow-hidden'
         }`}>
           <div className={`${
             isMapView ? 'bg-white/90' : 'bg-white'

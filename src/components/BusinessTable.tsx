@@ -287,28 +287,28 @@ export const BusinessTable = React.memo(({
                     <ProviderBadge provider={business.provider} className="scale-90 origin-left" />
                   </td>
 
-                  <td className="px-6 py-3">
-                    <div className="flex items-center justify-end gap-1 pr-6">
+                  <td className="px-2 md:px-6 py-3">
+                    <div className="flex items-center justify-end gap-0.5 md:gap-1 pr-2 md:pr-6">
                       <button
                         onClick={(e) => { e.stopPropagation(); onBusinessSelect?.(business); }}
-                        className="p-2 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-white hover:shadow-md transition-all"
+                        className="p-1.5 md:p-2 rounded-lg text-slate-300 hover:text-indigo-600 hover:bg-white hover:shadow-md transition-all"
                         title="Show on map"
                       >
-                        <Map className="w-4 h-4" />
+                        <Map className="w-3.5 h-3.5 md:w-4 md:h-4" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onAddToRoute?.(business.id); }}
-                        className="p-2 rounded-lg text-slate-300 hover:text-green-600 hover:bg-white hover:shadow-md transition-all"
+                        className="p-1.5 md:p-2 rounded-lg text-slate-300 hover:text-green-600 hover:bg-white hover:shadow-md transition-all"
                         title="Add to Route"
                       >
-                        <Route className="w-4 h-4" />
+                        <Route className="w-3.5 h-3.5 md:w-4 md:h-4" />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onDelete?.(business.id); }}
-                        className="p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-white hover:shadow-md transition-all"
+                        className="p-1.5 md:p-2 rounded-lg text-slate-300 hover:text-rose-600 hover:bg-white hover:shadow-md transition-all"
                         title="Delete business"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
                       </button>
                     </div>
                   </td>

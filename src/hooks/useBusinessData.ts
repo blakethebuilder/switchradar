@@ -128,20 +128,36 @@ export const useBusinessData = () => {
         }
     }, [token, isAuthenticated, selectedDatasets.length]);
 
-    // Auto-fetch on mount and auth changes
+    // Auto-fetch on mount and auth changes - Optimized to prevent multiple calls
     useEffect(() => {
+        console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
         if (isAuthenticated && token) {
-            fetchBusinesses();
-            fetchRoutes();
-            fetchDatasets();
+            // Use a single async function to coordinate all data fetching
+            const initializeData = async () => {
+                console.log('🚀 DATA: Starting data initialization');
+                try {
+                    // Fetch all data concurrently for better performance
+                    await Promise.all([
+                        fetchBusinesses(),
+                        fetchRoutes(),
+                        fetchDatasets()
+                    ]);
+                    console.log('✅ DATA: All data fetched successfully');
+                } catch (error) {
+                    console.error('❌ DATA: Error during data initialization:', error);
+                }
+            };
+            
+            initializeData();
         } else {
+            console.log('🔐 DATA: Not authenticated, clearing data');
             setBusinesses([]);
             setRouteItems([]);
             setAvailableDatasets([]);
             setSelectedDatasets([]);
             setError(null);
         }
-    }, [token, isAuthenticated, fetchBusinesses, fetchRoutes, fetchDatasets]);
+    }, [token, isAuthenticated]); // Removed function dependencies to prevent loops
 
     // Clear caches when businesses change
     useEffect(() => {

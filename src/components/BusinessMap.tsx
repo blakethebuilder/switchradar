@@ -487,6 +487,20 @@ export const BusinessMap = React.memo(({
   radiusKm
 }: BusinessMapProps) => {
   
+  console.log('🗺️ MAP: BusinessMap render', {
+    businessesCount: businesses?.length || 0,
+    businessesSample: businesses?.slice(0, 3)?.map(b => ({
+      id: b.id,
+      name: b.name,
+      provider: b.provider,
+      hasCoords: !!b.coordinates,
+      coords: b.coordinates
+    })),
+    fullScreen,
+    selectedBusinessId,
+    selectedBusinessIds: selectedBusinessIds.length
+  });
+  
   const [isDropMode, setIsDropMode] = useState(false);
   const [currentBusinessIndex, setCurrentBusinessIndex] = useState(0);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
@@ -497,9 +511,11 @@ export const BusinessMap = React.memo(({
 
   // Lazy load markers after map is ready for better initial performance
   useEffect(() => {
+    console.log('🗺️ MAP: Markers loading effect', { mapInstance: !!mapInstance, markersLoaded, businessesCount: businesses.length });
     if (mapInstance && !markersLoaded && businesses.length > 0) {
       // Delay marker loading slightly to let map render first
       const timer = setTimeout(() => {
+        console.log('🗺️ MAP: Setting markersLoaded to true');
         setMarkersLoaded(true);
       }, 300);
       
@@ -524,12 +540,14 @@ export const BusinessMap = React.memo(({
 
   // Handle map ready with performance monitoring
   const handleMapReady = useCallback((map: L.Map) => {
+    console.log('🗺️ MAP: handleMapReady called');
     PerformanceMonitor.startTimer('map-setup');
     try {
       setMapInstance(map);
       setCurrentZoom(map.getZoom());
       setIsMapLoading(false);
       setMapError(null);
+      console.log('🗺️ MAP: Map instance set successfully');
       PerformanceMonitor.endTimer('map-setup');
     } catch (error) {
       console.error('Error setting up map:', error);

@@ -824,101 +824,101 @@ function App() {
             )}
 
             {viewMode === 'map' && (
-              <div className="absolute inset-0 w-full h-full">
-                <div className="absolute top-2 md:top-4 left-0 right-0 z-[2000] px-2 md:px-4">
-                  <div className="max-w-4xl mx-auto">
-                    <WorkspaceFilters
-                      searchTerm={searchTerm}
-                      onSearchChange={setSearchTerm}
-                      selectedCategory={selectedCategory}
-                      onCategoryChange={setSelectedCategory}
-                      phoneType={phoneType}
-                      onPhoneTypeChange={setPhoneType}
-                      categories={categories}
-                      availableProviders={availableProviders}
-                      visibleProviders={visibleProviders}
-                      onToggleProvider={handleToggleProvider}
-                      onSelectAllProviders={handleSelectAllProviders}
-                      onClearProviders={handleClearProviders}
-                      onClearFilters={handleClearFilters}
-                      availableDatasets={availableDatasets}
-                      selectedDatasets={selectedDatasets}
-                      onDatasetChange={setSelectedDatasets}
-                      isVisible={isFiltersVisible}
-                      onToggleVisibility={() => setIsFiltersVisible(!isFiltersVisible)}
-                      droppedPin={droppedPin}
-                      radiusKm={radiusKm}
-                      setRadiusKm={setRadiusKm}
-                      variant="map"
-                    />
-                  </div>
-                </div>
+              <div className="absolute inset-0 w-full h-full flex">
+                {/* Sidebar Filters */}
+                <WorkspaceFilters
+                  searchTerm={searchTerm}
+                  onSearchChange={setSearchTerm}
+                  selectedCategory={selectedCategory}
+                  onCategoryChange={setSelectedCategory}
+                  phoneType={phoneType}
+                  onPhoneTypeChange={setPhoneType}
+                  categories={categories}
+                  availableProviders={availableProviders}
+                  visibleProviders={visibleProviders}
+                  onToggleProvider={handleToggleProvider}
+                  onSelectAllProviders={handleSelectAllProviders}
+                  onClearProviders={handleClearProviders}
+                  onClearFilters={handleClearFilters}
+                  availableDatasets={availableDatasets}
+                  selectedDatasets={selectedDatasets}
+                  onDatasetChange={setSelectedDatasets}
+                  isVisible={isFiltersVisible}
+                  onToggleVisibility={() => setIsFiltersVisible(!isFiltersVisible)}
+                  droppedPin={droppedPin}
+                  radiusKm={radiusKm}
+                  setRadiusKm={setRadiusKm}
+                  variant="map"
+                />
 
-                {/* Multi-Select Panel */}
-                {selectedBusinessIds.length > 0 && (
-                  <div className="absolute bottom-4 left-4 right-4 z-[2000]">
-                    <div className="max-w-md mx-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/40 p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
-                          <span className="text-sm font-bold text-slate-900">
-                            {selectedBusinessIds.length} businesses selected
-                          </span>
+                {/* Map Container */}
+                <div className="flex-1 relative">
+                  {/* Multi-Select Panel */}
+                  {selectedBusinessIds.length > 0 && (
+                    <div className="absolute bottom-4 left-4 right-4 z-[2000]">
+                      <div className="max-w-md mx-auto bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/40 p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
+                            <span className="text-sm font-bold text-slate-900">
+                              {selectedBusinessIds.length} businesses selected
+                            </span>
+                          </div>
+                          <button
+                            onClick={handleClearSelection}
+                            className="text-slate-400 hover:text-slate-600 transition-colors"
+                            title="Clear selection"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
                         </div>
-                        <button
-                          onClick={handleClearSelection}
-                          className="text-slate-400 hover:text-slate-600 transition-colors"
-                          title="Clear selection"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={handleAddSelectedToRoute}
-                          className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all active:scale-95"
-                        >
-                          <Plus className="h-4 w-4" />
-                          Add to Route
-                        </button>
-                        <button
-                          onClick={() => {
-                            // Navigate through selected businesses
-                            if (selectedBusinessIds.length > 0) {
-                              const firstSelected = businesses.find(b => b.id === selectedBusinessIds[0]);
-                              if (firstSelected) {
-                                setSelectedBusiness(firstSelected);
-                                setMapTarget({ center: [firstSelected.coordinates.lat, firstSelected.coordinates.lng], zoom: 15 });
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleAddSelectedToRoute}
+                            className="flex-1 flex items-center justify-center gap-2 py-2 px-4 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all active:scale-95"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add to Route
+                          </button>
+                          <button
+                            onClick={() => {
+                              // Navigate through selected businesses
+                              if (selectedBusinessIds.length > 0) {
+                                const firstSelected = businesses.find(b => b.id === selectedBusinessIds[0]);
+                                if (firstSelected) {
+                                  setSelectedBusiness(firstSelected);
+                                  setMapTarget({ center: [firstSelected.coordinates.lat, firstSelected.coordinates.lng], zoom: 15 });
+                                }
                               }
-                            }
-                          }}
-                          className="flex items-center justify-center gap-2 py-2 px-4 bg-slate-600 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-all active:scale-95"
-                          title="Navigate through selected"
-                        >
-                          <Target className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <div className="mt-2 text-xs text-slate-500 text-center">
-                        Hold Shift + drag to select multiple businesses
+                            }}
+                            className="flex items-center justify-center gap-2 py-2 px-4 bg-slate-600 text-white rounded-xl text-sm font-bold hover:bg-slate-700 transition-all active:scale-95"
+                            title="Navigate through selected"
+                          >
+                            <Target className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="mt-2 text-xs text-slate-500 text-center">
+                          Hold Shift + drag to select multiple businesses
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                <BusinessMap
-                  key={`map-${viewMode}-${filteredBusinesses.length}`}
-                  businesses={filteredBusinesses}
-                  targetLocation={mapTarget?.center}
-                  zoom={mapTarget?.zoom}
-                  fullScreen={true}
-                  onBusinessSelect={handleSelectBusinessOnMap}
-                  onMultiSelect={handleMultiSelect}
-                  selectedBusinessId={selectedBusiness?.id}
-                  selectedBusinessIds={selectedBusinessIds}
-                  droppedPin={droppedPin}
-                  setDroppedPin={setDroppedPin}
-                  radiusKm={radiusKm}
-                />
+                  <BusinessMap
+                    key={`map-${viewMode}-${filteredBusinesses.length}`}
+                    businesses={filteredBusinesses}
+                    targetLocation={mapTarget?.center}
+                    zoom={mapTarget?.zoom}
+                    fullScreen={true}
+                    onBusinessSelect={handleSelectBusinessOnMap}
+                    onMultiSelect={handleMultiSelect}
+                    selectedBusinessId={selectedBusiness?.id}
+                    selectedBusinessIds={selectedBusinessIds}
+                    droppedPin={droppedPin}
+                    setDroppedPin={setDroppedPin}
+                    radiusKm={radiusKm}
+                  />
+                </div>
               </div>
             )}
 
