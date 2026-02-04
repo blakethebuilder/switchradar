@@ -206,6 +206,45 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
     console.log('🗺️ MAPMARKERS: ❌ NO MARKERS TO RENDER - returning empty MarkerClusterGroup');
     return <MarkerClusterGroup>{[]}</MarkerClusterGroup>;
   }
+
+  // Debug: Try rendering first few markers directly without clustering
+  if (businesses.length > 0 && businesses.length <= 10) {
+    console.log('🗺️ MAPMARKERS: 🧪 TESTING - Rendering first few markers directly without clustering');
+    const directMarkers = businesses.slice(0, 3).map((business, index) => {
+      if (!business.coordinates || 
+          typeof business.coordinates.lat !== 'number' || 
+          typeof business.coordinates.lng !== 'number') {
+        return null;
+      }
+      
+      return (
+        <Marker
+          key={`direct-${business.id}`}
+          position={[business.coordinates.lat, business.coordinates.lng]}
+          icon={L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+          })}
+        />
+      );
+    }).filter(Boolean);
+    
+    console.log('🗺️ MAPMARKERS: 🧪 Created', directMarkers.length, 'direct markers');
+    
+    return (
+      <>
+        {directMarkers}
+        <MarkerClusterGroup>
+          {markers}
+        </MarkerClusterGroup>
+      </>
+    );
+  }
   
   return (
     <MarkerClusterGroup

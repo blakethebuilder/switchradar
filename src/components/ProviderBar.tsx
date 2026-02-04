@@ -129,7 +129,7 @@ const ProviderBarComponent: React.FC<ProviderBarProps> = ({
               <button
                 key={provider}
                 onClick={() => handleToggleProvider(provider)}
-                className={`group relative flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 transition-all duration-200 hover:scale-105 shrink-0 w-full justify-start ${isActive
+                className={`group relative flex items-center gap-1.5 rounded-lg border px-2 py-1 transition-all duration-200 hover:scale-105 shrink-0 ${isActive
                   ? 'border-indigo-200 bg-white shadow-md ring-1 ring-indigo-100'
                   : 'border-slate-200 bg-slate-50 hover:border-slate-300 opacity-70 hover:opacity-100 hover:shadow-sm'
                   }`}
@@ -139,11 +139,11 @@ const ProviderBarComponent: React.FC<ProviderBarProps> = ({
                   className="h-2.5 w-2.5 rounded-full ring-1 ring-white shadow-sm transition-transform group-hover:scale-110 flex-shrink-0"
                   style={{ backgroundColor: color }}
                 />
-                <span className={`text-[11px] font-bold tracking-tight flex-1 text-left truncate ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>
+                <span className={`text-[10px] font-bold tracking-tight ${isActive ? 'text-slate-900' : 'text-slate-600'}`}>
                   {provider}
                 </span>
                 {isActive && (
-                  <CheckCircle2 className="h-3 w-3 text-indigo-500 flex-shrink-0" />
+                  <CheckCircle2 className="h-2.5 w-2.5 text-indigo-500 flex-shrink-0" />
                 )}
               </button>
             );
