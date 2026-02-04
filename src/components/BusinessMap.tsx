@@ -120,7 +120,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           
           mapInstance.fitBounds(bounds, { 
             padding: padding,
-            maxZoom: 15, // Increased max zoom for better visibility
+            maxZoom: 14, // Reduced max zoom to prevent render issues and stay within safe limits
             animate: true,
             duration: 1.2
           });
@@ -232,7 +232,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
         preferCanvas={true}
         worldCopyJump={true}
         minZoom={5}
-        maxZoom={18}
+        maxZoom={16} // Reduced max zoom to prevent render issues and match clustering limits
         zoomSnap={0.5}
         zoomDelta={0.5}
         wheelPxPerZoomLevel={window.innerWidth < 768 ? 80 : 120}
@@ -297,7 +297,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
 
         {/* Business markers */}
         <MapMarkers
-          key={`markers-${businesses.length}-${businesses.map(b => b.id).slice(0, 3).join('-')}`}
+          key="business-markers"
           businesses={businesses}
           selectedBusinessId={selectedBusinessId}
           selectedBusinessIds={selectedBusinessIds}

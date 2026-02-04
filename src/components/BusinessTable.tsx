@@ -169,10 +169,10 @@ export const BusinessTable = React.memo(({
             className="overflow-auto custom-scrollbar h-full"
             onScroll={handleScroll}
           >
-            <table className="w-full text-left border-collapse table-fixed min-w-[1000px]">
+            <table className="w-full text-left border-collapse table-fixed min-w-[1200px]">
               <thead className="sticky top-0 z-10">
                 <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="w-[5%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  <th className="w-[4%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
                     <button
                       onClick={selectedBusinessIds.length === businesses.length ? handleClearSelection : handleSelectAll}
                       className="flex items-center justify-center"
@@ -184,11 +184,11 @@ export const BusinessTable = React.memo(({
                       )}
                     </button>
                   </th>
-                  <th className="w-[30%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Business Details</th>
-                  <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</th>
-                  <th className="w-[20%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Location</th>
-                  <th className="w-[15%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Network</th>
-                  <th className="w-[10%] px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-right pr-12">Actions</th>
+                  <th className="w-[28%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Business Details</th>
+                  <th className="w-[20%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Contact</th>
+                  <th className="w-[18%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Location</th>
+                  <th className="w-[15%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Network</th>
+                  <th className="w-[15%] px-4 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>

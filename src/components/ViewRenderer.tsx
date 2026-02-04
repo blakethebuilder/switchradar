@@ -389,7 +389,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
             )}
 
             <BusinessMap
-              key={`map-${viewMode}-${filteredBusinesses.length}`}
+              key={`map-${viewMode}`}
               businesses={filteredBusinesses}
               targetLocation={mapTarget?.center}
               zoom={mapTarget?.zoom}
