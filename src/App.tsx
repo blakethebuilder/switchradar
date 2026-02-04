@@ -299,9 +299,13 @@ function App() {
     console.log('📊 IMPORT STEP 4: Import rows length:', importRows?.length);
     console.log('📊 IMPORT STEP 4: Import columns:', importColumns);
     
+    // Close mapping modal and show loading immediately
     setIsMappingOpen(false);
     setIsImporting(true);
     setImportError('');
+    
+    // Show loading message
+    console.log('⏳ IMPORT: Starting data processing...');
     
     // Add a small delay to ensure UI updates
     await new Promise(resolve => setTimeout(resolve, 100));

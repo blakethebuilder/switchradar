@@ -63,6 +63,12 @@ try {
 }
 
 try {
+  db.exec(`ALTER TABLE datasets ADD COLUMN is_active BOOLEAN DEFAULT 1;`);
+} catch (e) {
+  // Column already exists, ignore
+}
+
+try {
   db.exec(`ALTER TABLE datasets ADD COLUMN town TEXT;`);
 } catch (e) {
   // Column already exists, ignore

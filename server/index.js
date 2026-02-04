@@ -355,10 +355,13 @@ app.delete('/api/workspace', auth, (req, res) => {
 
 // Business Routes with enhanced filtering and multi-dataset support
 app.get('/api/businesses', auth, (req, res) => {
+    const startTime = Date.now();
+    console.log('📥 GET /api/businesses - Request received');
+    
     try {
         const { 
             page = 1, 
-            limit = 1000, 
+            limit = 10000, // Increase default limit for better performance
             search = '', 
             category = '', 
             provider = '', 
@@ -375,29 +378,116 @@ app.get('/api/businesses', auth, (req, res) => {
         const userId = req.userData.userId;
         const { role } = req.userData;
         
-        // Build dataset filter
-        let datasetFilter = '';
-        let datasetParams = [];
+        console.log('🔍 Query params:', { page, limit, search, category, provider, town, userId, role });
         
-        if (datasets && datasets.trim()) {
-            const datasetIds = datasets.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
-            if (datasetIds.length > 0) {
-                if (role === 'admin') {
-                    // Admins can access any dataset
-                    datasetFilter = `AND l.dataset_id IN (${datasetIds.map(() => '?').join(',')})`;
-                    datasetParams = datasetIds;
-                } else {
-                    // Regular users need permission
-                    datasetFilter = `AND l.dataset_id IN (
-                        SELECT dp.dataset_id FROM dataset_permissions dp 
-                        WHERE dp.user_id = ? AND dp.dataset_id IN (${datasetIds.map(() => '?').join(',')})
-                    )`;
-                    datasetParams = [userId, ...datasetIds];
-                }
+        // Simplified query for better performance
+        let baseQuery = `
+            SELECT l.*, d.name as dataset_name 
+            FROM leads l 
+            LEFT JOIN datasets d ON l.dataset_id = d.id 
+            WHERE 1=1
+        `;
+        
+        let params = [];
+        
+        // For regular users, only show their data or data they have permission to see
+        if (role !== 'admin') {
+            baseQuery += ` AND (l.userId = ? OR l.dataset_id IN (
+                SELECT dp.dataset_id FROM dataset_permissions dp 
+                WHERE dp.user_id = ?
+            ))`;
+            params.push(userId, userId);
+        }
+        
+        // Add filters
+        if (search) {
+            baseQuery += ` AND (l.name LIKE ? OR l.address LIKE ? OR l.phone LIKE ?)`;
+            const searchTerm = `%${search}%`;
+            params.push(searchTerm, searchTerm, searchTerm);
+        }
+        
+        if (category) {
+            baseQuery += ` AND l.category = ?`;
+            params.push(category);
+        }
+        
+        if (provider) {
+            baseQuery += ` AND l.provider = ?`;
+            params.push(provider);
+        }
+        
+        if (town) {
+            baseQuery += ` AND l.town = ?`;
+            params.push(town);
+        }
+        
+        if (status) {
+            baseQuery += ` AND l.status = ?`;
+            params.push(status);
+        }
+        
+        // Phone type filter
+        if (phoneType === 'landline') {
+            baseQuery += ` AND (l.phone LIKE '0%' OR l.phone LIKE '+27%')`;
+        } else if (phoneType === 'mobile') {
+            baseQuery += ` AND (l.phone LIKE '06%' OR l.phone LIKE '07%' OR l.phone LIKE '08%' OR l.phone LIKE '09%')`;
+        }
+        
+        // Add ordering and pagination
+        baseQuery += ` ORDER BY l.last_modified DESC LIMIT ? OFFSET ?`;
+        params.push(parseInt(limit), offset);
+        
+        console.log('🔍 Executing query with', params.length, 'parameters');
+        const queryStart = Date.now();
+        
+        const businesses = db.prepare(baseQuery).all(...params);
+        
+        const queryTime = Date.now() - queryStart;
+        console.log('⚡ Query executed in', queryTime, 'ms, found', businesses.length, 'businesses');
+        
+        // Get total count for pagination (simplified)
+        let countQuery = `SELECT COUNT(*) as total FROM leads l WHERE 1=1`;
+        let countParams = [];
+        
+        if (role !== 'admin') {
+            countQuery += ` AND (l.userId = ? OR l.dataset_id IN (
+                SELECT dp.dataset_id FROM dataset_permissions dp 
+                WHERE dp.user_id = ?
+            ))`;
+            countParams.push(userId, userId);
+        }
+        
+        const totalResult = db.prepare(countQuery).get(...countParams);
+        const total = totalResult?.total || 0;
+        
+        const totalTime = Date.now() - startTime;
+        console.log('✅ GET /api/businesses completed in', totalTime, 'ms');
+        
+        res.json({
+            data: businesses,
+            pagination: {
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total,
+                pages: Math.ceil(total / parseInt(limit))
+            },
+            performance: {
+                queryTime,
+                totalTime,
+                resultCount: businesses.length
             }
-        } else if (role !== 'admin') {
-            // If no specific datasets requested, show user's accessible datasets
-            datasetFilter = `AND l.dataset_id IN (
+        });
+        
+    } catch (error) {
+        const totalTime = Date.now() - startTime;
+        console.error('❌ GET /api/businesses error after', totalTime, 'ms:', error);
+        res.status(500).json({ 
+            message: 'Failed to fetch businesses', 
+            error: error.message,
+            performance: { totalTime }
+        });
+    }
+});
                 SELECT dp.dataset_id FROM dataset_permissions dp WHERE dp.user_id = ?
                 UNION
                 SELECT d.id FROM datasets d WHERE d.created_by = ?
