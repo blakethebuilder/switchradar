@@ -229,11 +229,11 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({
                                         fill: '#64748b',
                                         textAnchor: 'start' // Align to start for mobile
                                     }}
-                                    width={window.innerWidth < 768 ? 120 : 200} // Responsive width
+                                    width={120} // Fixed width for mobile
                                     interval={0}
                                     tickFormatter={(value) => {
                                         // Truncate long provider names to fit mobile
-                                        const maxLength = window.innerWidth < 768 ? 12 : 15;
+                                        const maxLength = 12;
                                         if (value.length > maxLength) {
                                             return value.substring(0, maxLength) + '...';
                                         }
