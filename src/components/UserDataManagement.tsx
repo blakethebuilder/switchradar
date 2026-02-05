@@ -58,11 +58,26 @@ export const UserDataManagement: React.FC = () => {
   });
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [datasets, setDatasets] = useState<any[]>([]);
+  const [isTransferring, setIsTransferring] = useState(false);
 
   useEffect(() => {
     loadUserStats();
     loadSharedData();
+    loadDatasets();
   }, []);
+
+  const loadDatasets = async () => {
+    if (!token) return;
+    try {
+      const result = await serverDataService.getDatasets(token);
+      if (result.success) {
+        setDatasets(result.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to load datasets:', err);
+    }
+  };
 
   const handleEditBusiness = (business: Business) => {
     setEditingBusiness(JSON.parse(JSON.stringify(business))); // Deep clone
@@ -89,6 +104,31 @@ export const UserDataManagement: React.FC = () => {
       setError('An error occurred during update');
     } finally {
       setIsSharing(false);
+    }
+  };
+
+  const handleBulkTransfer = async (targetId: number, datasetId?: number) => {
+    if (!token || selectedBusinesses.length === 0) return;
+    setIsTransferring(true);
+    try {
+      let successCount = 0;
+      for (const businessId of selectedBusinesses) {
+        const result = await serverDataService.updateBusiness(businessId, {
+          userId: targetId as any,
+          dataset_id: datasetId as any
+        } as any, token);
+        if (result.success) successCount++;
+      }
+
+      setSelectedBusinesses([]);
+      if (selectedUserId) loadUserBusinesses(selectedUserId);
+      loadUserStats();
+      setError(`Successfully centralized ${successCount} leads to Blake.`);
+    } catch (err) {
+      console.error('Bulk transfer error:', err);
+      setError('Failed to transfer some leads.');
+    } finally {
+      setIsTransferring(false);
     }
   };
 
@@ -596,16 +636,29 @@ export const UserDataManagement: React.FC = () => {
               </div>
             )}
 
-            {/* Search */}
-            <div className="mt-4 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Search businesses..."
-              />
+            {/* Search and Actions */}
+            <div className="mt-4 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Search businesses..."
+                />
+              </div>
+
+              {selectedBusinesses.length > 0 && (
+                <button
+                  onClick={() => handleBulkTransfer(1)}
+                  disabled={isTransferring}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-bold hover:bg-amber-700 transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap"
+                >
+                  <Database className="h-4 w-4" />
+                  Centralize to Blake ({selectedBusinesses.length})
+                </button>
+              )}
             </div>
           </div>
 
@@ -1085,6 +1138,33 @@ export const UserDataManagement: React.FC = () => {
                     <option value="converted">Converted</option>
                     <option value="inactive">Inactive</option>
                   </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Owner</label>
+                    <select
+                      value={editingBusiness.userId || ''}
+                      onChange={(e) => setEditingBusiness({ ...editingBusiness, userId: e.target.value as any })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    >
+                      {userStats.map(u => (
+                        <option key={u.userId} value={u.userId}>{u.username}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Dataset</label>
+                    <select
+                      value={(editingBusiness as any).dataset_id || ''}
+                      onChange={(e) => setEditingBusiness({ ...editingBusiness, dataset_id: e.target.value as any } as any)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="">None</option>
+                      {datasets.map(d => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

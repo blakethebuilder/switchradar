@@ -44,6 +44,8 @@ export interface Business {
   metadata: BusinessMetadata;
   mapsLink?: string;
   dataset?: string; // Dataset name for filtering
+  userId?: number;
+  dataset_id?: number;
   isShared?: boolean;
 }
 
