@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Users, Share2, Database, Upload, Download, Trash2, Shield, BarChart3, Search, Filter, MapPin, Building2, Phone, FolderOpen, Edit3, Plus } from 'lucide-react';
+import { Users, Share2, Database, Upload, Trash2, Shield, BarChart3, Search, MapPin, Building2, Phone, FolderOpen, Edit3, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { serverDataService } from '../services/serverData';
+import { environmentConfig } from '../config/environment';
 import UserManagement from './UserManagement';
 import UserDataManagement from './UserDataManagement';
 
@@ -31,7 +32,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onBulkDelete
 }) => {
   const { isAdmin, isSuperAdmin, user, token } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'datasets' | 'database' | 'users' | 'sharing' | 'data'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'data-hub' | 'users' | 'sharing'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTown, setSelectedTown] = useState('');
   const [selectedProvider, setSelectedProvider] = useState('');
@@ -43,7 +44,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   // Dataset management state
   const [datasets, setDatasets] = useState<any[]>([]);
   const [selectedDataset, setSelectedDataset] = useState<any>(null);
-  const [datasetDetails, setDatasetDetails] = useState<any>(null);
   const [showCreateDataset, setShowCreateDataset] = useState(false);
   const [showEditDataset, setShowEditDataset] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -63,10 +63,11 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
   const loadDatasets = async () => {
     if (!token) return;
-    
+
     try {
       setLoading(true);
-      const response = await fetch(`https://map.smartintegrate.co.za/api/datasets`, {
+      const apiUrl = environmentConfig.getApiUrl();
+      const response = await fetch(`${apiUrl}/api/datasets`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -156,36 +157,21 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     }
   };
 
-  const handleViewDatasetDetails = async (dataset: any) => {
-    if (!token) return;
-
-    try {
-      setLoading(true);
-      const result = await serverDataService.getDatasetDetails(dataset.id, token);
-
-      if (result.success) {
-        setDatasetDetails(result.data);
-        setSelectedDataset(dataset);
-      }
-    } catch (error) {
-      console.error('Failed to load dataset details:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // No-op for removed methods
+  const handleViewDatasetDetails = (dataset: any) => setSelectedDataset(dataset);
 
   // Filter businesses based on search and filters
   const filteredBusinesses = useMemo(() => {
-    return businesses.filter(business => {
-      const matchesSearch = !searchTerm || 
+    return businesses.filter((business: any) => {
+      const matchesSearch = !searchTerm ||
         business.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         business.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         business.phone?.includes(searchTerm);
-      
+
       const matchesTown = !selectedTown || business.town === selectedTown;
       const matchesProvider = !selectedProvider || business.provider === selectedProvider;
       const matchesCategory = !selectedCategory || business.category === selectedCategory;
-      
+
       return matchesSearch && matchesTown && matchesProvider && matchesCategory;
     });
   }, [businesses, searchTerm, selectedTown, selectedProvider, selectedCategory]);
@@ -193,10 +179,10 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   // Statistics
   const stats = useMemo(() => {
     const totalBusinesses = businesses.length;
-    const uniqueTowns = new Set(businesses.map(b => b.town)).size;
-    const uniqueProviders = new Set(businesses.map(b => b.provider)).size;
-    const uniqueCategories = new Set(businesses.map(b => b.category)).size;
-    
+    const uniqueTowns = new Set(businesses.map((b: any) => b.town)).size;
+    const uniqueProviders = new Set(businesses.map((b: any) => b.provider)).size;
+    const uniqueCategories = new Set(businesses.map((b: any) => b.category)).size;
+
     const providerBreakdown = businesses.reduce((acc: Record<string, number>, business: any) => {
       acc[business.provider] = (acc[business.provider] || 0) + 1;
       return acc;
@@ -274,66 +260,40 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         <div className="flex space-x-1 bg-slate-100 p-1 rounded-lg overflow-x-auto">
           <button
             onClick={() => setActiveTab('overview')}
-            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'overview'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'overview'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
           >
             <BarChart3 className="h-4 w-4" />
             Overview
           </button>
           <button
-            onClick={() => setActiveTab('datasets')}
-            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'datasets'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <FolderOpen className="h-4 w-4" />
-            Datasets
-          </button>
-          <button
-            onClick={() => setActiveTab('database')}
-            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'database'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            onClick={() => setActiveTab('data-hub')}
+            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'data-hub'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
           >
             <Database className="h-4 w-4" />
-            Database
-          </button>
-          <button
-            onClick={() => setActiveTab('data')}
-            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'data'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Upload className="h-4 w-4" />
-            Data Management
+            Data Hub
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'users'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'users'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
           >
             <Users className="h-4 w-4" />
             Users
           </button>
           <button
             onClick={() => setActiveTab('sharing')}
-            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-              activeTab === 'sharing'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'sharing'
+              ? 'bg-white text-slate-900 shadow-sm'
+              : 'text-slate-600 hover:text-slate-900'
+              }`}
           >
             <Share2 className="h-4 w-4" />
             Sharing
@@ -412,21 +372,21 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             <h3 className="text-lg font-bold text-slate-900 mb-4">Provider Distribution</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {Object.entries(stats.providerBreakdown)
-                .sort(([,a], [,b]) => (b as number) - (a as number))
+                .sort(([, a], [, b]) => (b as number) - (a as number))
                 .slice(0, 8)
                 .map(([provider, count]) => (
-                <div key={provider} className="p-3 bg-slate-50 rounded-lg">
-                  <div className="font-bold text-slate-900 truncate" title={provider}>
-                    {provider}
+                  <div key={provider} className="p-3 bg-slate-50 rounded-lg">
+                    <div className="font-bold text-slate-900 truncate" title={provider}>
+                      {provider}
+                    </div>
+                    <div className="text-sm text-slate-600">
+                      {(count as number).toLocaleString()} businesses
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      {(((count as number) / stats.totalBusinesses) * 100).toFixed(1)}%
+                    </div>
                   </div>
-                  <div className="text-sm text-slate-600">
-                    {(count as number).toLocaleString()} businesses
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    {(((count as number) / stats.totalBusinesses) * 100).toFixed(1)}%
-                  </div>
-                </div>
-              ))}
+                ))}
             </div>
           </div>
 
@@ -447,13 +407,13 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                 </button>
               )}
               <button
-                onClick={() => setActiveTab('database')}
+                onClick={() => setActiveTab('data-hub')}
                 className="flex items-center gap-3 p-4 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
               >
                 <Database className="h-5 w-5" />
                 <div className="text-left">
-                  <div className="font-medium">Browse Database</div>
-                  <div className="text-xs text-blue-600">View & manage records</div>
+                  <div className="font-medium">Data Hub</div>
+                  <div className="text-xs text-blue-600">View & manage all lead data</div>
                 </div>
               </button>
               <button
@@ -471,14 +431,61 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         </div>
       )}
 
-      {activeTab === 'datasets' && (
+      {activeTab === 'data-hub' && (
         <div className="space-y-6">
-          {/* Datasets Header */}
+          {/* Section 1: Data Management (Import/Export/Clear) */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                <Upload className="h-5 w-5 text-indigo-600" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900">Import & Export</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {onImportClick && (
+                <div className="p-4 border border-slate-200 rounded-xl">
+                  <div className="text-center">
+                    <h4 className="font-bold text-slate-900 mb-2">Import Data</h4>
+                    <p className="text-sm text-slate-600 mb-4">Load leads from Excel/CSV</p>
+                    <button onClick={onImportClick} className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors">
+                      Import Businesses
+                    </button>
+                  </div>
+                </div>
+              )}
+              {onExportClick && (
+                <div className="p-4 border border-slate-200 rounded-xl">
+                  <div className="text-center">
+                    <h4 className="font-bold text-slate-900 mb-2">Export Data</h4>
+                    <p className="text-sm text-slate-600 mb-4">Download all lead data</p>
+                    <button onClick={onExportClick} disabled={totalCount === 0} className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50">
+                      Export to CSV
+                    </button>
+                  </div>
+                </div>
+              )}
+              {onClearData && (
+                <div className="p-4 border border-red-200 rounded-xl">
+                  <div className="text-center">
+                    <h4 className="font-bold text-slate-900 mb-2">Clear Data</h4>
+                    <p className="text-sm text-slate-600 mb-4">Wipe local/cloud DB</p>
+                    <button onClick={onClearData} disabled={totalCount === 0} className="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50">
+                      Clear All Data
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Section 2: Datasets */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Dataset Management</h3>
-                <p className="text-slate-600 text-sm">Manage data collections and organize businesses by location or category</p>
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <FolderOpen className="h-5 w-5 text-purple-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">Datasets</h3>
               </div>
               {isSuperAdmin && (
                 <button
@@ -486,46 +493,30 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
-                  Create Dataset
+                  Import
                 </button>
               )}
             </div>
 
-            {/* Datasets Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {datasets.map((dataset) => (
                 <div key={dataset.id} className="border border-slate-200 rounded-lg p-4 hover:border-indigo-300 transition-colors">
                   <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h4 className="font-semibold text-slate-900">{dataset.name}</h4>
-                      <p className="text-sm text-slate-600">{dataset.town}{dataset.province && `, ${dataset.province}`}</p>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-slate-900 truncate">{dataset.name}</h4>
+                      <p className="text-sm text-slate-600 truncate">{dataset.town}{dataset.province && `, ${dataset.province}`}</p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleViewDatasetDetails(dataset)}
-                        className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
-                        title="View Details"
-                      >
+                      <button onClick={() => handleViewDatasetDetails(dataset)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors">
                         <FolderOpen className="h-4 w-4" />
                       </button>
                       {isSuperAdmin && (
                         <>
-                          <button
-                            onClick={() => {
-                              setSelectedDataset(dataset);
-                              setShowEditDataset(true);
-                            }}
-                            className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
-                            title="Edit Dataset"
-                          >
+                          <button onClick={() => { setSelectedDataset(dataset); setShowEditDataset(true); }} className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
                             <Edit3 className="h-4 w-4" />
                           </button>
                           {dataset.id !== 1 && (
-                            <button
-                              onClick={() => handleDeleteDataset(dataset.id)}
-                              className="p-1 text-slate-400 hover:text-red-600 transition-colors"
-                              title="Delete Dataset"
-                            >
+                            <button onClick={() => handleDeleteDataset(dataset.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors">
                               <Trash2 className="h-4 w-4" />
                             </button>
                           )}
@@ -533,140 +524,16 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                       )}
                     </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">Businesses:</span>
-                      <span className="font-medium">{dataset.business_count || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">Created:</span>
-                      <span className="text-slate-500">{new Date(dataset.created_at).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-600">Created by:</span>
-                      <span className="text-slate-500">{dataset.created_by_name}</span>
-                    </div>
+                  <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
+                    <span>{dataset.business_count || 0} leads</span>
+                    <span>{new Date(dataset.created_at).toLocaleDateString()}</span>
                   </div>
-                  
-                  {dataset.description && (
-                    <p className="text-sm text-slate-600 mt-3 line-clamp-2">{dataset.description}</p>
-                  )}
                 </div>
               ))}
             </div>
-
-            {datasets.length === 0 && !loading && (
-              <div className="text-center py-8">
-                <FolderOpen className="h-12 w-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-500">No datasets found</p>
-                {isSuperAdmin && (
-                  <button
-                    onClick={() => setShowCreateDataset(true)}
-                    className="mt-2 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-                  >
-                    Create your first dataset
-                  </button>
-                )}
-              </div>
-            )}
           </div>
 
-          {/* Dataset Details Modal */}
-          {datasetDetails && selectedDataset && (
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-bold text-slate-900">{selectedDataset.name}</h3>
-                  <p className="text-slate-600">{selectedDataset.town}{selectedDataset.province && `, ${selectedDataset.province}`}</p>
-                </div>
-                <button
-                  onClick={() => {
-                    setDatasetDetails(null);
-                    setSelectedDataset(null);
-                  }}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2">
-                  <h4 className="font-semibold text-slate-900 mb-3">Businesses ({datasetDetails.totalBusinesses})</h4>
-                  <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-lg">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50 sticky top-0">
-                        <tr>
-                          <th className="text-left p-3 font-medium text-slate-700">Name</th>
-                          <th className="text-left p-3 font-medium text-slate-700">Town</th>
-                          <th className="text-left p-3 font-medium text-slate-700">Provider</th>
-                          <th className="text-left p-3 font-medium text-slate-700">Category</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {datasetDetails.businesses?.slice(0, 100).map((business: any) => (
-                          <tr key={business.id} className="border-t border-slate-100">
-                            <td className="p-3">{business.name}</td>
-                            <td className="p-3">{business.town}</td>
-                            <td className="p-3">{business.provider}</td>
-                            <td className="p-3">{business.category}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    {datasetDetails.businesses?.length > 100 && (
-                      <div className="p-3 text-center text-slate-500 text-sm border-t">
-                        Showing first 100 of {datasetDetails.totalBusinesses} businesses
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="font-semibold text-slate-900 mb-3">Dataset Info</h4>
-                  <div className="space-y-3 text-sm">
-                    <div>
-                      <span className="text-slate-600">Description:</span>
-                      <p className="text-slate-900 mt-1">{selectedDataset.description || 'No description'}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-600">Total Businesses:</span>
-                      <p className="text-slate-900 font-medium">{datasetDetails.totalBusinesses}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-600">Created:</span>
-                      <p className="text-slate-900">{new Date(selectedDataset.created_at).toLocaleDateString()}</p>
-                    </div>
-                    <div>
-                      <span className="text-slate-600">Created by:</span>
-                      <p className="text-slate-900">{selectedDataset.created_by_name}</p>
-                    </div>
-                  </div>
-
-                  {datasetDetails.permissions?.length > 0 && (
-                    <div className="mt-6">
-                      <h4 className="font-semibold text-slate-900 mb-3">Permissions</h4>
-                      <div className="space-y-2">
-                        {datasetDetails.permissions.map((perm: any) => (
-                          <div key={perm.id} className="flex items-center justify-between text-sm">
-                            <span className="text-slate-900">{perm.username}</span>
-                            <span className="text-slate-600 capitalize">{perm.permission_level}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'database' && (
-        <div className="space-y-6">
-          {/* Database Header */}
+          {/* Section 3: Database Browser */}
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
@@ -680,31 +547,28 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    showFilters ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${showFilters ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    }`}
                 >
-                  <Filter className="h-4 w-4" />
+                  <Database className="h-4 w-4" />
                   Filters
                 </button>
                 <div className="flex bg-slate-100 rounded-lg p-1">
                   <button
                     onClick={() => setViewMode('table')}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                      viewMode === 'table' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-                    }`}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${viewMode === 'table' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+                      }`}
                   >
                     Table
                   </button>
                   <button
                     onClick={() => setViewMode('grid')}
-                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
-                      viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
-                    }`}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'
+                      }`}
                   >
                     Grid
                   </button>
@@ -712,21 +576,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </div>
             </div>
 
-            {/* Search Bar */}
-            <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search businesses by name, address, or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
             {/* Filters */}
             {showFilters && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-lg mb-4">
                 <select
                   value={selectedTown}
                   onChange={(e) => setSelectedTown(e.target.value)}
@@ -760,240 +612,109 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </div>
             )}
 
-            {/* Bulk Actions */}
-            {selectedBusinesses.length > 0 && (
-              <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg mt-4">
-                <span className="text-sm font-medium text-blue-900">
-                  {selectedBusinesses.length} businesses selected
-                </span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleBulkDelete}
-                    className="px-3 py-1 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
-                  >
-                    Delete Selected
-                  </button>
-                  <button
-                    onClick={() => setSelectedBusinesses([])}
-                    className="px-3 py-1 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors"
-                  >
-                    Clear Selection
-                  </button>
-                </div>
+            <div className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search lead database..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
               </div>
-            )}
-          </div>
 
-          {/* Database Content */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-            {viewMode === 'table' ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left">
-                        <input
-                          type="checkbox"
-                          checked={selectedBusinesses.length === filteredBusinesses.length && filteredBusinesses.length > 0}
-                          onChange={handleSelectAll}
-                          className="rounded border-slate-300"
-                        />
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Business</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Location</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Provider</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Category</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Phone</th>
-                      <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase tracking-wider">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {filteredBusinesses.slice(0, 100).map((business) => (
-                      <tr key={business.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3">
+              {/* Bulk Actions */}
+              {selectedBusinesses.length > 0 && (
+                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <span className="text-sm font-medium text-blue-900">
+                    {selectedBusinesses.length} businesses selected
+                  </span>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleBulkDelete}
+                      className="px-3 py-1 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                    >
+                      Delete Selected
+                    </button>
+                    <button
+                      onClick={() => setSelectedBusinesses([])}
+                      className="px-3 py-1 bg-slate-600 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="overflow-x-auto border border-slate-100 rounded-lg">
+                {viewMode === 'table' ? (
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left w-10">
+                          <input
+                            type="checkbox"
+                            checked={selectedBusinesses.length === filteredBusinesses.length && filteredBusinesses.length > 0}
+                            onChange={handleSelectAll}
+                            className="rounded border-slate-300"
+                          />
+                        </th>
+                        <th className="px-4 py-3 text-left">Business</th>
+                        <th className="px-4 py-3 text-left">Location</th>
+                        <th className="px-4 py-3 text-left">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredBusinesses.slice(0, 50).map((business: any) => (
+                        <tr key={business.id}>
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedBusinesses.includes(business.id)}
+                              onChange={(e) => handleSelectBusiness(business.id, e.target.checked)}
+                              className="rounded border-slate-300"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900">{business.name}</div>
+                            <div className="text-xs text-slate-500">{business.provider}</div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">{business.town}</td>
+                          <td className="px-4 py-3">
+                            <button onClick={() => onDeleteBusiness?.(business.id)} className="text-red-600 hover:text-red-700">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {filteredBusinesses.slice(0, 50).map((business: any) => (
+                      <div key={business.id} className="p-3 border border-slate-200 rounded-lg">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="font-medium text-slate-900">{business.name}</div>
+                            <div className="text-xs text-slate-500">{business.provider}</div>
+                            <div className="text-xs text-slate-600 mt-1">{business.town}</div>
+                          </div>
                           <input
                             type="checkbox"
                             checked={selectedBusinesses.includes(business.id)}
                             onChange={(e) => handleSelectBusiness(business.id, e.target.checked)}
                             className="rounded border-slate-300"
                           />
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-slate-900">{business.name}</div>
-                          <div className="text-sm text-slate-500">{business.address}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="text-sm text-slate-900">{business.town}</div>
-                          <div className="text-xs text-slate-500">{business.province}</div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                            {business.provider}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-900">{business.category}</td>
-                        <td className="px-4 py-3 text-sm text-slate-900">{business.phone}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => onDeleteBusiness?.(business.id)}
-                              className="p-1 text-red-600 hover:bg-red-50 rounded"
-                              title="Delete business"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-                {filteredBusinesses.length > 100 && (
-                  <div className="p-4 text-center text-sm text-slate-600 bg-slate-50">
-                    Showing first 100 results. Use filters to narrow down the list.
                   </div>
                 )}
               </div>
-            ) : (
-              <div className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredBusinesses.slice(0, 50).map((business) => (
-                    <div key={business.id} className="p-4 border border-slate-200 rounded-lg hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-3">
-                        <input
-                          type="checkbox"
-                          checked={selectedBusinesses.includes(business.id)}
-                          onChange={(e) => handleSelectBusiness(business.id, e.target.checked)}
-                          className="rounded border-slate-300 mt-1"
-                        />
-                        <button
-                          onClick={() => onDeleteBusiness?.(business.id)}
-                          className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                      <h4 className="font-bold text-slate-900 mb-2">{business.name}</h4>
-                      <div className="space-y-1 text-sm text-slate-600">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-3 w-3" />
-                          {business.town}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3 w-3" />
-                          {business.phone}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-3 w-3" />
-                          {business.category}
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <span className="inline-flex px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                          {business.provider}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {filteredBusinesses.length > 50 && (
-                  <div className="mt-4 text-center text-sm text-slate-600">
-                    Showing first 50 results in grid view. Use filters to narrow down the list.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'data' && (
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="h-10 w-10 rounded-lg bg-blue-100 flex items-center justify-center">
-              <Database className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Data Management</h3>
-              <p className="text-sm text-slate-600">Import, export, and manage business data</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {onImportClick && (
-              <div className="p-6 border border-slate-200 rounded-xl">
-                <div className="text-center">
-                  <div className="h-12 w-12 rounded-xl bg-indigo-100 flex items-center justify-center mx-auto mb-4">
-                    <Upload className="h-6 w-6 text-indigo-600" />
-                  </div>
-                  <h4 className="font-bold text-slate-900 mb-2">Import Data</h4>
-                  <p className="text-sm text-slate-600 mb-4">
-                    Load new business data from Excel or CSV files
-                  </p>
-                  <button
-                    onClick={onImportClick}
-                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
-                  >
-                    Import Businesses
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {onExportClick && (
-              <div className="p-6 border border-slate-200 rounded-xl">
-                <div className="text-center">
-                  <div className="h-12 w-12 rounded-xl bg-green-100 flex items-center justify-center mx-auto mb-4">
-                    <Download className="h-6 w-6 text-green-600" />
-                  </div>
-                  <h4 className="font-bold text-slate-900 mb-2">Export Data</h4>
-                  <p className="text-sm text-slate-600 mb-4">
-                    Download current data as CSV for backup or analysis
-                  </p>
-                  <button
-                    onClick={onExportClick}
-                    disabled={totalCount === 0}
-                    className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors disabled:opacity-50"
-                  >
-                    Export to CSV
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {onClearData && (
-              <div className="p-6 border border-red-200 rounded-xl">
-                <div className="text-center">
-                  <div className="h-12 w-12 rounded-xl bg-red-100 flex items-center justify-center mx-auto mb-4">
-                    <Trash2 className="h-6 w-6 text-red-600" />
-                  </div>
-                  <h4 className="font-bold text-slate-900 mb-2">Clear Data</h4>
-                  <p className="text-sm text-slate-600 mb-4">
-                    Remove all business data from the system
-                  </p>
-                  <button
-                    onClick={onClearData}
-                    disabled={totalCount === 0}
-                    className="w-full px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
-                  >
-                    Clear All Data
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-            <div className="flex items-start gap-3">
-              <div className="h-5 w-5 text-amber-600 mt-0.5">
-                <svg fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div>
-                <h5 className="font-bold text-amber-800 mb-1">Admin Only</h5>
-                <p className="text-sm text-amber-700">
-                  Only administrators can import, export, or clear data. Regular users can only view data that has been shared with them.
+              <div className="text-center">
+                <p className="text-xs text-slate-500 mb-2">
+                  {filteredBusinesses.length > 50 ? 'Showing first 50 results' : `Showing all ${filteredBusinesses.length} results`}
                 </p>
               </div>
             </div>
@@ -1009,7 +730,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-bold text-slate-900 mb-4">Create New Dataset</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
@@ -1021,7 +742,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   placeholder="Dataset name"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Town *</label>
                 <input
@@ -1032,7 +753,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   placeholder="Town name"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Province</label>
                 <input
@@ -1043,7 +764,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   placeholder="Province name"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                 <textarea
@@ -1055,14 +776,14 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                 />
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 mt-6">
               <button
                 onClick={handleCreateDataset}
                 disabled={!newDataset.name || !newDataset.town || loading}
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loading ? 'Creating...' : 'Create Dataset'}
+                {loading ? 'Importing...' : 'Import'}
               </button>
               <button
                 onClick={() => {
@@ -1083,7 +804,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
             <h3 className="text-lg font-bold text-slate-900 mb-4">Edit Dataset</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
@@ -1095,7 +816,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   placeholder="Dataset name"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Town *</label>
                 <input
@@ -1106,7 +827,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   placeholder="Town name"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Province</label>
                 <input
@@ -1117,7 +838,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   placeholder="Province name"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                 <textarea
@@ -1129,7 +850,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                 />
               </div>
             </div>
-            
+
             <div className="flex items-center gap-3 mt-6">
               <button
                 onClick={handleUpdateDataset}

@@ -184,7 +184,12 @@ app.delete('/api/users/:id', auth, (req, res) => {
 // Business Routes
 app.get('/api/businesses', auth, (req, res) => {
     try {
-        const leads = db.prepare('SELECT * FROM leads WHERE userId = ?').all(req.userData.userId);
+        let leads;
+        if (req.userData.role === 'super_admin') {
+            leads = db.prepare('SELECT * FROM leads').all();
+        } else {
+            leads = db.prepare('SELECT * FROM leads WHERE userId = ?').all(req.userData.userId);
+        }
         res.json(leads.map(lead => ({
             ...lead,
             coordinates: { lat: lead.lat, lng: lead.lng },
@@ -252,7 +257,12 @@ app.post('/api/businesses/sync', auth, (req, res) => {
 // Route Routes
 app.get('/api/routes', auth, (req, res) => {
     try {
-        const routes = db.prepare('SELECT * FROM routes WHERE userId = ? ORDER BY "order"').all(req.userData.userId);
+        let routes;
+        if (req.userData.role === 'super_admin') {
+            routes = db.prepare('SELECT * FROM routes ORDER BY "order"').all();
+        } else {
+            routes = db.prepare('SELECT * FROM routes WHERE userId = ? ORDER BY "order"').all(req.userData.userId);
+        }
         res.json(routes);
     } catch (error) {
         console.error('Route fetch error:', error);
@@ -287,8 +297,13 @@ app.post('/api/routes', auth, (req, res) => {
 app.get('/api/datasets', auth, (req, res) => {
     const userId = req.userData.userId;
     try {
-        const datasets = db.prepare('SELECT * FROM datasets WHERE created_by = ? OR created_by IS NULL').all(userId);
-        res.json(datasets);
+        let datasets;
+        if (req.userData.role === 'super_admin') {
+            datasets = db.prepare('SELECT * FROM datasets').all();
+        } else {
+            datasets = db.prepare('SELECT * FROM datasets WHERE created_by = ? OR created_by IS NULL').all(userId);
+        }
+        res.json({ success: true, datasets });
     } catch (err) {
         console.error('Error fetching datasets:', err);
         res.status(500).json({ message: 'Failed to retrieve datasets' });
