@@ -39,7 +39,7 @@ export const UserManagement: React.FC = () => {
 
   const loadUsers = async () => {
     if (!token) return;
-    
+
     setLoading(true);
     try {
       console.log('🔍 Loading users with token:', token?.substring(0, 20) + '...');
@@ -47,7 +47,9 @@ export const UserManagement: React.FC = () => {
       console.log('📥 Users result:', result);
       if (result.success) {
         console.log('✅ Setting users:', result.data);
-        setUsers(result.data || []);
+        // Handle both direct array and nested { success: true, data: [...] } format
+        const userData = Array.isArray(result.data) ? result.data : (result.data.data || []);
+        setUsers(userData);
       } else {
         console.error('❌ Failed to load users:', result.error);
         setError(result.error || 'Failed to load users');
@@ -62,10 +64,10 @@ export const UserManagement: React.FC = () => {
 
   const handleAddUser = async () => {
     if (!token) return;
-    
+
     try {
       setError('');
-      
+
       if (!newUser.username.trim()) {
         setError('Username is required');
         return;
@@ -80,7 +82,7 @@ export const UserManagement: React.FC = () => {
       console.log('🚀 Creating user:', newUser.username);
       const result = await serverDataService.createUser(newUser.username.trim(), newUser.password, token);
       console.log('📥 Create user result:', result);
-      
+
       if (result.success) {
         setSuccess(`User "${newUser.username}" created successfully`);
         setNewUser({ username: '', password: '' });
@@ -102,7 +104,7 @@ export const UserManagement: React.FC = () => {
 
   const handleDeleteUser = async (userId: number, username: string) => {
     if (!token) return;
-    
+
     if (userId === currentUser?.id) {
       setError('Cannot delete your own account');
       return;
@@ -112,7 +114,7 @@ export const UserManagement: React.FC = () => {
       try {
         setLoading(true);
         const result = await serverDataService.deleteUser(userId, token);
-        
+
         if (result.success) {
           setSuccess(`User "${username}" deleted successfully`);
           await loadUsers();
@@ -140,10 +142,10 @@ export const UserManagement: React.FC = () => {
 
   const handleUpdateUser = async () => {
     if (!token || !editingUser) return;
-    
+
     try {
       setError('');
-      
+
       if (!editUser.username.trim()) {
         setError('Username is required');
         return;
@@ -151,26 +153,26 @@ export const UserManagement: React.FC = () => {
 
       setLoading(true);
       console.log('🔄 Updating user:', editingUser.id);
-      
+
       const updates: { username?: string; password?: string } = {};
-      
+
       // Only update username if it changed
       if (editUser.username.trim() !== editingUser.username) {
         updates.username = editUser.username.trim();
       }
-      
+
       // Only update password if provided
       if (editUser.password.trim()) {
         updates.password = editUser.password.trim();
       }
-      
+
       if (Object.keys(updates).length === 0) {
         setError('No changes to save');
         return;
       }
-      
+
       const result = await serverDataService.updateUser(editingUser.id, updates, token);
-      
+
       if (result.success) {
         setSuccess(`User "${editUser.username}" updated successfully`);
         setEditUser({ username: '', password: '' });
@@ -232,7 +234,7 @@ export const UserManagement: React.FC = () => {
             <p className="text-red-800 text-sm font-medium">{error}</p>
           </div>
         )}
-        
+
         {success && (
           <div className="mt-4 bg-green-50 border border-green-200 rounded-lg p-4">
             <p className="text-green-800 text-sm font-medium">{success}</p>
@@ -248,7 +250,7 @@ export const UserManagement: React.FC = () => {
             {loading && <LoadingSpinner size="sm" inline />}
           </h3>
         </div>
-        
+
         <div className="divide-y divide-slate-200">
           {users.map((user) => (
             <div key={user.id} className="p-6 hover:bg-slate-50 transition-colors">
@@ -289,7 +291,7 @@ export const UserManagement: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                   {user.id !== currentUser?.id && (
                     <button
@@ -315,7 +317,7 @@ export const UserManagement: React.FC = () => {
               </div>
             </div>
           ))}
-          
+
           {users.length === 0 && !loading && (
             <div className="p-8 text-center">
               <Users className="h-12 w-12 text-slate-400 mx-auto mb-4" />
@@ -330,7 +332,7 @@ export const UserManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Add New User</h3>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Username *</label>
@@ -343,7 +345,7 @@ export const UserManagement: React.FC = () => {
                   disabled={loading}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Password *</label>
                 <input
@@ -356,7 +358,7 @@ export const UserManagement: React.FC = () => {
                 />
               </div>
             </div>
-            
+
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => {
@@ -401,7 +403,7 @@ export const UserManagement: React.FC = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Username *</label>
@@ -414,7 +416,7 @@ export const UserManagement: React.FC = () => {
                   disabled={loading}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   New Password
@@ -433,7 +435,7 @@ export const UserManagement: React.FC = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => {

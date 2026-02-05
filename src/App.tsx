@@ -58,8 +58,10 @@ function App() {
     dbError,
     handleDatabaseReset,
     refetch,
-    isProcessingLargeDataset,
-    cacheStatus
+    loadingProgress,
+    cacheStatus,
+    hasMore,
+    loadMore
   } = useBusinessData();
 
   // App state hook
@@ -176,7 +178,7 @@ function App() {
     setPendingFileName(file.name);
     setImportClearFirst(clearFirst);
     startImporting();
-    
+
     try {
       const { rows, columns } = await ImportService.processFile(file, setImportProgress);
       setImportData(rows, columns);
@@ -190,10 +192,10 @@ function App() {
 
   const handleConfirmMapping = async (mapping: ImportMapping) => {
     console.log('🚀 IMPORT: handleConfirmMapping called');
-    
+
     closeMappingModal();
     startImporting();
-    
+
     try {
       if (!token) {
         throw new Error('You must be logged in to import data');
@@ -212,13 +214,13 @@ function App() {
       const providers = Array.from(new Set(importRows.map((row: any) => row[mapping.provider || '']).filter(Boolean)));
       setVisibleProviders(providers);
       setLastImportName(pendingFileName);
-      
+
       // Refresh data from server
       await refetch();
-      
+
       closeImportModal();
       console.log('🎉 IMPORT COMPLETE: Import process finished successfully');
-      
+
     } catch (error) {
       console.error('❌ IMPORT: Import error:', error);
       setImportError(error instanceof Error ? error.message : 'Failed to process data');
@@ -232,7 +234,7 @@ function App() {
   const handleImportSample = async () => {
     console.log('🚀 SAMPLE IMPORT: Starting sample data import');
     startImporting();
-    
+
     try {
       if (!token) {
         throw new Error('You must be logged in to import data');
@@ -258,17 +260,17 @@ function App() {
       prev.includes(provider) ? prev.filter(p => p !== provider) : [...prev, provider]
     );
   }, [setHasUserInteracted, setVisibleProviders]);
-  
+
   const handleSelectAllProviders = useCallback(() => {
     setHasUserInteracted(true);
     setVisibleProviders(availableProviders);
   }, [availableProviders, setHasUserInteracted, setVisibleProviders]);
-  
+
   const handleClearProviders = useCallback(() => {
     setHasUserInteracted(true);
     setVisibleProviders([]);
   }, [setHasUserInteracted, setVisibleProviders]);
-  
+
   const handleClearFilters = useCallback(() => {
     setHasUserInteracted(true);
     setSearchTerm('');
@@ -295,12 +297,12 @@ function App() {
 
   const handleDeleteNonSelectedProviders = async () => {
     if (!token) return;
-    
+
     if (window.confirm('Delete all businesses from non-selected providers? This cannot be undone.')) {
       try {
         const businessesToDelete = businesses.filter(b => !visibleProviders.includes(b.provider));
         const idsToDelete = businessesToDelete.map(b => b.id);
-        
+
         const deleted = await bulkDeleteBusinesses(idsToDelete);
         if (deleted && selectedBusiness && businessesToDelete.some(b => b.id === selectedBusiness.id)) {
           clearSelectedBusiness();
@@ -389,14 +391,14 @@ function App() {
           cacheStatus={cacheStatus}
           onRefresh={refetch}
         />
-        
+
         <main className="flex-1 flex flex-col overflow-hidden relative">
           {isImporting ? (
-            <ImportLoading 
+            <ImportLoading
               progress={importProgress}
-              stage={importProgress?.includes('Uploading') ? 'uploading' : 
-                     importProgress?.includes('Validating') ? 'validating' :
-                     importProgress?.includes('Completing') ? 'completing' : 'processing'}
+              stage={importProgress?.includes('Uploading') ? 'uploading' :
+                importProgress?.includes('Validating') ? 'validating' :
+                  importProgress?.includes('Completing') ? 'completing' : 'processing'}
             />
           ) : (
             <ViewRenderer
@@ -415,7 +417,9 @@ function App() {
               isFiltersVisible={isFiltersVisible}
               lastImportName={lastImportName}
               loading={loading}
-              isProcessingLargeDataset={isProcessingLargeDataset}
+              loadingProgress={loadingProgress}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
               searchTerm={searchTerm}
               selectedCategory={selectedCategory}
               selectedTown={selectedTown}
@@ -484,25 +488,25 @@ function App() {
           />
         )}
 
-        <ImportModal 
-          isOpen={isImportOpen} 
-          isImporting={isImporting} 
-          onClose={closeImportModal} 
-          onFileSelected={handleFileSelected} 
-          onLoadSample={handleImportSample} 
-          errorMessage={importError} 
+        <ImportModal
+          isOpen={isImportOpen}
+          isImporting={isImporting}
+          onClose={closeImportModal}
+          onFileSelected={handleFileSelected}
+          onLoadSample={handleImportSample}
+          errorMessage={importError}
         />
-        <ImportMappingModal 
-          isOpen={isMappingOpen} 
-          columns={importColumns} 
-          initialMapping={{}} 
-          onConfirm={handleConfirmMapping} 
-          onBack={closeMappingModal} 
+        <ImportMappingModal
+          isOpen={isMappingOpen}
+          columns={importColumns}
+          initialMapping={{}}
+          onConfirm={handleConfirmMapping}
+          onBack={closeMappingModal}
         />
-        <LoginModal 
-          isOpen={isLoginOpen} 
-          onClose={() => setIsLoginOpen(false)} 
-          onLoginSuccess={() => {}} 
+        <LoginModal
+          isOpen={isLoginOpen}
+          onClose={() => setIsLoginOpen(false)}
+          onLoginSuccess={() => { }}
         />
       </div>
     </ErrorBoundary>

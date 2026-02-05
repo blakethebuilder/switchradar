@@ -1,22 +1,38 @@
 import Dexie, { type Table } from 'dexie';
 import type { Business, RouteItem } from './types';
 
+export interface Dataset {
+    id: number;
+    name: string;
+    description?: string;
+    town?: string;
+    province?: string;
+    created_by?: number;
+    created_at?: Date;
+    business_count?: number;
+    is_active?: boolean;
+}
+
+export interface BusinessWithDataset extends Business {
+    datasetId?: number;
+}
+
 export class SwitchRadarDB extends Dexie {
-    businesses!: Table<Business>;
+    businesses!: Table<BusinessWithDataset>;
     route!: Table<RouteItem>;
+    datasets!: Table<Dataset>;
 
     constructor() {
         super('SwitchRadarDB');
-        
-        // Simple, stable schema - no complex upgrades
-        this.version(1).stores({
-            businesses: 'id, name, provider, town, status, category, [provider+category], [town+provider]',
+        // Define tables and indexes
+        this.version(4).stores({
+            datasets: '++id, name, created_by',
+            businesses: 'id, datasetId, name, provider, town, status',
             route: '++id, businessId, order'
         });
     }
 }
 
-// Create a single database instance
 export const db = new SwitchRadarDB();
 
 // Export a function to reset database if needed

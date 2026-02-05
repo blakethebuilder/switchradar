@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Download, Eye, Calendar, MessageSquare, Phone, Mail, MapPin, Search, X, FileText, Trash2, ExternalLink, Map } from 'lucide-react';
+import { Download, Eye, Calendar, MessageSquare, Phone, Mail, MapPin, Search, X, FileText, Trash2, ExternalLink, Map, Plus } from 'lucide-react';
 import type { Business } from '../types';
 import { ProviderBadge } from './ProviderBadge';
 
@@ -22,17 +22,18 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'notes'>('recent');
+  const [visibleCount, setVisibleCount] = useState(20);
 
   // Filter businesses that have been "seen" (have rich notes)
   const seenBusinesses = useMemo(() => {
-    return businesses.filter(business => 
+    return businesses.filter(business =>
       business.richNotes && business.richNotes.length > 0
     );
   }, [businesses]);
 
   // Apply filters and sorting
   const filteredSeenBusinesses = useMemo(() => {
-    let filtered = seenBusinesses;
+    let filtered = [...seenBusinesses];
 
     // Search filter
     if (searchTerm) {
@@ -41,7 +42,7 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
         business.name.toLowerCase().includes(term) ||
         business.town.toLowerCase().includes(term) ||
         business.provider.toLowerCase().includes(term) ||
-        business.richNotes?.some(note => 
+        business.richNotes?.some(note =>
           note.content.toLowerCase().includes(term)
         )
       );
@@ -58,10 +59,10 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'recent':
-          const aLatest = a.richNotes?.reduce((latest, note) => 
+          const aLatest = a.richNotes?.reduce((latest, note) =>
             new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest
           );
-          const bLatest = b.richNotes?.reduce((latest, note) => 
+          const bLatest = b.richNotes?.reduce((latest, note) =>
             new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest
           );
           return new Date(bLatest?.timestamp || 0).getTime() - new Date(aLatest?.timestamp || 0).getTime();
@@ -80,19 +81,19 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
   // Calculate statistics
   const stats = useMemo(() => {
     const totalSeen = seenBusinesses.length;
-    const totalNotes = seenBusinesses.reduce((sum, business) => 
+    const totalNotes = seenBusinesses.reduce((sum, business) =>
       sum + (business.richNotes?.length || 0), 0
     );
-    
+
     const categoryStats = NOTE_CATEGORIES.map(category => ({
       ...category,
-      count: seenBusinesses.reduce((sum, business) => 
+      count: seenBusinesses.reduce((sum, business) =>
         sum + (business.richNotes?.filter(note => note.category === category.value).length || 0), 0
       )
     }));
 
     const recentActivity = seenBusinesses
-      .flatMap(business => 
+      .flatMap(business =>
         (business.richNotes || []).map(note => ({
           business,
           note,
@@ -122,10 +123,10 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
       provider: business.provider,
       category: business.category,
       totalNotes: business.richNotes?.length || 0,
-      lastNoteDate: business.richNotes?.reduce((latest, note) => 
+      lastNoteDate: business.richNotes?.reduce((latest, note) =>
         new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest
       )?.timestamp || '',
-      notes: business.richNotes?.map(note => 
+      notes: business.richNotes?.map(note =>
         `[${note.category.toUpperCase()}] ${new Date(note.timestamp).toLocaleDateString()} - ${note.content}`
       ).join(' | ') || ''
     }));
@@ -229,11 +230,10 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
             <button
               key={category.value}
               onClick={() => setSelectedCategory(selectedCategory === category.value ? '' : category.value)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                selectedCategory === category.value
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedCategory === category.value
                   ? `${category.bg} ${category.color} border border-current`
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
+                }`}
             >
               <category.icon className="h-3 w-3" />
               {category.label} ({category.count})
@@ -250,16 +250,16 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
             {seenBusinesses.length === 0 ? 'No Seen Clients Yet' : 'No Results Found'}
           </h3>
           <p className="text-slate-600">
-            {seenBusinesses.length === 0 
+            {seenBusinesses.length === 0
               ? 'Start adding notes to clients to track your interactions and build your seen clients list.'
               : 'Try adjusting your search terms or filters to find the clients you\'re looking for.'
             }
           </p>
         </div>
       ) : (
-        <div className="grid gap-4">
-          {filteredSeenBusinesses.map(business => {
-            const latestNote = business.richNotes?.reduce((latest, note) => 
+        <div className="flex flex-col gap-4">
+          {filteredSeenBusinesses.slice(0, visibleCount).map(business => {
+            const latestNote = business.richNotes?.reduce((latest, note) =>
               new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest
             );
             const categoryCount = NOTE_CATEGORIES.map(cat => ({
@@ -347,7 +347,7 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
                         <MessageSquare className="h-4 w-4" />
                         All Notes ({business.richNotes?.length || 0})
                       </h4>
-                      
+
                       {/* Action Buttons */}
                       <div className="flex items-center gap-1">
                         {/* Call Button */}
@@ -434,6 +434,16 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
               </div>
             );
           })}
+
+          {visibleCount < filteredSeenBusinesses.length && (
+            <button
+              onClick={() => setVisibleCount(prev => prev + 20)}
+              className="flex items-center justify-center gap-2 p-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 hover:bg-slate-50 transition-all active:scale-95 shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Load More Seen Clients ({filteredSeenBusinesses.length - visibleCount} remaining)
+            </button>
+          )}
         </div>
       )}
 
@@ -470,4 +480,5 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
     </div>
   );
 };
+
 export default SeenClients;

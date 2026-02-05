@@ -15,7 +15,6 @@ export const useBusinessData = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lastFetch, setLastFetch] = useState<Date | null>(null);
-    const [isProcessingLargeDataset, setIsProcessingLargeDataset] = useState(false);
     const [cacheStatus, setCacheStatus] = useState<'loading' | 'cached' | 'fresh' | 'error'>('loading');
 
     // Note: fetchBusinesses removed - businesses are now fetched in the initialization effect
@@ -28,11 +27,11 @@ export const useBusinessData = () => {
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
     const [hasUserInteracted, setHasUserInteracted] = useState(false);
     const [phoneType, setPhoneType] = useState<'all' | 'landline' | 'mobile'>('all');
-    
+
     // Dataset state
-    const [availableDatasets, setAvailableDatasets] = useState<Array<{id: number, name: string, town?: string}>>([]);
+    const [availableDatasets, setAvailableDatasets] = useState<Array<{ id: number, name: string, town?: string }>>([]);
     const [selectedDatasets, setSelectedDatasets] = useState<number[]>([]);
-    
+
     // Dropped Pin State for Filtering
     const [droppedPin, setDroppedPin] = useState<{ lat: number, lng: number } | null>(null);
     const [radiusKm, setRadiusKm] = useState<number>(0.5);
@@ -42,26 +41,26 @@ export const useBusinessData = () => {
     // Auto-fetch on mount and auth changes - Prevent duplicate calls with ref
     const initializationRef = useRef(false);
     const isInitializing = useRef(false);
-    
+
     useEffect(() => {
         console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
-        
+
         // Prevent duplicate initialization
         if (initializationRef.current || isInitializing.current) {
             console.log('🔐 DATA: Initialization already completed or in progress, skipping');
             return;
         }
-        
+
         if (isAuthenticated && token) {
             // Check if we have cached data first
             const cachedBusinesses = cacheService.getBusinesses();
             const cachedRoutes = cacheService.getRoutes();
             const cachedDatasets = cacheService.getDatasets();
-            
+
             if (cachedBusinesses || cachedRoutes || cachedDatasets) {
                 console.log('📦 CACHE: Found cached data, loading immediately');
                 setCacheStatus('cached');
-                
+
                 if (cachedBusinesses) {
                     setBusinesses(cachedBusinesses);
                     setLastFetch(new Date());
@@ -75,21 +74,21 @@ export const useBusinessData = () => {
                         setSelectedDatasets(prev => prev.length === 0 ? cachedDatasets.map((d: any) => d.id) : prev);
                     }
                 }
-                
+
                 // Set loading to false since we have cached data
                 setLoading(false);
                 initializationRef.current = true;
                 isInitializing.current = false;
-                
+
                 // Optionally fetch fresh data in background after a delay
                 const backgroundRefreshTimer = setTimeout(() => {
                     console.log('🔄 CACHE: Refreshing data in background');
                     initializeDataFromServer(true); // Background refresh
                 }, 2000); // Increased delay to prevent immediate refetch
-                
+
                 return () => clearTimeout(backgroundRefreshTimer);
             }
-            
+
             // No cached data, show loading and fetch from server
             setLoading(true);
             setCacheStatus('loading');
@@ -108,44 +107,31 @@ export const useBusinessData = () => {
         }
     }, [token, isAuthenticated]); // CRITICAL: Only depend on auth state to prevent infinite loops
 
-    // Separate function for server data initialization with debouncing
-    const initializeDataFromServer = useCallback(async (isBackgroundRefresh = false) => {
-        // Prevent multiple simultaneous initializations
-        if (isInitializing.current && !isBackgroundRefresh) {
-            console.log('🔐 DATA: Already initializing, skipping duplicate call');
-            return;
-        }
+    const [loadingProgress, setLoadingProgress] = useState<string>('');
 
-        // Set initializing flag to prevent race conditions
+    const [hasMore, setHasMore] = useState(true);
+    const [page, setPage] = useState(1);
+    const PAGE_SIZE = 1000;
+
+    // Load initial data from Cloud if available
+    const initializeDataFromServer = useCallback(async (isBackgroundRefresh = false) => {
+        if (isInitializing.current && !isBackgroundRefresh) return;
         isInitializing.current = true;
-        
+
         try {
-            console.log('🚀 DATA: Starting data initialization', { isBackgroundRefresh });
-            
-            // Fetch all data in parallel for better performance
-            const [datasetsResult, businessesResult, routesResult] = await Promise.all([
-                (async () => {
-                    try {
-                        const response = await fetch(`${environmentConfig.getApiUrl()}/api/datasets`, {
-                            headers: {
-                                'Authorization': `Bearer ${token}`,
-                                'Content-Type': 'application/json'
-                            }
-                        });
-                        if (response.ok) {
-                            const result = await response.json();
-                            console.log('📊 DATASETS: Fetched datasets:', result);
-                            return result;
-                        }
-                    } catch (err) {
-                        console.error('Failed to fetch datasets:', err);
-                    }
-                    return null;
-                })(),
-                serverDataService.getBusinesses(token || '', isBackgroundRefresh),
+            console.log('🚀 DATA: Starting server fetch...');
+
+            // Fetch first page of businesses
+            const businessesResult = await serverDataService.getBusinessesPaginated(token || '', 1, PAGE_SIZE);
+
+            // Fetch datasets and routes in parallel
+            const [datasetsResult, routesResult] = await Promise.all([
+                fetch(`${environmentConfig.getApiUrl()}/api/datasets`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }).then(r => r.ok ? r.json() : []).catch(() => []),
                 serverDataService.getRoutes(token || '', isBackgroundRefresh)
             ]);
-            
+
             // Process datasets
             if (datasetsResult) {
                 let datasets = [];
@@ -158,7 +144,7 @@ export const useBusinessData = () => {
                         datasets = datasetsResult.datasets;
                     }
                 }
-                
+
                 const validDatasets = datasets
                     .filter((d: any) => d && typeof d === 'object' && d.id && d.name)
                     .map((d: any) => ({
@@ -166,64 +152,30 @@ export const useBusinessData = () => {
                         name: d.name,
                         town: d.town || ''
                     }));
-                
+
                 setAvailableDatasets(validDatasets);
                 cacheService.setDatasets(validDatasets);
-                
+
                 if (validDatasets.length > 0) {
                     setSelectedDatasets(prev => prev.length === 0 ? validDatasets.map((d: any) => d.id) : prev);
                 }
             }
-            
-            // Process businesses with enhanced error handling
+
+            // Process businesses
             if (businessesResult.success) {
                 const businessData = businessesResult.data || [];
-                
-                if (businessData.length > 2000) {
-                    console.log('📊 FETCH: Large dataset detected, enabling performance mode');
-                    setIsProcessingLargeDataset(true);
-                    
-                    // Use requestIdleCallback for better performance
-                    const processLargeDataset = () => {
-                        setBusinesses(businessData);
-                        setIsProcessingLargeDataset(false);
-                    };
-                    
-                    if (window.requestIdleCallback) {
-                        window.requestIdleCallback(processLargeDataset, { timeout: 1000 });
-                    } else {
-                        setTimeout(processLargeDataset, 100);
-                    }
-                } else {
-                    setBusinesses(businessData);
-                }
+                setBusinesses(businessData);
+                setHasMore(businessData.length === PAGE_SIZE);
+                setPage(1);
                 setLastFetch(new Date());
-            } else {
-                // If regular fetch failed, try chunked approach
-                console.log('⚠️ DATA: Regular fetch failed, trying chunked approach');
-                try {
-                    const chunkedResult = await serverDataService.getBusinessesChunked(token || '');
-                    if (chunkedResult.success) {
-                        const businessData = chunkedResult.data || [];
-                        console.log('✅ DATA: Chunked fetch successful:', businessData.length, 'businesses');
-                        setBusinesses(businessData);
-                        setLastFetch(new Date());
-                    } else {
-                        console.error('❌ DATA: Both regular and chunked fetch failed');
-                        setError('Failed to fetch business data');
-                    }
-                } catch (chunkedError) {
-                    console.error('❌ DATA: Chunked fetch error:', chunkedError);
-                    setError('Failed to fetch business data');
-                }
             }
-            
+
             // Process routes
             if (routesResult.success) {
                 setRouteItems(routesResult.data || []);
             }
-            
-            console.log('✅ DATA: All data fetched successfully');
+
+            console.log('✅ DATA: Initial data fetched successfully');
             setCacheStatus('fresh');
             initializationRef.current = true;
         } catch (error) {
@@ -235,8 +187,30 @@ export const useBusinessData = () => {
                 setLoading(false);
             }
         }
-    }, [token]); // Add token as dependency
+    }, [token]);
 
+    const loadMore = useCallback(async () => {
+        if (!hasMore || loading || !token) return;
+
+        setLoading(true);
+        const nextPage = page + 1;
+
+        try {
+            console.log(`📥 DATA: Loading more businesses (Page ${nextPage})...`);
+            const result = await serverDataService.getBusinessesPaginated(token, nextPage, PAGE_SIZE);
+
+            if (result.success) {
+                const newData = result.data || [];
+                setBusinesses(prev => [...prev, ...newData]);
+                setHasMore(newData.length === PAGE_SIZE);
+                setPage(nextPage);
+            }
+        } catch (err) {
+            console.error('Failed to load more businesses:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, [hasMore, loading, page, token]);
     // Clear caches when businesses change
     useEffect(() => {
         clearFilterCaches();
@@ -251,7 +225,7 @@ export const useBusinessData = () => {
                 // For large datasets, limit processing to improve performance and use sampling
                 const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
                 const step = Math.max(1, Math.floor(businesses.length / sampleSize));
-                
+
                 for (let i = 0; i < businesses.length; i += step) {
                     const business = businesses[i];
                     if (business.category) {
@@ -275,7 +249,7 @@ export const useBusinessData = () => {
                 // For large datasets, limit processing to improve performance and use sampling
                 const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
                 const step = Math.max(1, Math.floor(businesses.length / sampleSize));
-                
+
                 for (let i = 0; i < businesses.length; i += step) {
                     const business = businesses[i];
                     if (business.town) {
@@ -299,7 +273,7 @@ export const useBusinessData = () => {
                 // For large datasets, limit processing to improve performance and use sampling
                 const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
                 const step = Math.max(1, Math.floor(businesses.length / sampleSize));
-                
+
                 for (let i = 0; i < businesses.length; i += step) {
                     const business = businesses[i];
                     if (business.provider) {
@@ -330,24 +304,24 @@ export const useBusinessData = () => {
             visibleProviders: visibleProviders.length,
             phoneType
         });
-        
+
         if (!businesses.length) {
             console.log('🔍 FILTER: No businesses, returning empty array');
             return [];
         }
-        
+
         // For very large datasets (>2000), show loading indicator and defer heavy calculations
         if (businesses.length > 2000) {
             console.log('🔍 FILTER: Large dataset detected, optimizing performance');
         }
-        
+
         return PerformanceMonitor.measure('filterBusinesses', () => {
             // CRITICAL FIX: Skip dataset filtering for now since it's causing all businesses to be filtered out
             // The dataset matching logic needs to be fixed on the backend first
             let datasetFilteredBusinesses = businesses;
-            
+
             console.log('🔍 FILTER: Skipping dataset filtering - showing all businesses to prevent empty results');
-            
+
             const finalFiltered = filterBusinesses(datasetFilteredBusinesses, {
                 searchTerm,
                 selectedCategory,
@@ -357,7 +331,7 @@ export const useBusinessData = () => {
                 droppedPin: droppedPin ?? undefined,
                 radiusKm
             });
-            
+
             console.log('🔍 FILTER: Final filtering result:', {
                 afterDatasetFilter: datasetFilteredBusinesses.length,
                 finalCount: finalFiltered.length,
@@ -367,7 +341,7 @@ export const useBusinessData = () => {
                     coordinates: finalFiltered[0].coordinates
                 } : null
             });
-            
+
             return finalFiltered;
         });
     }, [businesses, searchTerm, selectedCategory, selectedTown, visibleProviders, phoneType, droppedPin, radiusKm]);
@@ -379,7 +353,7 @@ export const useBusinessData = () => {
         categories,
         availableTowns,
         availableProviders,
-        searchTerm: searchInput, 
+        searchTerm: searchInput,
         setSearchTerm: setSearchInput,
         selectedCategory,
         setSelectedCategory,
@@ -406,123 +380,98 @@ export const useBusinessData = () => {
         loading,
         error,
         lastFetch,
-        isProcessingLargeDataset,
         cacheStatus,
+        hasMore,
+        loadMore,
         refetch: useCallback(async (forceRefresh = false) => {
             console.log('🔄 REFETCH: Manual refetch triggered', { forceRefresh });
-            
-            // Prevent multiple simultaneous refetches
+
             if (isInitializing.current) {
                 console.log('🔄 REFETCH: Already initializing, skipping refetch');
                 return;
             }
-            
+
             if (forceRefresh) {
-                // Clear all caches when force refresh is requested
                 cacheService.clearAll();
                 console.log('🗑️ CACHE: Cleared all caches for force refresh');
             }
-            
-            setLastFetch(null); // Clear cache indicator
+
+            setLastFetch(null);
             setLoading(true);
             setCacheStatus('loading');
             isInitializing.current = true;
-            
+
             try {
-                // Fetch businesses first - try regular, then chunked if it fails
-                let businessResult = await serverDataService.getBusinesses(token || '', forceRefresh);
-                
-                // If regular fetch failed due to JSON issues, try chunked approach
-                if (!businessResult.success && businessResult.error?.includes('JSON')) {
-                    console.log('⚠️ REFETCH: Regular fetch failed with JSON error, trying chunked approach');
-                    businessResult = await serverDataService.getBusinessesChunked(token || '');
+                setLoadingProgress('Initializing refetch...');
+
+                // 1. Fetch Datasets
+                const datasetsResponse = await fetch(`${environmentConfig.getApiUrl()}/api/datasets`, {
+                    headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+                });
+
+                if (datasetsResponse.ok) {
+                    const result = await datasetsResponse.json();
+                    let datasets = Array.isArray(result) ? result : (result.data || result.datasets || []);
+                    const validDatasets = datasets
+                        .filter((d: any) => d && typeof d === 'object' && d.id && d.name)
+                        .map((d: any) => ({ id: d.id, name: d.name, town: d.town || '' }));
+                    setAvailableDatasets(validDatasets);
+                    cacheService.setDatasets(validDatasets);
+                    setSelectedDatasets(prev => prev.length === 0 && validDatasets.length > 0 ? validDatasets.map((d: any) => d.id) : prev);
                 }
-                
-                if (businessResult.success) {
-                    const businessData = businessResult.data || [];
-                    if (businessData.length > 2000) {
-                        console.log('📊 REFETCH: Large dataset detected, enabling performance mode');
-                        setIsProcessingLargeDataset(true);
-                        
-                        // Use requestIdleCallback for better performance
-                        const processLargeDataset = () => {
-                            setBusinesses(businessData);
-                            setIsProcessingLargeDataset(false);
-                        };
-                        
-                        if (window.requestIdleCallback) {
-                            window.requestIdleCallback(processLargeDataset, { timeout: 1000 });
-                        } else {
-                            setTimeout(processLargeDataset, 100);
-                        }
-                    } else {
-                        setBusinesses(businessData);
-                    }
-                    setLastFetch(new Date());
-                } else {
-                    console.error('❌ REFETCH: Both regular and chunked fetch failed');
-                    setError(businessResult.error || 'Failed to fetch business data');
-                }
-                
-                // Fetch routes
+
+                // 2. Fetch Routes
                 const routeResult = await serverDataService.getRoutes(token || '', forceRefresh);
                 if (routeResult.success) {
                     setRouteItems(routeResult.data || []);
                 }
-                
-                // Fetch datasets
-                try {
-                    const response = await fetch(`${environmentConfig.getApiUrl()}/api/datasets`, {
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        }
+
+                // 3. Progressive Fetch Businesses
+                let allBusinesses: Business[] = [];
+                let page = 1;
+                let hasMore = true;
+                const chunkSize = 2000;
+
+                while (hasMore) {
+                    setLoadingProgress(`Refreshing businesses (Page ${page})...`);
+                    const response = await fetch(`${environmentConfig.getApiUrl()}/api/businesses?page=${page}&limit=${chunkSize}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
                     });
 
-                    if (response.ok) {
-                        const result = await response.json();
-                        let datasets = [];
-                        if (Array.isArray(result)) {
-                            datasets = result;
-                        } else if (result.data && Array.isArray(result.data)) {
-                            datasets = result.data;
-                        } else if (result.datasets && Array.isArray(result.datasets)) {
-                            datasets = result.datasets;
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const result = await response.json();
+                    const businessesChunk = result.data || result.businesses || [];
+
+                    if (!Array.isArray(businessesChunk) || businessesChunk.length === 0) {
+                        hasMore = false;
+                    } else {
+                        allBusinesses = [...allBusinesses, ...businessesChunk];
+                        if (page % 2 === 0 || businessesChunk.length < chunkSize) {
+                            setBusinesses([...allBusinesses]);
                         }
-                        
-                        const validDatasets = datasets
-                            .filter((d: any) => d && typeof d === 'object' && d.id && d.name)
-                            .map((d: any) => ({
-                                id: d.id,
-                                name: d.name,
-                                town: d.town || ''
-                            }));
-                        
-                        setAvailableDatasets(validDatasets);
-                        cacheService.setDatasets(validDatasets);
-                        
-                        // Only auto-select if no datasets are currently selected
-                        setSelectedDatasets(prev => prev.length === 0 && validDatasets.length > 0 ? validDatasets.map((d: any) => d.id) : prev);
+                        hasMore = businessesChunk.length === chunkSize;
+                        page++;
                     }
-                } catch (err) {
-                    console.error('Failed to fetch datasets in refetch:', err);
-                    setAvailableDatasets([]);
+                    if (page > 100) break;
                 }
-                
+
+                setBusinesses(allBusinesses);
+                cacheService.setBusinesses(allBusinesses);
+                setLastFetch(new Date());
                 setCacheStatus('fresh');
-                
             } catch (error) {
                 console.error('❌ REFETCH: Error during manual refetch:', error);
                 setCacheStatus('error');
+                setError('Failed to refresh data');
             } finally {
                 isInitializing.current = false;
                 setLoading(false);
+                setLoadingProgress('');
             }
-            
-            console.log('✅ REFETCH: Manual refetch completed');
-        }, [token]), // Remove selectedDatasets.length dependency
+        }, [token]),
         isDbReady: isAuthenticated && !error,
         dbError: error,
+        loadingProgress,
         // Database reset function (for compatibility)
         handleDatabaseReset: async () => {
             // In server-first architecture, this would clear server data

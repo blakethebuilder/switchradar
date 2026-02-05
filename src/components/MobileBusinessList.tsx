@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Building2, Mail, Map, Trash2, Landmark, Smartphone, Route, CheckSquare, Square } from 'lucide-react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
+import { Building2, Map, Trash2, Landmark, Smartphone, Route, CheckSquare, Square, Plus } from 'lucide-react';
 import type { Business } from '../types';
 import { ProviderBadge } from './ProviderBadge';
 import { isMobileProvider } from '../utils/phoneUtils';
@@ -12,6 +12,9 @@ interface MobileBusinessListProps {
   onAddToRoute?: (id: string) => void;
   selectedBusinessIds: string[];
   onSelectBusiness: (businessId: string, isSelected: boolean) => void;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  loading?: boolean;
 }
 
 export const MobileBusinessList: React.FC<MobileBusinessListProps> = ({
@@ -21,18 +24,49 @@ export const MobileBusinessList: React.FC<MobileBusinessListProps> = ({
   onTogglePhoneType,
   onAddToRoute,
   selectedBusinessIds,
-  onSelectBusiness
+  onSelectBusiness,
+  hasMore = false,
+  onLoadMore,
+  loading = false
 }) => {
-  const [visibleCount, setVisibleCount] = useState(50); // Increased initial load
-  
-  // Only render visible items for performance
-  const visibleBusinesses = useMemo(() => 
-    businesses.slice(0, visibleCount), 
-    [businesses, visibleCount]
+  const [scrollTop, setScrollTop] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(window.innerHeight - 300); // Approximate
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Virtual scrolling parameters
+  const ITEM_HEIGHT = 200; // Approximate height of each mobile card
+  const BUFFER_SIZE = 3;
+
+  // Update container height on resize
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        setContainerHeight(containerRef.current.clientHeight || (window.innerHeight - 300));
+      }
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
+
+  // Calculate visible range
+  const visibleRange = useMemo(() => {
+    const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - BUFFER_SIZE);
+    const endIndex = Math.min(
+      businesses.length,
+      Math.ceil((scrollTop + containerHeight) / ITEM_HEIGHT) + BUFFER_SIZE
+    );
+    return { startIndex, endIndex };
+  }, [scrollTop, containerHeight, businesses.length]);
+
+  const visibleBusinesses = useMemo(() =>
+    businesses.slice(visibleRange.startIndex, visibleRange.endIndex),
+    [businesses, visibleRange]
   );
 
-  const loadMore = () => {
-    setVisibleCount(prev => Math.min(prev + 50, businesses.length)); // Increased batch size
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop);
   };
 
   if (businesses.length === 0) {
@@ -48,160 +82,158 @@ export const MobileBusinessList: React.FC<MobileBusinessListProps> = ({
   }
 
   return (
-    <div className="space-y-3">
-      {visibleBusinesses.map((business) => {
-        const isMobile = business.phoneTypeOverride
-          ? business.phoneTypeOverride === 'mobile'
-          : isMobileProvider(business.provider);
-        const isSelected = selectedBusinessIds.includes(business.id);
-        
-        return (
-          <div
-            key={business.id}
-            className={`bg-white rounded-2xl border border-slate-200 p-4 transition-all ${
-              isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : 'hover:shadow-md'
-            }`}
-          >
-            {/* Header Row */}
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-start gap-3 flex-1 min-w-0">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectBusiness(business.id, !isSelected);
-                  }}
-                  className="mt-1 flex-shrink-0"
-                >
-                  {isSelected ? (
-                    <CheckSquare className="h-5 w-5 text-indigo-600" />
-                  ) : (
-                    <Square className="h-5 w-5 text-slate-400" />
-                  )}
-                </button>
-                
-                <div className="flex-1 min-w-0">
-                  <div 
-                    className="cursor-pointer"
-                    onClick={() => onBusinessSelect?.(business)}
-                  >
-                    <h3 className="text-base font-bold text-slate-900 leading-tight mb-1 truncate">
-                      {business.name}
-                    </h3>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        {business.category}
-                      </span>
-                      <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
-                      <span className="text-xs font-bold text-indigo-600 uppercase">
-                        {business.town}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  {/* Provider Badge */}
-                  <div className="mb-3">
-                    <ProviderBadge provider={business.provider} className="scale-90 origin-left" />
-                  </div>
-                </div>
-              </div>
-            </div>
+    <div
+      ref={containerRef}
+      className="overflow-auto custom-scrollbar pr-1"
+      style={{ maxHeight: 'calc(100vh - 350px)' }}
+      onScroll={handleScroll}
+    >
+      <div
+        className="relative"
+        style={{ height: businesses.length * ITEM_HEIGHT }}
+      >
+        <div
+          className="absolute top-0 left-0 right-0 space-y-3"
+          style={{ transform: `translateY(${visibleRange.startIndex * ITEM_HEIGHT}px)` }}
+        >
+          {visibleBusinesses.map((business) => {
+            const isMobile = business.phoneTypeOverride
+              ? business.phoneTypeOverride === 'mobile'
+              : isMobileProvider(business.provider);
+            const isSelected = selectedBusinessIds.includes(business.id);
 
-            {/* Contact Info */}
-            {(business.phone || business.email) && (
-              <div className="space-y-2 mb-3 pl-8">
-                {business.phone && (
-                  <div className="flex items-center gap-2">
+            return (
+              <div
+                key={business.id}
+                className={`bg-white rounded-2xl border border-slate-200 p-4 transition-all shadow-sm ${isSelected ? 'ring-2 ring-indigo-500 bg-indigo-50/30' : 'hover:shadow-md'
+                  }`}
+                style={{ height: ITEM_HEIGHT - 12 - 12 }} // Subtracting margins/padding to fit
+              >
+                {/* Header Row */}
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        onTogglePhoneType?.(business.id, isMobile ? 'mobile' : 'landline');
+                        onSelectBusiness(business.id, !isSelected);
                       }}
-                      className={`p-1.5 rounded-lg transition-all ${
-                        isMobile ? 'text-rose-500 bg-rose-50' : 'text-emerald-500 bg-emerald-50'
-                      }`}
-                      title={`Switch to ${isMobile ? 'Landline' : 'Cellphone'}`}
+                      className="mt-1 flex-shrink-0"
                     >
-                      {isMobile ? <Smartphone className="w-4 h-4" /> : <Landmark className="w-4 h-4" />}
+                      {isSelected ? (
+                        <CheckSquare className="h-5 w-5 text-indigo-600" />
+                      ) : (
+                        <Square className="h-5 w-5 text-slate-400" />
+                      )}
                     </button>
-                    <a 
-                      href={`tel:${business.phone}`}
-                      className="text-sm font-medium text-slate-700 hover:text-indigo-600"
-                    >
-                      {business.phone}
-                    </a>
+
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className="cursor-pointer"
+                        onClick={() => onBusinessSelect?.(business)}
+                      >
+                        <h3 className="text-base font-bold text-slate-900 leading-tight mb-0.5 truncate">
+                          {business.name}
+                        </h3>
+                        <div className="flex items-center gap-1.5 mb-1.5 text-[10px] font-bold">
+                          <span className="text-slate-400 uppercase tracking-wider truncate max-w-[120px]">
+                            {business.category}
+                          </span>
+                          <div className="w-1 h-1 bg-slate-300 rounded-full"></div>
+                          <span className="text-indigo-600 uppercase">
+                            {business.town}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Provider Badge */}
+                      <div className="mb-2">
+                        <ProviderBadge provider={business.provider} className="scale-75 origin-left" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Info */}
+                {(business.phone || business.email) && (
+                  <div className="space-y-1.5 mb-2 pl-8">
+                    {business.phone && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onTogglePhoneType?.(business.id, isMobile ? 'mobile' : 'landline');
+                          }}
+                          className={`p-1 rounded-md transition-all ${isMobile ? 'text-rose-500 bg-rose-50' : 'text-emerald-500 bg-emerald-50'
+                            }`}
+                        >
+                          {isMobile ? <Smartphone className="w-3.5 h-3.5" /> : <Landmark className="w-3.5 h-3.5" />}
+                        </button>
+                        <a
+                          href={`tel:${business.phone}`}
+                          className="text-xs font-medium text-slate-700 hover:text-indigo-600"
+                        >
+                          {business.phone}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 )}
-                {business.email && (
-                  <div className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-slate-400" />
-                    <a 
-                      href={`mailto:${business.email}`}
-                      className="text-sm text-slate-600 hover:text-indigo-600 truncate"
-                    >
-                      {business.email}
-                    </a>
-                  </div>
-                )}
+
+                {/* Action Buttons */}
+                <div className="flex items-center justify-end gap-1 pt-2 border-t border-slate-50">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onBusinessSelect?.(business); }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                  >
+                    <Map className="w-3.5 h-3.5" />
+                    Map
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onAddToRoute?.(business.id); }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
+                  >
+                    <Route className="w-3.5 h-3.5" />
+                    Route
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDelete?.(business.id); }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
+                  </button>
+                </div>
               </div>
-            )}
-
-            {/* Address */}
-            <div className="text-xs text-slate-500 mb-3 pl-8 line-clamp-2">
-              {business.address}
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  onBusinessSelect?.(business); 
-                }}
-                className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-              >
-                <Map className="w-4 h-4" />
-                Map
-              </button>
-              <button
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  onAddToRoute?.(business.id); 
-                }}
-                className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-slate-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
-              >
-                <Route className="w-4 h-4" />
-                Route
-              </button>
-              <button
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  onDelete?.(business.id); 
-                }}
-                className="flex items-center gap-1 px-3 py-2 text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-              >
-                <Trash2 className="w-4 h-4" />
-                Delete
-              </button>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Load More Button */}
-      {visibleCount < businesses.length && (
-        <div className="flex justify-center pt-4">
-          <button
-            onClick={loadMore}
-            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors"
-          >
-            Load More ({businesses.length - visibleCount} remaining)
-          </button>
+            );
+          })}
         </div>
-      )}
+      </div>
 
-      {/* Results Summary */}
-      <div className="text-center text-sm text-slate-500 py-4">
-        Showing {visibleCount} of {businesses.length} businesses
+      {/* Results Summary & Load More */}
+      <div className="flex flex-col items-center gap-4 py-6">
+        <div className="text-center text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+          Showing {businesses.length} businesses
+        </div>
+
+        {hasMore && (
+          <button
+            onClick={onLoadMore}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-200 rounded-xl text-xs font-black uppercase tracking-widest text-slate-900 shadow-sm hover:shadow-md hover:bg-slate-50 transition-all active:scale-95 disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <div className="h-3 w-3 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
+                Loading...
+              </>
+            ) : (
+              <>
+                Load More
+                <Plus className="h-3 w-3" />
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

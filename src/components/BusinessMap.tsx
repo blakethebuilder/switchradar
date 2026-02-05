@@ -62,37 +62,37 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
 
   // Memoize businesses to prevent unnecessary re-renders and limit for performance
   const memoizedBusinesses = React.useMemo(() => {
-    const validBusinesses = (businesses || []).filter(business => 
-      business?.id && 
-      business.coordinates && 
-      typeof business.coordinates.lat === 'number' && 
+    const validBusinesses = (businesses || []).filter(business =>
+      business?.id &&
+      business.coordinates &&
+      typeof business.coordinates.lat === 'number' &&
       typeof business.coordinates.lng === 'number' &&
-      !isNaN(business.coordinates.lat) && 
+      !isNaN(business.coordinates.lat) &&
       !isNaN(business.coordinates.lng) &&
-      Math.abs(business.coordinates.lat) > 0.001 && 
+      Math.abs(business.coordinates.lat) > 0.001 &&
       Math.abs(business.coordinates.lng) > 0.001
     );
-    
+
     // CRITICAL: Limit businesses for map performance
-    const MAX_MAP_BUSINESSES = 1500;
+    const MAX_MAP_BUSINESSES = 5000;
     if (validBusinesses.length > MAX_MAP_BUSINESSES) {
       console.log(`🗺️ MAP: Limiting businesses from ${validBusinesses.length} to ${MAX_MAP_BUSINESSES} for performance`);
-      
+
       // Always include selected business
       let result = [];
       if (selectedBusinessId) {
         const selected = validBusinesses.find(b => b.id === selectedBusinessId);
         if (selected) result.push(selected);
       }
-      
+
       // Sample the rest
       const remaining = validBusinesses.filter(b => b.id !== selectedBusinessId);
       const step = Math.ceil(remaining.length / (MAX_MAP_BUSINESSES - result.length));
       const sampled = remaining.filter((_, index) => index % step === 0);
-      
+
       return [...result, ...sampled].slice(0, MAX_MAP_BUSINESSES);
     }
-    
+
     return validBusinesses;
   }, [businesses, selectedBusinessId]);
 
@@ -126,11 +126,11 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
   const handleFitBounds = useCallback(() => {
     if (businesses.length > 0 && mapInstance) {
       try {
-        const validBusinesses = businesses.filter(b => 
-          b.coordinates && 
-          typeof b.coordinates.lat === 'number' && 
+        const validBusinesses = businesses.filter(b =>
+          b.coordinates &&
+          typeof b.coordinates.lat === 'number' &&
           typeof b.coordinates.lng === 'number' &&
-          !isNaN(b.coordinates.lat) && 
+          !isNaN(b.coordinates.lat) &&
           !isNaN(b.coordinates.lng) &&
           b.coordinates.lat >= -90 && b.coordinates.lat <= 90 &&
           b.coordinates.lng >= -180 && b.coordinates.lng <= 180 &&
@@ -138,38 +138,38 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           !(Math.abs(b.coordinates.lat) < 0.001 && Math.abs(b.coordinates.lng) < 0.001) &&
           !(b.coordinates.lat === 0 && b.coordinates.lng === 0)
         );
-        
+
         console.log('🗺️ FIT BOUNDS: Valid businesses:', validBusinesses.length, 'out of', businesses.length);
-        
+
         if (validBusinesses.length === 0) {
           console.warn('🗺️ FIT BOUNDS: No valid businesses with coordinates');
           return;
         }
-        
+
         if (validBusinesses.length === 1) {
           // Single business - center on it with reasonable zoom
           const business = validBusinesses[0];
-          mapInstance.setView([business.coordinates.lat, business.coordinates.lng], 14, { 
-            animate: true, 
-            duration: 1 
+          mapInstance.setView([business.coordinates.lat, business.coordinates.lng], 14, {
+            animate: true,
+            duration: 1
           });
         } else {
           // Multiple businesses - fit bounds with padding
           const coordinates: [number, number][] = validBusinesses.map(b => [b.coordinates.lat, b.coordinates.lng]);
           const bounds = L.latLngBounds(coordinates);
-          
+
           // Calculate appropriate padding based on screen size
           const isMobile = window.innerWidth < 768;
           const padding: [number, number] = isMobile ? [30, 30] : [50, 50];
-          
-          mapInstance.fitBounds(bounds, { 
+
+          mapInstance.fitBounds(bounds, {
             padding: padding,
             maxZoom: 15, // Max zoom 15 for fit bounds to ensure businesses scatter
             animate: true,
             duration: 1.2
           });
         }
-        
+
         console.log('✅ FIT BOUNDS: Successfully fitted bounds');
       } catch (error) {
         console.error('❌ FIT BOUNDS: Error fitting bounds:', error);
@@ -183,7 +183,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
   useEffect(() => {
     const currentBusinessCount = businesses.length;
     const previousBusinessCount = previousBusinessCountRef.current;
-    
+
     // Only fit bounds if:
     // 1. This is the initial load (no previous fit)
     // 2. The business count has significantly changed (not just +1/-1 from selection)
@@ -192,7 +192,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
       (!hasInitialFitRef.current && currentBusinessCount > 0) || // Initial load
       (Math.abs(currentBusinessCount - previousBusinessCount) > 1) // Significant change
     ) && !targetLocation; // Not navigating to specific location
-    
+
     if (shouldFitBounds && mapInstance) {
       console.log('🗺️ AUTO-FIT: Fitting bounds', {
         currentCount: currentBusinessCount,
@@ -200,16 +200,16 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
         isInitial: !hasInitialFitRef.current,
         hasTarget: !!targetLocation
       });
-      
+
       // Small delay to ensure markers are rendered
       const timer = setTimeout(() => {
         handleFitBounds();
         hasInitialFitRef.current = true;
       }, 500);
-      
+
       // Update the ref
       previousBusinessCountRef.current = currentBusinessCount;
-      
+
       return () => clearTimeout(timer);
     } else {
       // Just update the ref without fitting bounds
@@ -274,7 +274,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
       ? 'h-full w-full bg-slate-100'
       : 'rounded-[2.5rem] border-[12px] border-white bg-white shadow-2xl shadow-indigo-100 overflow-hidden min-h-[600px] h-[700px]'
       }`}>
-      
+
       {/* Loading overlay */}
       {isMapLoading && (
         <div className="absolute inset-0 z-[3000] bg-slate-100 flex items-center justify-center">
@@ -310,10 +310,10 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
         boxZoom={!isDropMode}
         keyboard={!isDropMode}
       >
-        <MapController 
-          targetLocation={targetLocation} 
-          zoom={zoom} 
-          businesses={businesses} 
+        <MapController
+          targetLocation={targetLocation}
+          zoom={zoom}
+          businesses={businesses}
           isDropMode={isDropMode}
           setIsDropMode={setIsDropMode}
           setDroppedPin={setDroppedPin}
@@ -322,7 +322,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           setCurrentZoom={setCurrentZoom}
           radiusKm={radiusKm}
         />
-        
+
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -351,10 +351,10 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
             <Circle
               center={[droppedPin.lat, droppedPin.lng]}
               radius={radiusKm * 1000}
-              pathOptions={{ 
-                fillColor: '#ef4444', 
-                fillOpacity: 0.1, 
-                color: '#ef4444', 
+              pathOptions={{
+                fillColor: '#ef4444',
+                fillOpacity: 0.1,
+                color: '#ef4444',
                 weight: 2,
                 opacity: 0.5
               }}
@@ -367,13 +367,13 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           key="business-markers"
           businesses={memoizedBusinesses}
           selectedBusinessId={selectedBusinessId}
-          onBusinessSelect={onMapBusinessSelect ? 
+          onBusinessSelect={onMapBusinessSelect ?
             (business) => {
               // Get actual current zoom from map instance if available, otherwise use state
               const actualZoom = mapInstance ? mapInstance.getZoom() : currentZoom;
               console.log('🗺️ BUSINESS SELECT: Using zoom', actualZoom, 'from', mapInstance ? 'map instance' : 'state');
               onMapBusinessSelect(business, actualZoom);
-            } : 
+            } :
             onBusinessSelect
           }
         />
@@ -402,7 +402,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          
+
           <div className="flex flex-col items-center px-2">
             <span className="text-xs font-bold text-slate-900">
               {currentBusinessIndex + 1} of {businesses.length}
@@ -411,7 +411,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
               Navigate
             </span>
           </div>
-          
+
           <button
             onClick={navigateToNextBusiness}
             className="p-2 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 transition-all active:scale-95"

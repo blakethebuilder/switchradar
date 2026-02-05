@@ -31,8 +31,8 @@ interface ViewRendererProps {
   isFiltersVisible: boolean;
   lastImportName: string;
   loading: boolean;
-  isProcessingLargeDataset?: boolean;
-  
+  loadingProgress?: string;
+
   // Filter props
   searchTerm: string;
   selectedCategory: string;
@@ -41,7 +41,7 @@ interface ViewRendererProps {
   visibleProviders: string[];
   droppedPin: any;
   radiusKm: number;
-  
+
   // Handlers
   onSearchChange: (term: string) => void;
   onCategoryChange: (category: string) => void;
@@ -75,7 +75,9 @@ interface ViewRendererProps {
   setDroppedPin: (pin: any) => void;
   setRadiusKm: (radius: number) => void;
   setViewMode: (mode: ViewMode) => void;
-  
+  hasMore: boolean;
+  onLoadMore: () => void;
+
   // Auth props
   isAdmin: boolean;
 }
@@ -96,7 +98,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
   isFiltersVisible,
   lastImportName,
   loading,
-  isProcessingLargeDataset,
+  loadingProgress,
   searchTerm,
   selectedCategory,
   selectedTown,
@@ -136,6 +138,8 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
   setDroppedPin,
   setRadiusKm,
   setViewMode,
+  hasMore,
+  onLoadMore,
   isAdmin,
 }) => {
   const providerCount = availableProviders.length;
@@ -151,7 +155,8 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
       <DataLoading
         type="businesses"
         count={businesses.length}
-        isLargeDataset={isProcessingLargeDataset}
+        isLargeDataset={businesses.length > 2000}
+        progress={loadingProgress}
       />
     );
   }
@@ -185,7 +190,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
           </div>
         );
       }
-      
+
       return (
         <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
           <div className="max-w-6xl mx-auto">
@@ -292,7 +297,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
               variant="table"
             />
           </div>
-          
+
           <BusinessTable
             businesses={filteredBusinesses}
             onBusinessSelect={onBusinessSelect}
@@ -306,6 +311,9 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
             onProviderSearch={onProviderSearch}
             onCategorySearch={onCategorySearch}
             currentSearchTerm={searchTerm}
+            hasMore={hasMore}
+            onLoadMore={onLoadMore}
+            loading={loading}
           />
         </div>
       );
@@ -396,16 +404,12 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
                 // CRITICAL FIX: Always include the selected business in the map, even if it's filtered out
                 // This prevents markers from disappearing when clicked
                 const mapBusinesses = [...filteredBusinesses];
-                
+
                 if (selectedBusiness && !mapBusinesses.find(b => b.id === selectedBusiness.id)) {
-                  console.log('🗺️ MAP: Adding selected business to map businesses', {
-                    selectedBusinessId: selectedBusiness.id,
-                    selectedBusinessName: selectedBusiness.name,
-                    filteredCount: filteredBusinesses.length
-                  });
+                  console.log('🗺️ MAP: Adding selected business to map markers');
                   mapBusinesses.push(selectedBusiness);
                 }
-                
+
                 // Also include any selected businesses from multi-select
                 selectedBusinessIds.forEach(id => {
                   if (!mapBusinesses.find(b => b.id === id)) {
@@ -416,7 +420,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
                     }
                   }
                 });
-                
+
                 return mapBusinesses;
               }, [filteredBusinesses, selectedBusiness, selectedBusinessIds, businesses])}
               targetLocation={mapTarget?.center}
@@ -438,9 +442,9 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
       return (
         <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
           <Suspense fallback={<LoadingSpinner size="lg" message="Loading routes..." />}>
-            <RouteView 
-              routeItems={routeItems} 
-              businesses={businesses} 
+            <RouteView
+              routeItems={routeItems}
+              businesses={businesses}
               onRemoveFromRoute={onRemoveFromRoute}
               onClearRoute={onClearRoute}
               onSelectBusiness={onBusinessSelect}
@@ -468,11 +472,11 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
           </div>
         );
       }
-      
+
       return (
         <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
           <div className="max-w-6xl mx-auto">
-            <AdminConsole 
+            <AdminConsole
               onImportClick={onImportClick}
               onExportClick={onExportClick}
               onClearData={onClearData}
@@ -494,9 +498,9 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
           {renderHeader()}
           <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8 pt-0">
             <Suspense fallback={<LoadingSpinner size="lg" message="Loading analytics..." />}>
-              <MarketIntelligence 
-                businesses={filteredBusinesses} 
-                droppedPin={droppedPin} 
+              <MarketIntelligence
+                businesses={filteredBusinesses}
+                droppedPin={droppedPin}
                 radiusKm={radiusKm}
                 onProviderFilter={onProviderFilter}
               />
@@ -511,8 +515,8 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
           {renderHeader()}
           <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8 pt-0">
             <Suspense fallback={<LoadingSpinner size="lg" message="Loading client history..." />}>
-              <SeenClients 
-                businesses={businesses} 
+              <SeenClients
+                businesses={businesses}
                 onDeleteBusiness={onDeleteBusiness}
                 onViewOnMap={onViewOnMap}
               />

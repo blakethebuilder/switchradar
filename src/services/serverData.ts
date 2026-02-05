@@ -25,10 +25,10 @@ class ServerDataService {
   private handleAuthError(response: Response): void {
     if (response.status === 401) {
       console.warn('🔐 Authentication failed - token may be invalid. Clearing stored credentials.');
-      
+
       // Show a user-friendly message
       const message = 'Your session has expired. Please logout and login again to continue.';
-      
+
       // Try to show a toast notification if available, otherwise use alert
       if (window.confirm(`${message}\n\nClick OK to logout now, or Cancel to logout manually.`)) {
         // Clear invalid tokens from localStorage
@@ -44,38 +44,38 @@ class ServerDataService {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         console.log(`🌐 Attempt ${attempt}/${retries} - ${options.method || 'GET'} ${url}`);
-        
+
         // Create abort controller for timeout
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-        
+
         const response = await fetch(url, {
           ...options,
           signal: controller.signal
         });
-        
+
         clearTimeout(timeoutId);
         console.log(`📥 Response: ${response.status} ${response.statusText}`);
-        
+
         // Handle authentication errors
         this.handleAuthError(response);
-        
+
         return response;
-        
+
       } catch (error) {
         console.error(`❌ Attempt ${attempt} failed:`, error);
-        
+
         if (attempt === retries) {
           throw error;
         }
-        
+
         // Wait before retry (exponential backoff)
         const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
         console.log(`⏳ Retrying in ${delay}ms...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
-    
+
     throw new Error('All retry attempts failed');
   }
 
@@ -96,11 +96,11 @@ class ServerDataService {
       }
 
       console.log('🌐 API: Fetching businesses from server');
-      
+
       // Add timeout and better error handling for large responses
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for large datasets
-      
+
       const response = await fetch(this.getApiUrl('/api/businesses'), {
         headers: this.getAuthHeaders(token),
         signal: controller.signal
@@ -120,7 +120,7 @@ class ServerDataService {
 
       // Get response as text first to handle potential JSON parsing issues
       const responseText = await response.text();
-      
+
       if (!responseText || responseText.trim().length === 0) {
         throw new Error('Empty response from server');
       }
@@ -128,7 +128,7 @@ class ServerDataService {
       // Check if response is truncated (common signs)
       if (responseText.endsWith('...') || !responseText.trim().endsWith('}') && !responseText.trim().endsWith(']')) {
         console.warn('⚠️ API: Response appears to be truncated, attempting recovery');
-        
+
         // Try to parse partial JSON and recover what we can
         try {
           const partialData = this.attemptPartialJsonRecovery(responseText);
@@ -144,7 +144,7 @@ class ServerDataService {
         } catch (recoveryError) {
           console.error('❌ API: Failed to recover partial data:', recoveryError);
         }
-        
+
         throw new Error('Response truncated and recovery failed');
       }
 
@@ -156,7 +156,7 @@ class ServerDataService {
         console.error('Response length:', responseText.length);
         console.error('Response preview:', responseText.substring(0, 500));
         console.error('Response ending:', responseText.substring(Math.max(0, responseText.length - 500)));
-        
+
         // Try to recover partial JSON
         const partialData = this.attemptPartialJsonRecovery(responseText);
         if (partialData && Array.isArray(partialData) && partialData.length > 0) {
@@ -168,7 +168,7 @@ class ServerDataService {
             count: partialData.length
           };
         }
-        
+
         throw new Error(`JSON parsing failed: ${(jsonError as Error).message}`);
       }
 
@@ -189,7 +189,7 @@ class ServerDataService {
       };
     } catch (error) {
       console.error('Failed to fetch businesses:', error);
-      
+
       // Try to return cached data as fallback if available
       const cachedBusinesses = cacheService.getBusinesses();
       if (cachedBusinesses) {
@@ -200,7 +200,7 @@ class ServerDataService {
           count: cachedBusinesses.length
         };
       }
-      
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch businesses'
@@ -233,9 +233,9 @@ class ServerDataService {
 
       // Construct potentially valid JSON
       const truncatedJson = responseText.substring(0, lastCompleteObjectIndex + 1) + '}]';
-      
+
       // If it was wrapped in an object, close it properly
-      const finalJson = responseText.includes('"data":[') 
+      const finalJson = responseText.includes('"data":[')
         ? '{"data":' + truncatedJson + '}'
         : truncatedJson;
 
@@ -256,52 +256,57 @@ class ServerDataService {
       let hasMore = true;
 
       while (hasMore) {
-        console.log(`📦 API: Fetching chunk ${page} (${chunkSize} per page)`);
-        
-        const response = await this.makeRequest(
-          this.getApiUrl(`/api/businesses?page=${page}&limit=${chunkSize}`), 
-          {
-            headers: this.getAuthHeaders(token)
-          }
-        );
+        const result = await this.getBusinessesPaginated(token, page, chunkSize);
+        if (!result.success) throw new Error(result.error);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        const businesses = result.data || result.businesses || [];
-        
-        if (!Array.isArray(businesses) || businesses.length === 0) {
+        const businesses = result.data || [];
+        if (businesses.length === 0) {
           hasMore = false;
         } else {
           allBusinesses = [...allBusinesses, ...businesses];
-          hasMore = businesses.length === chunkSize; // If we got less than requested, we're done
+          hasMore = businesses.length === chunkSize;
           page++;
         }
 
-        // Safety limit to prevent infinite loops
-        if (page > 100) { // Increased from 50 to 100 for larger datasets
-          console.warn('⚠️ API: Reached maximum page limit (100), stopping');
-          break;
-        }
+        if (page > 100) break;
       }
 
-      console.log(`✅ API: Fetched ${allBusinesses.length} businesses in ${page - 1} chunks`);
-      
-      // Cache the result
       cacheService.setBusinesses(allBusinesses);
+      return { success: true, data: allBusinesses, count: allBusinesses.length };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch in chunks' };
+    }
+  }
+
+  async getBusinessesPaginated(token: string, page: number, limit: number): Promise<ServerDataResult> {
+    try {
+      console.log(`📡 API: Fetching page ${page} (limit: ${limit})`);
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/businesses?page=${page}&limit=${limit}`),
+        {
+          headers: this.getAuthHeaders(token)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      const businesses = result.data || result.businesses || result;
+
+      const data = Array.isArray(businesses) ? businesses : (businesses.data || []);
 
       return {
         success: true,
-        data: allBusinesses,
-        count: allBusinesses.length
+        data: data,
+        count: result.total || data.length
       };
     } catch (error) {
-      console.error('Failed to fetch businesses in chunks:', error);
+      console.error(`Failed to fetch page ${page}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch businesses in chunks'
+        error: error instanceof Error ? error.message : 'Failed to fetch page'
       };
     }
   }
@@ -322,12 +327,12 @@ class ServerDataService {
     if (businesses.length > 800) {
       console.log('📦 API: Large dataset detected, using chunked upload...');
       const result = await this.saveBusinessesChunked(businesses, token, 1000, metadata); // Increased chunk size
-      
+
       // Invalidate cache after successful save
       if (result.success) {
         cacheService.invalidateRelated('businesses');
       }
-      
+
       return result;
     }
 
@@ -335,7 +340,7 @@ class ServerDataService {
       const headers = this.getAuthHeaders(token);
       console.log('📤 API: Request headers prepared');
 
-      const requestBody = { 
+      const requestBody = {
         businesses,
         clearFirst: metadata?.clearFirst || false, // Default to NOT clearing existing data
         ...metadata // Include source and town metadata
@@ -381,7 +386,7 @@ class ServerDataService {
   async saveBusinessesChunked(businesses: Business[], token: string, chunkSize = 1000, metadata?: any): Promise<ServerDataResult> {
     try {
       console.log(`📦 API: Saving ${businesses.length} businesses in chunks of ${chunkSize}`);
-      
+
       const chunks = [];
       for (let i = 0; i < businesses.length; i += chunkSize) {
         chunks.push(businesses.slice(i, i + chunkSize));
@@ -394,7 +399,7 @@ class ServerDataService {
 
       for (let i = 0; i < chunks.length; i++) {
         console.log(`📦 API: Uploading chunk ${i + 1}/${chunks.length} (${chunks[i].length} businesses)`);
-        
+
         const chunkMetadata = {
           ...metadata,
           clearFirst: clearFirst && i === 0, // Only clear on first chunk
@@ -465,7 +470,7 @@ class ServerDataService {
   async updateBusiness(businessId: string, updates: Partial<Business>, token: string): Promise<ServerDataResult> {
     try {
       console.log('🔄 API: Updating business:', businessId);
-      
+
       const response = await this.makeRequest(
         this.getApiUrl(`/api/businesses/${businessId}`),
         {
@@ -507,7 +512,7 @@ class ServerDataService {
 
       const businesses = currentResult.data || [];
       const businessIndex = businesses.findIndex((b: Business) => b.id === businessId);
-      
+
       if (businessIndex === -1) {
         throw new Error('Business not found');
       }
@@ -583,7 +588,7 @@ class ServerDataService {
       };
     } catch (error) {
       console.error('Failed to fetch routes:', error);
-      
+
       // Try to return cached data as fallback
       const cachedRoutes = cacheService.getRoutes();
       if (cachedRoutes) {
@@ -593,7 +598,7 @@ class ServerDataService {
           count: cachedRoutes ? cachedRoutes.length : 0
         };
       }
-      
+
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch routes'
@@ -677,9 +682,9 @@ class ServerDataService {
         {
           method: 'PUT',
           headers: this.getAuthHeaders(token),
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             businessIds,
-            updates 
+            updates
           })
         }
       );
@@ -899,11 +904,12 @@ class ServerDataService {
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
-      const users = await response.json();
+      const result = await response.json();
+      const users = result.data || result;
 
       return {
         success: true,
-        data: users
+        data: Array.isArray(users) ? users : []
       };
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -989,11 +995,12 @@ class ServerDataService {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const businesses = await response.json();
+      const result = await response.json();
+      const businesses = result.data || result;
 
       return {
         success: true,
-        data: businesses
+        data: Array.isArray(businesses) ? businesses : []
       };
     } catch (error) {
       console.error('Failed to fetch user businesses:', error);
@@ -1079,10 +1086,11 @@ class ServerDataService {
       }
 
       const result = await response.json();
+      const towns = result.data || result;
 
       return {
         success: true,
-        data: result
+        data: Array.isArray(towns) ? towns : []
       };
     } catch (error) {
       console.error('Failed to fetch available towns:', error);
@@ -1170,10 +1178,11 @@ class ServerDataService {
       }
 
       const result = await response.json();
+      const sharedData = result.data || result;
 
       return {
         success: true,
-        data: result
+        data: Array.isArray(sharedData) ? sharedData : []
       };
     } catch (error) {
       console.error('Failed to fetch shared data:', error);
@@ -1477,11 +1486,12 @@ class ServerDataService {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const datasets = await response.json();
+      const result = await response.json();
+      const datasets = result.data || result;
 
       return {
         success: true,
-        data: datasets
+        data: Array.isArray(datasets) ? datasets : []
       };
     } catch (error) {
       console.error('Failed to fetch datasets:', error);
