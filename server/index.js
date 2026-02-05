@@ -112,7 +112,12 @@ app.get('/api/users', auth, (req, res) => {
     }
 
     try {
-        const users = db.prepare('SELECT id, username, created_at, last_sync, total_businesses, storage_used_mb FROM users').all();
+        const users = db.prepare(`
+            SELECT u.id, u.username, u.created_at, u.last_sync, u.total_businesses, u.storage_used_mb,
+                   (SELECT COUNT(*) FROM shared_towns WHERE targetUserId = u.id) as shared_town_count,
+                   (SELECT COUNT(*) FROM shared_businesses WHERE targetUserId = u.id) as shared_business_count
+            FROM users u
+        `).all();
         res.json({ success: true, data: users });
     } catch (error) {
         console.error('Fetch users error:', error);
@@ -386,9 +391,25 @@ app.get('/api/user-businesses/:userId', auth, (req, res) => {
     }
     const { userId } = req.params;
     try {
-        const businesses = db.prepare('SELECT * FROM leads WHERE userId = ?').all(userId);
-        res.json({ success: true, data: businesses });
+        const businesses = db.prepare(`
+            SELECT * FROM leads 
+            WHERE userId = ? 
+            OR town IN (SELECT town FROM shared_towns WHERE targetUserId = ?)
+            OR id IN (SELECT businessId FROM shared_businesses WHERE targetUserId = ?)
+        `).all(userId, userId, userId);
+
+        res.json({
+            success: true,
+            data: businesses.map(lead => ({
+                ...lead,
+                isShared: lead.userId != userId,
+                coordinates: { lat: lead.lat, lng: lead.lng },
+                notes: JSON.parse(lead.notes || '[]'),
+                metadata: JSON.parse(lead.metadata || '{}')
+            }))
+        });
     } catch (err) {
+        console.error('User businesses fetch error:', err);
         res.status(500).json({ success: false, error: 'Failed to fetch user businesses' });
     }
 });

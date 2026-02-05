@@ -44,6 +44,7 @@ export interface Business {
   metadata: BusinessMetadata;
   mapsLink?: string;
   dataset?: string; // Dataset name for filtering
+  isShared?: boolean;
 }
 
 export type ViewMode = 'dashboard' | 'table' | 'map' | 'stats' | 'settings' | 'route' | 'seen' | 'present';

@@ -12,6 +12,8 @@ interface UserDataStats {
   routeCount: number;
   lastSync: string;
   storageUsed: number;
+  sharedTownCount: number;
+  sharedBusinessCount: number;
 }
 
 interface AvailableTown {
@@ -55,11 +57,12 @@ export const UserDataManagement: React.FC = () => {
 
   useEffect(() => {
     loadUserStats();
+    loadSharedData();
   }, []);
 
   const loadUserStats = async () => {
     if (!token) return;
-    
+
     try {
       const result = await serverDataService.getUsers(token);
       if (result.success) {
@@ -70,7 +73,9 @@ export const UserDataManagement: React.FC = () => {
           businessCount: user.total_businesses || 0,
           routeCount: 0, // Would need separate endpoint for routes
           lastSync: user.last_sync || new Date().toISOString(),
-          storageUsed: user.storage_used_mb || 0
+          storageUsed: user.storage_used_mb || 0,
+          sharedTownCount: user.shared_town_count || 0,
+          sharedBusinessCount: user.shared_business_count || 0
         }));
         setUserStats(stats);
       } else {
@@ -85,7 +90,7 @@ export const UserDataManagement: React.FC = () => {
 
   const loadSharedData = async () => {
     if (!token) return;
-    
+
     setLoadingSharedData(true);
     try {
       const result = await serverDataService.getSharedData(token);
@@ -113,7 +118,7 @@ export const UserDataManagement: React.FC = () => {
 
   const loadUserBusinesses = async (businessUserId: number) => {
     if (!token) return;
-    
+
     try {
       const result = await serverDataService.getUserBusinesses(businessUserId, token);
       if (result.success) {
@@ -136,7 +141,7 @@ export const UserDataManagement: React.FC = () => {
 
   const handleAddBusiness = async () => {
     if (!token || !selectedUserId) return;
-    
+
     try {
       const businessToAdd: Business = {
         id: `business_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
@@ -180,7 +185,7 @@ export const UserDataManagement: React.FC = () => {
 
   const loadAvailableTowns = async () => {
     if (!token) return;
-    
+
     try {
       const result = await serverDataService.getAvailableTowns(token);
       if (result.success) {
@@ -198,7 +203,7 @@ export const UserDataManagement: React.FC = () => {
 
   const handleShareTowns = async () => {
     if (!token || !targetUserId || selectedTowns.length === 0) return;
-    
+
     setIsSharing(true);
     try {
       const result = await serverDataService.shareTowns(targetUserId, selectedTowns, token);
@@ -220,7 +225,7 @@ export const UserDataManagement: React.FC = () => {
 
   const handleShareBusinesses = async () => {
     if (!token || !targetUserId || selectedBusinesses.length === 0) return;
-    
+
     setIsSharing(true);
     try {
       const result = await serverDataService.shareBusinesses(targetUserId, selectedBusinesses, token);
@@ -242,7 +247,7 @@ export const UserDataManagement: React.FC = () => {
 
   const handleUnshareTowns = async (targetUserId: number, towns: string[]) => {
     if (!token || towns.length === 0) return;
-    
+
     try {
       const result = await serverDataService.unshareTowns(targetUserId, towns, token);
       if (result.success) {
@@ -259,7 +264,7 @@ export const UserDataManagement: React.FC = () => {
 
   const handleUnshareBusinesses = async (targetUserId: number, businessIds: string[]) => {
     if (!token || businessIds.length === 0) return;
-    
+
     try {
       const result = await serverDataService.unshareBusinesses(targetUserId, businessIds, token);
       if (result.success) {
@@ -287,7 +292,7 @@ export const UserDataManagement: React.FC = () => {
 
   const handleDeleteBusiness = async (businessId: string) => {
     if (!token || !window.confirm('Are you sure you want to delete this business?')) return;
-    
+
     try {
       const result = await serverDataService.deleteBusiness(businessId, token);
       if (result.success) {
@@ -321,7 +326,7 @@ export const UserDataManagement: React.FC = () => {
               <p className="text-sm text-slate-600">View and manage all users' business data</p>
             </div>
           </div>
-          
+
           {/* Share Actions */}
           <div className="flex items-center gap-2">
             <button
@@ -400,6 +405,26 @@ export const UserDataManagement: React.FC = () => {
                   {new Date(stat.lastSync).toLocaleDateString()}
                 </span>
               </div>
+              <div className="pt-2 mt-2 border-t border-slate-100">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Access Rights</span>
+                  <div className="flex gap-1">
+                    {stat.sharedTownCount > 0 && (
+                      <span className="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {stat.sharedTownCount} Towns
+                      </span>
+                    )}
+                    {stat.sharedBusinessCount > 0 && (
+                      <span className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                        {stat.sharedBusinessCount} Leads
+                      </span>
+                    )}
+                    {stat.sharedTownCount === 0 && stat.sharedBusinessCount === 0 && (
+                      <span className="text-[10px] text-slate-400 font-medium italic">No shared data</span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         ))}
@@ -414,14 +439,37 @@ export const UserDataManagement: React.FC = () => {
                 <h3 className="text-lg font-bold text-slate-900">
                   {userStats.find(u => u.userId === selectedUserId)?.username}'s Business Data
                 </h3>
-                <p className="text-sm text-slate-600">
-                  {filteredBusinesses.length} businesses
-                  {selectedBusinesses.length > 0 && (
-                    <span className="ml-2 text-indigo-600">
-                      • {selectedBusinesses.length} selected
-                    </span>
-                  )}
-                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  <p className="text-sm text-slate-600">
+                    {filteredBusinesses.length} businesses
+                    {selectedBusinesses.length > 0 && (
+                      <span className="ml-2 text-indigo-600">
+                        • {selectedBusinesses.length} selected
+                      </span>
+                    )}
+                  </p>
+                  {/* Shared Info Badges */}
+                  {(() => {
+                    const shared = sharedDataUsers.find(u => u.userId === selectedUserId);
+                    if (!shared) return null;
+                    return (
+                      <div className="flex gap-2 ml-4">
+                        {shared.sharedTowns.length > 0 && (
+                          <span className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                            Shared Towns: {shared.sharedTowns.map(t => t.town).join(', ')}
+                            <button onClick={() => handleUnshareTowns(selectedUserId, shared.sharedTowns.map(t => t.town))} className="hover:text-green-900"><X className="h-2 w-2" /></button>
+                          </span>
+                        )}
+                        {shared.sharedBusinesses.length > 0 && (
+                          <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                            {shared.sharedBusinesses.length} Shared Leads
+                            <button onClick={() => handleUnshareBusinesses(selectedUserId, shared.sharedBusinesses.map(b => b.id))} className="hover:text-blue-900"><X className="h-2 w-2" /></button>
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 {selectedBusinesses.length > 0 && (
@@ -504,7 +552,12 @@ export const UserDataManagement: React.FC = () => {
                       className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                     />
                     <div className="flex-1">
-                      <h4 className="font-semibold text-slate-900">{business.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-slate-900">{business.name}</h4>
+                        {business.isShared && (
+                          <span className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Shared</span>
+                        )}
+                      </div>
                       <p className="text-sm text-slate-600">{business.address}</p>
                       <div className="flex items-center gap-4 mt-1">
                         <span className="text-xs text-slate-500">{business.phone}</span>
@@ -522,7 +575,7 @@ export const UserDataManagement: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => {/* Edit functionality */}}
+                      onClick={() => {/* Edit functionality */ }}
                       className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                       title="Edit business"
                     >
@@ -548,7 +601,7 @@ export const UserDataManagement: React.FC = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4">Add Business</h3>
-            
+
             <div className="space-y-4">
               <input
                 type="text"
@@ -593,7 +646,7 @@ export const UserDataManagement: React.FC = () => {
                 placeholder="Town"
               />
             </div>
-            
+
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowAddBusinessModal(false)}
@@ -628,7 +681,7 @@ export const UserDataManagement: React.FC = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             {/* Target User Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -714,7 +767,7 @@ export const UserDataManagement: React.FC = () => {
                 </div>
               </div>
             )}
-            
+
             <div className="flex gap-3">
               <button
                 onClick={() => setShowShareModal(false)}
@@ -725,14 +778,14 @@ export const UserDataManagement: React.FC = () => {
               <button
                 onClick={shareType === 'towns' ? handleShareTowns : handleShareBusinesses}
                 disabled={
-                  !targetUserId || 
-                  isSharing || 
+                  !targetUserId ||
+                  isSharing ||
                   (shareType === 'towns' ? selectedTowns.length === 0 : selectedBusinesses.length === 0)
                 }
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                <ButtonLoading 
-                  loading={isSharing} 
+                <ButtonLoading
+                  loading={isSharing}
                   loadingText="Sharing..."
                   className="flex items-center gap-2"
                 >
@@ -758,7 +811,7 @@ export const UserDataManagement: React.FC = () => {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            
+
             <div className="space-y-6">
               {loadingSharedData ? (
                 <div className="flex items-center justify-center py-8">
@@ -793,9 +846,9 @@ export const UserDataManagement: React.FC = () => {
                         )}
                       </div>
                     </div>
-                    
-                    {(Array.isArray(user.sharedTowns) ? user.sharedTowns.length : 0) === 0 && 
-                     (Array.isArray(user.sharedBusinesses) ? user.sharedBusinesses.length : 0) === 0 ? (
+
+                    {(Array.isArray(user.sharedTowns) ? user.sharedTowns.length : 0) === 0 &&
+                      (Array.isArray(user.sharedBusinesses) ? user.sharedBusinesses.length : 0) === 0 ? (
                       <div className="text-sm text-slate-500">
                         No shared data for this user
                       </div>
@@ -824,7 +877,7 @@ export const UserDataManagement: React.FC = () => {
                             </div>
                           </div>
                         )}
-                        
+
                         {Array.isArray(user.sharedBusinesses) && user.sharedBusinesses.length > 0 && (
                           <div>
                             <h5 className="text-sm font-medium text-slate-700 mb-2">
@@ -855,7 +908,7 @@ export const UserDataManagement: React.FC = () => {
                 ))
               )}
             </div>
-            
+
             <div className="mt-6 flex justify-end">
               <button
                 onClick={() => setShowSharedDataModal(false)}
