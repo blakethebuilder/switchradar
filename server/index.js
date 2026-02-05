@@ -246,6 +246,67 @@ app.get('/api/businesses', auth, (req, res) => {
     }
 });
 
+app.put('/api/businesses/:id', auth, (req, res) => {
+    const { id } = req.params;
+    const updates = req.body;
+    try {
+        // Check permissions: admin/super_admin or the actual owner
+        const business = db.prepare('SELECT userId FROM leads WHERE id = ?').get(id);
+        if (!business) {
+            return res.status(404).json({ success: false, error: 'Business not found' });
+        }
+
+        if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin' && business.userId !== req.userData.userId) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        const fields = [];
+        const values = [];
+
+        const allowedFields = ['name', 'address', 'phone', 'email', 'website', 'provider', 'category', 'town', 'province', 'status', 'lat', 'lng', 'notes', 'metadata'];
+
+        for (const field of allowedFields) {
+            if (updates[field] !== undefined) {
+                fields.push(`${field} = ?`);
+                if (field === 'notes' || field === 'metadata') {
+                    values.push(JSON.stringify(updates[field]));
+                } else {
+                    values.push(updates[field]);
+                }
+            }
+        }
+
+        // Handle nested coordinates if provided separately from lat/lng
+        if (updates.coordinates) {
+            if (updates.coordinates.lat !== undefined && updates.lat === undefined) {
+                fields.push('lat = ?');
+                values.push(updates.coordinates.lat);
+            }
+            if (updates.coordinates.lng !== undefined && updates.lng === undefined) {
+                fields.push('lng = ?');
+                values.push(updates.coordinates.lng);
+            }
+        }
+
+        if (fields.length === 0) {
+            return res.status(400).json({ success: false, error: 'No fields to update' });
+        }
+
+        fields.push('last_modified = CURRENT_TIMESTAMP');
+        values.push(id);
+
+        db.prepare(`UPDATE leads SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+
+        // Update user sync status
+        updateUserStats(business.userId);
+
+        res.json({ success: true, message: 'Business updated successfully' });
+    } catch (error) {
+        console.error('Update business error:', error);
+        res.status(500).json({ success: false, error: 'Update failed' });
+    }
+});
+
 app.post('/api/businesses/sync', auth, (req, res) => {
     const { businesses, clearFirst } = req.body;
     const userId = req.userData.userId;

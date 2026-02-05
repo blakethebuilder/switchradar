@@ -56,11 +56,41 @@ export const UserDataManagement: React.FC = () => {
     category: '',
     town: ''
   });
+  const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   useEffect(() => {
     loadUserStats();
     loadSharedData();
   }, []);
+
+  const handleEditBusiness = (business: Business) => {
+    setEditingBusiness(JSON.parse(JSON.stringify(business))); // Deep clone
+    setShowEditModal(true);
+  };
+
+  const handleUpdateBusiness = async () => {
+    if (!token || !editingBusiness) return;
+    setIsSharing(true);
+    try {
+      const result = await serverDataService.updateBusiness(editingBusiness.id, editingBusiness, token);
+      if (result.success) {
+        setShowEditModal(false);
+        setEditingBusiness(null);
+        if (selectedUserId) {
+          loadUserBusinesses(selectedUserId);
+        }
+        loadUserStats(); // Refresh stats for counts
+      } else {
+        setError(result.error || 'Failed to update business');
+      }
+    } catch (err) {
+      console.error('Update error:', err);
+      setError('An error occurred during update');
+    } finally {
+      setIsSharing(false);
+    }
+  };
 
   const loadUserStats = async () => {
     if (!token) return;
@@ -621,7 +651,7 @@ export const UserDataManagement: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => {/* Edit functionality */ }}
+                      onClick={() => handleEditBusiness(business)}
                       className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                       title="Edit business"
                     >
@@ -961,6 +991,124 @@ export const UserDataManagement: React.FC = () => {
                 className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Business Modal */}
+      {showEditModal && editingBusiness && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl max-w-lg w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-slate-900 border-l-4 border-indigo-500 pl-3">
+                Edit Lead Data
+              </h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Business Name</label>
+                  <input
+                    type="text"
+                    value={editingBusiness.name}
+                    onChange={(e) => setEditingBusiness({ ...editingBusiness, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                  <input
+                    type="text"
+                    value={editingBusiness.address}
+                    onChange={(e) => setEditingBusiness({ ...editingBusiness, address: e.target.value })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                    <input
+                      type="text"
+                      value={editingBusiness.phone}
+                      onChange={(e) => setEditingBusiness({ ...editingBusiness, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Town</label>
+                    <input
+                      type="text"
+                      value={editingBusiness.town}
+                      onChange={(e) => setEditingBusiness({ ...editingBusiness, town: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Provider</label>
+                    <input
+                      type="text"
+                      value={editingBusiness.provider}
+                      onChange={(e) => setEditingBusiness({ ...editingBusiness, provider: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                    <input
+                      type="text"
+                      value={editingBusiness.category}
+                      onChange={(e) => setEditingBusiness({ ...editingBusiness, category: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select
+                    value={editingBusiness.status}
+                    onChange={(e) => setEditingBusiness({ ...editingBusiness, status: e.target.value as any })}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="active">Active</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="converted">Converted</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8">
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors"
+                disabled={isSharing}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateBusiness}
+                disabled={isSharing}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-bold"
+              >
+                <ButtonLoading
+                  loading={isSharing}
+                  loadingText="Saving..."
+                  className="flex items-center gap-2"
+                >
+                  Save Changes
+                </ButtonLoading>
               </button>
             </div>
           </div>
