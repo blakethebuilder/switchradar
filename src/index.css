@@ -72,15 +72,19 @@
     .touch-manipulation {
       touch-action: manipulation;
     }
-    
+
     /* Larger touch targets on mobile */
-    button, select, input[type="file"] {
+    button,
+    select,
+    input[type="file"] {
       min-height: 44px;
       touch-action: manipulation;
     }
-    
+
     /* Prevent zoom on input focus */
-    input, select, textarea {
+    input,
+    select,
+    textarea {
       font-size: 16px;
     }
   }
@@ -193,7 +197,7 @@
     -webkit-perspective: 1000;
     perspective: 1000;
   }
-  
+
   .custom-marker,
   .custom-cluster-icon,
   .cluster-icon-stable {
@@ -202,7 +206,7 @@
     -webkit-backface-visibility: hidden;
     backface-visibility: hidden;
   }
-  
+
   /* Reduce animations on mobile for better performance */
   .marker-cluster-small,
   .marker-cluster-medium,
@@ -211,13 +215,14 @@
     transition: none !important;
     animation: none !important;
   }
-  
+
   /* Optimize spiderfy animations for mobile */
   .leaflet-cluster-anim .leaflet-marker-icon,
   .leaflet-cluster-anim .leaflet-marker-shadow {
-    transition: transform 0.2s ease-out !important; /* Faster on mobile */
+    transition: transform 0.2s ease-out !important;
+    /* Faster on mobile */
   }
-  
+
   /* Optimize scrolling */
   .custom-scrollbar {
     -webkit-overflow-scrolling: touch;
@@ -230,7 +235,7 @@
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
   }
-  
+
   /* Slightly reduced spiral animations for tablets */
   .leaflet-cluster-anim .leaflet-marker-icon,
   .leaflet-cluster-anim .leaflet-marker-shadow {
@@ -261,4 +266,45 @@
   will-change: transform;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
+}
+
+/* User Location Marker */
+.user-location-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none !important;
+}
+
+.user-location-dot {
+  width: 12px;
+  height: 12px;
+  background: #4f46e5;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
+  z-index: 2;
+  position: absolute;
+}
+
+.user-location-pulse {
+  width: 20px;
+  height: 20px;
+  background: rgba(79, 70, 229, 0.3);
+  border-radius: 50%;
+  position: absolute;
+  animation: location-pulse 2s infinite ease-out;
+  z-index: 1;
+}
+
+@keyframes location-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
 }

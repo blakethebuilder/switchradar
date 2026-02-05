@@ -10,7 +10,7 @@ import type { Business } from '../types';
 import { MapController } from './MapController';
 import { MapMarkers } from './MapMarkers';
 import { MapControls } from './MapControls';
-import { DroppedPinIcon } from '../utils/mapIcons';
+import { DroppedPinIcon, UserLocationIcon } from '../utils/mapIcons';
 import { LoadingSpinner } from './LoadingStates';
 
 // Fix for default markers
@@ -59,6 +59,10 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
   const [isMapLoading, setIsMapLoading] = useState(true);
   const previousBusinessCountRef = React.useRef<number>(0);
   const hasInitialFitRef = React.useRef<boolean>(false);
+  const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
+  const watchIdRef = React.useRef<number | null>(null);
 
   // Memoize businesses to prevent unnecessary re-renders and limit for performance
   const memoizedBusinesses = React.useMemo(() => {
@@ -231,6 +235,62 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
     setDroppedPin(null);
   }, [setDroppedPin]);
 
+  const handleLocateMe = useCallback(() => {
+    if (!navigator.geolocation) {
+      alert('Geolocation is not supported by your browser');
+      return;
+    }
+
+    setIsLocating(true);
+
+    // One-time high accuracy position fetch to center the map immediately
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude, accuracy } = position.coords;
+        console.log('📍 GEOLOCATION: User located', { latitude, longitude, accuracy });
+
+        setUserLocation([latitude, longitude]);
+        setLocationAccuracy(accuracy);
+
+        if (mapInstance) {
+          mapInstance.setView([latitude, longitude], 15, {
+            animate: true,
+            duration: 1
+          });
+        }
+        setIsLocating(false);
+      },
+      (error) => {
+        console.error('❌ GEOLOCATION: Error', error);
+        setIsLocating(false);
+        alert(`Could not determine your location: ${error.message}`);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+
+    // Start watching position for real-time updates if not already watching
+    if (watchIdRef.current === null) {
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude, accuracy } = position.coords;
+          setUserLocation([latitude, longitude]);
+          setLocationAccuracy(accuracy);
+        },
+        (error) => console.warn('📍 GEOLOCATION: Watch error', error),
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 5000 }
+      );
+    }
+  }, [mapInstance]);
+
+  // Clean up geolocation watch on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+    };
+  }, []);
+
   // Navigation handlers
   const navigateToNextBusiness = useCallback(() => {
     if (businesses.length === 0) return;
@@ -362,6 +422,31 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           </>
         )}
 
+        {/* User location marker */}
+        {userLocation && (
+          <>
+            <Marker
+              position={userLocation}
+              icon={UserLocationIcon}
+              zIndexOffset={1000}
+            />
+            {locationAccuracy && locationAccuracy > 20 && (
+              <Circle
+                center={userLocation}
+                radius={locationAccuracy}
+                pathOptions={{
+                  fillColor: '#4f46e5',
+                  fillOpacity: 0.1,
+                  color: '#4f46e5',
+                  weight: 1,
+                  opacity: 0.3,
+                  dashArray: '5, 5'
+                }}
+              />
+            )}
+          </>
+        )}
+
         {/* Business markers */}
         <MapMarkers
           key="business-markers"
@@ -390,6 +475,8 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
         onFitBounds={handleFitBounds}
         onToggleDropMode={handleToggleDropMode}
         onClearPin={handleClearPin}
+        onLocateMe={handleLocateMe}
+        isLocating={isLocating}
       />
 
       {/* Navigation controls */}

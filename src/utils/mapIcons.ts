@@ -30,7 +30,7 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
   const color = getProviderColor(safeProvider) || '#6b7280';
   const label = getProviderLabel(safeProvider);
   const size = isSelected ? 28 : 24;
-  
+
   return L.divIcon({
     className: 'simple-marker',
     html: `<div style="
@@ -49,7 +49,7 @@ export const createProviderIcon = (provider: string, isSelected: boolean = false
       cursor: pointer;
     ">${label}</div>`,
     iconSize: [size, size],
-    iconAnchor: [size/2, size/2],
+    iconAnchor: [size / 2, size / 2],
   });
 };
 
@@ -66,4 +66,12 @@ export const DroppedPinIcon = L.divIcon({
   "></div>`,
   iconSize: [32, 32],
   iconAnchor: [16, 32],
+});
+
+// User location icon
+export const UserLocationIcon = L.divIcon({
+  className: 'user-location-marker',
+  html: '<div class="user-location-dot"></div><div class="user-location-pulse"></div>',
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
 });

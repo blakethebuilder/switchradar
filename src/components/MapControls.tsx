@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus, Target, MapPin, X, Info } from 'lucide-react';
+import { Plus, Minus, Target, MapPin, X, Info, Navigation } from 'lucide-react';
 import type { Business } from '../types';
 
 interface MapControlsProps {
@@ -12,6 +12,8 @@ interface MapControlsProps {
   onFitBounds: () => void;
   onToggleDropMode: () => void;
   onClearPin: () => void;
+  onLocateMe: () => void;
+  isLocating: boolean;
 }
 
 export const MapControls: React.FC<MapControlsProps> = ({
@@ -23,7 +25,9 @@ export const MapControls: React.FC<MapControlsProps> = ({
   onZoomOut,
   onFitBounds,
   onToggleDropMode,
-  onClearPin
+  onClearPin,
+  onLocateMe,
+  isLocating
 }) => {
   return (
     <div className="absolute top-4 right-0 z-[1000] flex flex-col gap-1 md:gap-2">
@@ -51,7 +55,7 @@ export const MapControls: React.FC<MapControlsProps> = ({
           {droppedPin && (
             <div className="pt-1 md:pt-2 border-t border-slate-200">
               <div className="flex items-center gap-1">
-                <div className="h-1 w-1 md:h-2 md:w-2 bg-rose-500 rounded-full"></div>
+                <div className="h-1 v-1 md:h-2 md:w-2 bg-rose-500 rounded-full"></div>
                 <span className="text-[8px] md:text-xs font-bold text-rose-600">Pin Active</span>
               </div>
               <button
@@ -84,9 +88,17 @@ export const MapControls: React.FC<MapControlsProps> = ({
             <Minus className="h-2.5 w-2.5 md:h-4 md:w-4" />
           </button>
         </div>
-        
+
         {/* Action Controls */}
         <div className="flex flex-col">
+          <button
+            onClick={onLocateMe}
+            className={`p-1 md:p-2 transition-all duration-200 border-b border-slate-100/50 flex items-center justify-center ${isLocating ? 'text-indigo-600 bg-indigo-50' : 'text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'
+              }`}
+            title="Locate Me"
+          >
+            <Navigation className={`h-2.5 w-2.5 md:h-4 md:w-4 ${isLocating ? 'animate-pulse' : ''}`} />
+          </button>
           <button
             onClick={onFitBounds}
             className="p-1 md:p-2 text-slate-600 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-200 border-b border-slate-100/50 flex items-center justify-center"
@@ -96,11 +108,10 @@ export const MapControls: React.FC<MapControlsProps> = ({
           </button>
           <button
             onClick={onToggleDropMode}
-            className={`p-1 md:p-2 transition-all duration-200 flex items-center justify-center ${
-              isDropMode 
-                ? 'bg-rose-500 text-white hover:bg-rose-600' 
+            className={`p-1 md:p-2 transition-all duration-200 flex items-center justify-center ${isDropMode
+                ? 'bg-rose-500 text-white hover:bg-rose-600'
                 : 'text-slate-600 hover:bg-rose-50 hover:text-rose-600'
-            }`}
+              }`}
             title={isDropMode ? 'Cancel Drop Pin' : 'Drop Filter Pin (500m radius)'}
           >
             {isDropMode ? <X className="h-2.5 w-2.5 md:h-4 md:w-4" /> : <MapPin className="h-2.5 w-2.5 md:h-4 md:w-4" />}
