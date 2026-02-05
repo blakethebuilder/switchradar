@@ -24,9 +24,11 @@
   will-change: auto;
 }
 
-/* Prevent marker flickering on hover */
+/* Safe hover effect that doesn't cause disappearing - only changes opacity */
 .custom-marker-stable:hover .marker-content {
-  /* No hover effects to prevent glitches */
+  /* Safe hover effect - only opacity change, no transforms */
+  opacity: 0.8;
+  /* Still prevent any transforms that cause glitches */
   transform: none !important;
   transition: none !important;
 }

@@ -27,33 +27,30 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
+  businessCount,
+  providerCount,
   onImportClick,
   onViewModeChange,
   onTownSelect
 }) => {
   const { user } = useAuth();
   const { 
-    businesses, 
     availableTowns, 
-    availableProviders,
-    setSelectedTown,
-    routeItems,
-    loading
+    routeItems
   } = useBusinessData();
 
   const [selectedTownForView, setSelectedTownForView] = useState<string>('');
 
-  // Calculate data overview
+  // Calculate data overview using props instead of hook data
   const dataOverview = {
-    totalBusinesses: businesses.length,
+    totalBusinesses: businessCount,
     totalTowns: availableTowns.length,
-    totalProviders: availableProviders.length,
+    totalProviders: providerCount,
     routeItems: routeItems.length
   };
 
   const handleTownSelection = (town: string) => {
     setSelectedTownForView(town);
-    setSelectedTown(town);
     if (onTownSelect) {
       onTownSelect(town);
     }
@@ -72,16 +69,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return 'Good evening';
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/20 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading your workspace...</p>
-        </div>
-      </div>
-    );
-  }
+  // Remove the loading check since it's handled by ViewRenderer now
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/20 flex flex-col">
@@ -175,7 +163,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 </button>
                 
                 {availableTowns.map((town) => {
-                  const townBusinessCount = businesses.filter(b => b.town === town).length;
                   return (
                     <button
                       key={town}
@@ -190,7 +177,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <MapPin className="h-4 w-4" />
                         <span className="font-bold text-sm">{town}</span>
                       </div>
-                      <p className="text-xs opacity-75">{townBusinessCount} businesses</p>
+                      <p className="text-xs opacity-75">Explore {town}</p>
                     </button>
                   );
                 })}

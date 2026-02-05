@@ -90,28 +90,9 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
           position={[business.coordinates.lat, business.coordinates.lng]}
           icon={icon}
           eventHandlers={{ 
-            click: handleClick,
-            // Add hover effects for better UX at high zoom levels
-            mouseover: (e) => {
-              const marker = e.target;
-              if (marker.getElement) {
-                const element = marker.getElement();
-                if (element) {
-                  element.style.transform = 'scale(1.2)';
-                  element.style.zIndex = '1000';
-                }
-              }
-            },
-            mouseout: (e) => {
-              const marker = e.target;
-              if (marker.getElement) {
-                const element = marker.getElement();
-                if (element) {
-                  element.style.transform = 'scale(1)';
-                  element.style.zIndex = '';
-                }
-              }
-            }
+            click: handleClick
+            // Removed problematic hover effects that cause markers to disappear
+            // The CSS transforms were interfering with marker rendering
           }}
         />
       );
