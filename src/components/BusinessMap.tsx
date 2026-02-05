@@ -11,6 +11,7 @@ import { MapController } from './MapController';
 import { MapMarkers } from './MapMarkers';
 import { MapControls } from './MapControls';
 import { DroppedPinIcon } from '../utils/mapIcons';
+import { LoadingSpinner } from './LoadingStates';
 
 // Fix for default markers
 const DefaultIcon = L.icon({
@@ -208,10 +209,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
       {/* Loading overlay */}
       {isMapLoading && (
         <div className="absolute inset-0 z-[3000] bg-slate-100 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p className="text-slate-600 font-medium">Loading map...</p>
-          </div>
+          <LoadingSpinner size="lg" message="Loading map..." />
         </div>
       )}
 

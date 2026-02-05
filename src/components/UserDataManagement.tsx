@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Database, Eye, Edit, Plus, Trash2, Search, Share2, MapPin, Building2, X } from 'lucide-react';
 import { serverDataService } from '../services/serverData';
 import { useAuth } from '../context/AuthContext';
+import { ButtonLoading } from './LoadingStates';
 import type { Business } from '../types';
 
 interface UserDataStats {
@@ -680,17 +681,14 @@ export const UserDataManagement: React.FC = () => {
                 }
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {isSharing ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    Sharing...
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="h-4 w-4" />
-                    Share {shareType === 'towns' ? `${selectedTowns.length} Towns` : `${selectedBusinesses.length} Businesses`}
-                  </>
-                )}
+                <ButtonLoading 
+                  loading={isSharing} 
+                  loadingText="Sharing..."
+                  className="flex items-center gap-2"
+                >
+                  <Share2 className="h-4 w-4" />
+                  Share {shareType === 'towns' ? `${selectedTowns.length} Towns` : `${selectedBusinesses.length} Businesses`}
+                </ButtonLoading>
               </button>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Plus, Trash2, Shield, User as UserIcon, Calendar, CheckCircle, Edit, Key, X } from 'lucide-react';
 import { serverDataService } from '../services/serverData';
 import { useAuth } from '../context/AuthContext';
+import { LoadingSpinner, ButtonLoading } from './LoadingStates';
 
 interface ServerUser {
   id: number;
@@ -242,9 +243,9 @@ export const UserManagement: React.FC = () => {
       {/* Users List */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="px-6 py-4 border-b border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900">
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
             System Users ({users.length})
-            {loading && <span className="text-sm text-slate-500 ml-2">Loading...</span>}
+            {loading && <LoadingSpinner size="sm" inline />}
           </h3>
         </div>
         
@@ -373,7 +374,9 @@ export const UserManagement: React.FC = () => {
                 disabled={loading || !newUser.username.trim() || !newUser.password.trim()}
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating...' : 'Add User'}
+                <ButtonLoading loading={loading} loadingText="Creating...">
+                  Add User
+                </ButtonLoading>
               </button>
             </div>
           </div>
@@ -449,7 +452,9 @@ export const UserManagement: React.FC = () => {
                 disabled={loading || !editUser.username.trim()}
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Updating...' : 'Update User'}
+                <ButtonLoading loading={loading} loadingText="Updating...">
+                  Update User
+                </ButtonLoading>
               </button>
             </div>
           </div>

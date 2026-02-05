@@ -15,6 +15,7 @@ import { useImportState } from './hooks/useImportState';
 import { useBusinessOperations } from './hooks/useBusinessOperations';
 import { useRouteOperations } from './hooks/useRouteOperations';
 import { ImportService } from './services/importService';
+import { ImportLoading } from './components/LoadingStates';
 import './App.css';
 import type { ImportMapping } from './types';
 
@@ -387,26 +388,12 @@ function App() {
         
         <main className="flex-1 flex flex-col overflow-hidden relative">
           {isImporting ? (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-                <p className="text-slate-600">
-                  {importProgress || 'Processing import...'}
-                </p>
-                {importProgress && importProgress.includes('%') && (
-                  <div className="mt-4 w-64 mx-auto">
-                    <div className="bg-slate-200 rounded-full h-2">
-                      <div 
-                        className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                        style={{ 
-                          width: `${importProgress.match(/(\d+)%/)?.[1] || 0}%` 
-                        }}
-                      ></div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            <ImportLoading 
+              progress={importProgress}
+              stage={importProgress?.includes('Uploading') ? 'uploading' : 
+                     importProgress?.includes('Validating') ? 'validating' :
+                     importProgress?.includes('Completing') ? 'completing' : 'processing'}
+            />
           ) : (
             <ViewRenderer
               viewMode={viewMode}

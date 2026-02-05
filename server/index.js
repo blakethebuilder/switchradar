@@ -810,6 +810,86 @@ app.post('/api/users', auth, (req, res) => {
     }
 });
 
+app.put('/api/users/:userId', auth, async (req, res) => {
+    console.log('📥 PUT /api/users/:userId - Update user request received from:', req.userData.username);
+    const { role } = req.userData;
+    const { userId } = req.params;
+    const { username, password } = req.body;
+    
+    console.log('📊 Request data:', { userId, username, passwordLength: password?.length, userRole: role });
+    
+    if (role !== 'admin') {
+        console.log('❌ Access denied - user is not admin:', role);
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    if (!username && !password) {
+        console.log('❌ No updates provided');
+        return res.status(400).json({ message: 'At least username or password must be provided' });
+    }
+    
+    try {
+        // Check if user exists
+        const existingUser = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+        if (!existingUser) {
+            console.log('❌ User not found:', userId);
+            return res.status(404).json({ message: 'User not found' });
+        }
+        
+        console.log('✅ User found:', existingUser.username);
+        
+        // Prepare update query parts
+        const updateParts = [];
+        const updateValues = [];
+        
+        if (username) {
+            // Check if new username already exists (but not for the same user)
+            const usernameCheck = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(username, userId);
+            if (usernameCheck) {
+                console.log('❌ Username already exists:', username);
+                return res.status(400).json({ message: 'Username already exists' });
+            }
+            updateParts.push('username = ?');
+            updateValues.push(username);
+        }
+        
+        if (password) {
+            console.log('🔐 Hashing new password...');
+            const hashedPassword = await bcrypt.hash(password, 10);
+            updateParts.push('password = ?');
+            updateValues.push(hashedPassword);
+        }
+        
+        // Add user ID for WHERE clause
+        updateValues.push(userId);
+        
+        // Execute update
+        const updateQuery = `UPDATE users SET ${updateParts.join(', ')} WHERE id = ?`;
+        console.log('💾 Executing update query:', updateQuery.replace(/\?/g, '[value]'));
+        
+        const result = db.prepare(updateQuery).run(...updateValues);
+        
+        if (result.changes === 0) {
+            console.log('❌ No changes made to user:', userId);
+            return res.status(404).json({ message: 'User not found or no changes made' });
+        }
+        
+        console.log('✅ User updated successfully:', { userId, changes: result.changes });
+        
+        // Return updated user info (without password)
+        const updatedUser = db.prepare('SELECT id, username, created_at, last_sync, total_businesses, storage_used_mb FROM users WHERE id = ?').get(userId);
+        
+        res.json({ 
+            message: 'User updated successfully',
+            user: updatedUser
+        });
+        
+    } catch (error) {
+        console.error('❌ Failed to update user:', error);
+        res.status(500).json({ message: 'Failed to update user', error: error.message });
+    }
+});
+
 app.delete('/api/users/:userId', auth, (req, res) => {
     const { role, userId: currentUserId } = req.userData;
     const { userId } = req.params;

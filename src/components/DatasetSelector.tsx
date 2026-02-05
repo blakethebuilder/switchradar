@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Database, CheckCircle2, MapPin, Users, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { environmentConfig } from '../config/environment';
+import { DataLoading } from './LoadingStates';
 
 interface Dataset {
   id: number;
@@ -85,14 +86,7 @@ export const DatasetSelector: React.FC<DatasetSelectorProps> = ({
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12 lg:py-24">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading available datasets...</p>
-        </div>
-      </div>
-    );
+    return <DataLoading type="datasets" />;
   }
 
   if (error || datasets.length === 0) {

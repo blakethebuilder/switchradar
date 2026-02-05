@@ -6,6 +6,7 @@ import { BusinessMap } from './BusinessMap';
 import { Dashboard } from './Dashboard';
 import { DatasetSelector } from './DatasetSelector';
 import AdminConsole from './AdminConsole';
+import { LoadingSpinner, DataLoading } from './LoadingStates';
 import type { Business, ViewMode } from '../types';
 
 // Lazy load heavy components
@@ -13,12 +14,6 @@ const MarketIntelligence = React.lazy(() => import('./MarketIntelligence'));
 const RouteView = React.lazy(() => import('./RouteView'));
 const SeenClients = React.lazy(() => import('./SeenClients'));
 const PresentationView = React.lazy(() => import('./PresentationView'));
-
-const LoadingSpinner = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
-  </div>
-);
 
 interface ViewRendererProps {
   viewMode: ViewMode;
@@ -148,22 +143,11 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
   // Only show loading for non-dashboard views or when there are no businesses at all
   if ((loading || isProcessingLargeDataset) && (viewMode !== 'dashboard' || businesses.length === 0)) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-600 font-medium">
-            {isProcessingLargeDataset 
-              ? `Processing ${businesses.length.toLocaleString()} businesses...` 
-              : 'Loading businesses...'
-            }
-          </p>
-          {isProcessingLargeDataset && (
-            <p className="text-slate-500 text-sm mt-2">
-              Large dataset detected - optimizing performance
-            </p>
-          )}
-        </div>
-      </div>
+      <DataLoading
+        type="businesses"
+        count={businesses.length}
+        isLargeDataset={isProcessingLargeDataset}
+      />
     );
   }
 
@@ -209,7 +193,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
     if (viewMode === 'present') {
       return (
         <div className="flex-1 h-full">
-          <Suspense fallback={<LoadingSpinner />}>
+          <Suspense fallback={<LoadingSpinner size="lg" message="Loading presentation..." />}>
             <PresentationView onBack={() => setViewMode('table')} />
           </Suspense>
         </div>
@@ -447,7 +431,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
     case 'route':
       return (
         <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8">
-          <Suspense fallback={<LoadingSpinner />}>
+          <Suspense fallback={<LoadingSpinner size="lg" message="Loading routes..." />}>
             <RouteView 
               routeItems={routeItems} 
               businesses={businesses} 
@@ -503,7 +487,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
         <div className="flex-1 flex flex-col h-full relative">
           {renderHeader()}
           <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8 pt-0">
-            <Suspense fallback={<LoadingSpinner />}>
+            <Suspense fallback={<LoadingSpinner size="lg" message="Loading analytics..." />}>
               <MarketIntelligence 
                 businesses={filteredBusinesses} 
                 droppedPin={droppedPin} 
@@ -520,7 +504,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
         <div className="flex-1 flex flex-col h-full relative">
           {renderHeader()}
           <div className="flex-1 overflow-auto p-3 md:p-4 lg:p-6 xl:p-8 pt-0">
-            <Suspense fallback={<LoadingSpinner />}>
+            <Suspense fallback={<LoadingSpinner size="lg" message="Loading client history..." />}>
               <SeenClients 
                 businesses={businesses} 
                 onDeleteBusiness={onDeleteBusiness}
@@ -534,7 +518,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
     case 'present':
       return (
         <div className="flex-1 h-full">
-          <Suspense fallback={<LoadingSpinner />}>
+          <Suspense fallback={<LoadingSpinner size="lg" message="Loading presentation..." />}>
             <PresentationView onBack={() => setViewMode('map')} />
           </Suspense>
         </div>
