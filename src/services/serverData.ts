@@ -96,16 +96,87 @@ class ServerDataService {
       }
 
       console.log('🌐 API: Fetching businesses from server');
-      const response = await this.makeRequest(this.getApiUrl('/api/businesses'), {
-        headers: this.getAuthHeaders(token)
+      
+      // Add timeout and better error handling for large responses
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout for large datasets
+      
+      const response = await fetch(this.getApiUrl('/api/businesses'), {
+        headers: this.getAuthHeaders(token),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const result = await response.json();
+      // Check content type
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Invalid content type: ${contentType}. Expected JSON.`);
+      }
+
+      // Get response as text first to handle potential JSON parsing issues
+      const responseText = await response.text();
+      
+      if (!responseText || responseText.trim().length === 0) {
+        throw new Error('Empty response from server');
+      }
+
+      // Check if response is truncated (common signs)
+      if (responseText.endsWith('...') || !responseText.trim().endsWith('}') && !responseText.trim().endsWith(']')) {
+        console.warn('⚠️ API: Response appears to be truncated, attempting recovery');
+        
+        // Try to parse partial JSON and recover what we can
+        try {
+          const partialData = this.attemptPartialJsonRecovery(responseText);
+          if (partialData && Array.isArray(partialData) && partialData.length > 0) {
+            console.log('🔧 API: Recovered partial data:', partialData.length, 'businesses');
+            cacheService.setBusinesses(partialData);
+            return {
+              success: true,
+              data: partialData,
+              count: partialData.length
+            };
+          }
+        } catch (recoveryError) {
+          console.error('❌ API: Failed to recover partial data:', recoveryError);
+        }
+        
+        throw new Error('Response truncated and recovery failed');
+      }
+
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (jsonError) {
+        console.error('❌ API: JSON parsing failed:', jsonError);
+        console.error('Response length:', responseText.length);
+        console.error('Response preview:', responseText.substring(0, 500));
+        console.error('Response ending:', responseText.substring(Math.max(0, responseText.length - 500)));
+        
+        // Try to recover partial JSON
+        const partialData = this.attemptPartialJsonRecovery(responseText);
+        if (partialData && Array.isArray(partialData) && partialData.length > 0) {
+          console.log('🔧 API: Recovered partial data after JSON error:', partialData.length, 'businesses');
+          cacheService.setBusinesses(partialData);
+          return {
+            success: true,
+            data: partialData,
+            count: partialData.length
+          };
+        }
+        
+        throw new Error(`JSON parsing failed: ${jsonError.message}`);
+      }
+
       const businesses = result.data || result; // Handle both paginated and direct responses
+
+      if (!Array.isArray(businesses)) {
+        throw new Error('Invalid response format: expected array of businesses');
+      }
 
       // Cache the result
       cacheService.setBusinesses(businesses);
@@ -137,7 +208,160 @@ class ServerDataService {
     }
   }
 
-  async saveBusinesses(businesses: Business[], token: string, metadata?: { source?: string; town?: string; clearFirst?: boolean }): Promise<ServerDataResult> {
+  // Attempt to recover partial JSON data
+  private attemptPartialJsonRecovery(responseText: string): any[] | null {
+    try {
+      // Try to find the last complete business object
+      const lastCompleteObjectIndex = responseText.lastIndexOf('},{');
+      if (lastCompleteObjectIndex === -1) {
+        return null;
+      }
+
+      // Try to construct valid JSON by finding the array start and truncating at last complete object
+      let arrayStart = responseText.indexOf('[');
+      if (arrayStart === -1) {
+        // Maybe it's wrapped in an object
+        const dataStart = responseText.indexOf('"data":[');
+        if (dataStart !== -1) {
+          arrayStart = responseText.indexOf('[', dataStart);
+        }
+      }
+
+      if (arrayStart === -1) {
+        return null;
+      }
+
+      // Construct potentially valid JSON
+      const truncatedJson = responseText.substring(0, lastCompleteObjectIndex + 1) + '}]';
+      
+      // If it was wrapped in an object, close it properly
+      const finalJson = responseText.includes('"data":[') 
+        ? '{"data":' + truncatedJson + '}'
+        : truncatedJson;
+
+      const parsed = JSON.parse(finalJson);
+      return parsed.data || parsed;
+    } catch (error) {
+      console.error('Recovery attempt failed:', error);
+      return null;
+    }
+  }
+
+  // Add a method to fetch businesses in chunks for very large datasets
+  async getBusinessesChunked(token: string, chunkSize = 1000): Promise<ServerDataResult> {
+    try {
+      console.log('📦 API: Fetching businesses in chunks');
+      let allBusinesses: any[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        console.log(`📦 API: Fetching chunk ${page} (${chunkSize} per page)`);
+        
+        const response = await this.makeRequest(
+          this.getApiUrl(`/api/businesses?page=${page}&limit=${chunkSize}`), 
+          {
+            headers: this.getAuthHeaders(token)
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        const businesses = result.data || result.businesses || [];
+        
+        if (!Array.isArray(businesses) || businesses.length === 0) {
+          hasMore = false;
+        } else {
+          allBusinesses = [...allBusinesses, ...businesses];
+          hasMore = businesses.length === chunkSize; // If we got less than requested, we're done
+          page++;
+        }
+
+        // Safety limit to prevent infinite loops
+        if (page > 100) { // Increased from 50 to 100 for larger datasets
+          console.warn('⚠️ API: Reached maximum page limit (100), stopping');
+          break;
+        }
+      }
+
+      console.log(`✅ API: Fetched ${allBusinesses.length} businesses in ${page - 1} chunks`);
+      
+      // Cache the result
+      cacheService.setBusinesses(allBusinesses);
+
+      return {
+        success: true,
+        data: allBusinesses,
+        count: allBusinesses.length
+      };
+    } catch (error) {
+      console.error('Failed to fetch businesses in chunks:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch businesses in chunks'
+      };
+    }
+  }
+  async getBusinessesChunked(token: string, chunkSize = 1000): Promise<ServerDataResult> {
+    try {
+      console.log('📦 API: Fetching businesses in chunks');
+      let allBusinesses: any[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        console.log(`📦 API: Fetching chunk ${page} (${chunkSize} per page)`);
+        
+        const response = await this.makeRequest(
+          this.getApiUrl(`/api/businesses?page=${page}&limit=${chunkSize}`), 
+          {
+            headers: this.getAuthHeaders(token)
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        const businesses = result.data || result.businesses || [];
+        
+        if (!Array.isArray(businesses) || businesses.length === 0) {
+          hasMore = false;
+        } else {
+          allBusinesses = [...allBusinesses, ...businesses];
+          hasMore = businesses.length === chunkSize; // If we got less than requested, we're done
+          page++;
+        }
+
+        // Safety limit to prevent infinite loops
+        if (page > 50) {
+          console.warn('⚠️ API: Reached maximum page limit (50), stopping');
+          break;
+        }
+      }
+
+      console.log(`✅ API: Fetched ${allBusinesses.length} businesses in ${page - 1} chunks`);
+      
+      // Cache the result
+      cacheService.setBusinesses(allBusinesses);
+
+      return {
+        success: true,
+        data: allBusinesses,
+        count: allBusinesses.length
+      };
+    } catch (error) {
+      console.error('Failed to fetch businesses in chunks:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch businesses in chunks'
+      };
+    }
+  }
     console.log('🚀 API: saveBusinesses called');
     console.log('📊 API: Business count:', businesses.length);
     console.log('🔐 API: Token present:', !!token, 'length:', token?.length);

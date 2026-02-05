@@ -174,7 +174,7 @@ export const useBusinessData = () => {
                 }
             }
             
-            // Process businesses with performance optimization
+            // Process businesses with enhanced error handling
             if (businessesResult.success) {
                 const businessData = businessesResult.data || [];
                 
@@ -197,6 +197,24 @@ export const useBusinessData = () => {
                     setBusinesses(businessData);
                 }
                 setLastFetch(new Date());
+            } else {
+                // If regular fetch failed, try chunked approach
+                console.log('⚠️ DATA: Regular fetch failed, trying chunked approach');
+                try {
+                    const chunkedResult = await serverDataService.getBusinessesChunked(token || '');
+                    if (chunkedResult.success) {
+                        const businessData = chunkedResult.data || [];
+                        console.log('✅ DATA: Chunked fetch successful:', businessData.length, 'businesses');
+                        setBusinesses(businessData);
+                        setLastFetch(new Date());
+                    } else {
+                        console.error('❌ DATA: Both regular and chunked fetch failed');
+                        setError('Failed to fetch business data');
+                    }
+                } catch (chunkedError) {
+                    console.error('❌ DATA: Chunked fetch error:', chunkedError);
+                    setError('Failed to fetch business data');
+                }
             }
             
             // Process routes
@@ -410,8 +428,15 @@ export const useBusinessData = () => {
             isInitializing.current = true;
             
             try {
-                // Fetch businesses first
-                const businessResult = await serverDataService.getBusinesses(token || '', forceRefresh);
+                // Fetch businesses first - try regular, then chunked if it fails
+                let businessResult = await serverDataService.getBusinesses(token || '', forceRefresh);
+                
+                // If regular fetch failed due to JSON issues, try chunked approach
+                if (!businessResult.success && businessResult.error?.includes('JSON')) {
+                    console.log('⚠️ REFETCH: Regular fetch failed with JSON error, trying chunked approach');
+                    businessResult = await serverDataService.getBusinessesChunked(token || '');
+                }
+                
                 if (businessResult.success) {
                     const businessData = businessResult.data || [];
                     if (businessData.length > 2000) {
@@ -433,6 +458,9 @@ export const useBusinessData = () => {
                         setBusinesses(businessData);
                     }
                     setLastFetch(new Date());
+                } else {
+                    console.error('❌ REFETCH: Both regular and chunked fetch failed');
+                    setError(businessResult.error || 'Failed to fetch business data');
                 }
                 
                 // Fetch routes

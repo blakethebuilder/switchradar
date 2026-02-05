@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression'); // Add compression middleware
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('./db');
@@ -35,6 +36,7 @@ if (!JWT_SECRET) {
 console.log('✅ JWT_SECRET configured successfully');
 
 app.use(cors());
+app.use(compression()); // Enable gzip compression for responses
 app.use(express.json({ limit: '50mb' })); // Increase JSON payload limit
 app.use(express.urlencoded({ limit: '50mb', extended: true })); // Increase URL-encoded payload limit
 
@@ -543,7 +545,7 @@ app.get('/api/businesses', auth, (req, res) => {
     try {
         const { 
             page = 1, 
-            limit = 10000, // Increase default limit for better performance
+            limit, // No default limit - will fetch all if not specified
             search = '', 
             category = '', 
             provider = '', 
@@ -556,11 +558,28 @@ app.get('/api/businesses', auth, (req, res) => {
             radius
         } = req.query;
         
-        const offset = (parseInt(page) - 1) * parseInt(limit);
+        const offset = (parseInt(page) - 1) * (limit ? parseInt(limit) : 0);
         const userId = req.userData.userId;
         const { role } = req.userData;
         
-        console.log('🔍 Query params:', { page, limit, search, category, provider, town, userId, role });
+        // If no limit specified, fetch all records (but with safety maximum)
+        // If limit is specified, enforce reasonable maximum to prevent memory issues
+        const maxLimit = 50000; // Safety maximum
+        const actualLimit = limit ? Math.min(parseInt(limit), maxLimit) : maxLimit;
+        const usePagination = !!limit; // Only paginate if limit is explicitly set
+        
+        console.log('🔍 Query params:', { 
+            page, 
+            limit: limit || 'unlimited', 
+            actualLimit, 
+            usePagination,
+            search, 
+            category, 
+            provider, 
+            town, 
+            userId, 
+            role 
+        });
         
         // Simplified query for better performance
         let baseQuery = `
@@ -616,9 +635,16 @@ app.get('/api/businesses', auth, (req, res) => {
             baseQuery += ` AND (l.phone LIKE '06%' OR l.phone LIKE '07%' OR l.phone LIKE '08%' OR l.phone LIKE '09%')`;
         }
         
-        // Add ordering and pagination
-        baseQuery += ` ORDER BY l.last_modified DESC LIMIT ? OFFSET ?`;
-        params.push(parseInt(limit), offset);
+        // Add ordering and pagination (only if limit is specified)
+        baseQuery += ` ORDER BY l.last_modified DESC`;
+        if (usePagination) {
+            baseQuery += ` LIMIT ? OFFSET ?`;
+            params.push(actualLimit, offset);
+        } else {
+            // No pagination - fetch all (up to safety limit)
+            baseQuery += ` LIMIT ?`;
+            params.push(actualLimit);
+        }
         
         console.log('🔍 Executing query with', params.length, 'parameters');
         const queryStart = Date.now();
@@ -669,13 +695,25 @@ app.get('/api/businesses', auth, (req, res) => {
         const totalTime = Date.now() - startTime;
         console.log('✅ GET /api/businesses completed in', totalTime, 'ms');
         
+        // For very large responses, add additional headers to help with streaming
+        if (transformedBusinesses.length > 1000) {
+            res.setHeader('Content-Type', 'application/json; charset=utf-8');
+            res.setHeader('Transfer-Encoding', 'chunked');
+        }
+        
         res.json({
             data: transformedBusinesses,
-            pagination: {
+            pagination: usePagination ? {
                 page: parseInt(page),
-                limit: parseInt(limit),
+                limit: actualLimit,
                 total,
-                pages: Math.ceil(total / parseInt(limit))
+                pages: Math.ceil(total / actualLimit),
+                maxLimit: maxLimit
+            } : {
+                total,
+                returned: transformedBusinesses.length,
+                maxLimit: maxLimit,
+                unlimited: true
             },
             performance: {
                 queryTime,
