@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { serverDataService } from '../services/serverData';
 import { filterBusinesses, clearFilterCaches } from '../utils/dataProcessors';
@@ -28,9 +28,15 @@ export const useBusinessData = () => {
             return;
         }
 
-        // Don't refetch if we have recent data (unless forced)
-        if (!forceRefresh && lastFetch && Date.now() - lastFetch.getTime() < 30000) { // Increased to 30 seconds
+        // Don't refetch if we have recent data (unless forced) - increased cache time for performance
+        if (!forceRefresh && lastFetch && Date.now() - lastFetch.getTime() < 60000) { // Increased to 60 seconds
             console.log('⏭️ FETCH: Skipping fetch, recent data available');
+            return;
+        }
+
+        // Prevent duplicate concurrent requests
+        if (loading && !forceRefresh) {
+            console.log('⏭️ FETCH: Already loading, skipping duplicate request');
             return;
         }
 
@@ -46,16 +52,22 @@ export const useBusinessData = () => {
                 console.log('✅ FETCH: Success, businesses count:', result.data?.length || 0);
                 const businessData = result.data || [];
                 
-                // Handle large datasets
+                // Handle large datasets with better performance
                 if (businessData.length > 5000) {
                     console.log('📊 FETCH: Large dataset detected, enabling performance mode');
                     setIsProcessingLargeDataset(true);
                     
-                    // Defer heavy processing for large datasets
-                    setTimeout(() => {
+                    // Use requestIdleCallback for better performance if available
+                    const processLargeDataset = () => {
                         setBusinesses(businessData);
                         setIsProcessingLargeDataset(false);
-                    }, 100);
+                    };
+                    
+                    if (window.requestIdleCallback) {
+                        window.requestIdleCallback(processLargeDataset, { timeout: 1000 });
+                    } else {
+                        setTimeout(processLargeDataset, 50);
+                    }
                 } else {
                     setBusinesses(businessData);
                 }
@@ -76,7 +88,7 @@ export const useBusinessData = () => {
             console.log('🏁 FETCH: Fetch completed, setting loading to false');
             setLoading(false);
         }
-    }, [token, isAuthenticated, lastFetch]);
+    }, [token, isAuthenticated, lastFetch, loading]);
 
     // Memoized fetch routes function
     const fetchRoutes = useCallback(async () => {
@@ -177,10 +189,21 @@ export const useBusinessData = () => {
         }
     }, [token, isAuthenticated]); // Remove selectedDatasets.length dependency
 
-    // Auto-fetch on mount and auth changes - Fixed to prevent infinite loops
+    // Auto-fetch on mount and auth changes - Prevent duplicate calls with ref
+    const initializationRef = useRef(false);
+    
     useEffect(() => {
         console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
+        
+        // Prevent duplicate initialization
+        if (initializationRef.current) {
+            console.log('🔐 DATA: Initialization already in progress, skipping');
+            return;
+        }
+        
         if (isAuthenticated && token) {
+            initializationRef.current = true;
+            
             // Use a single async function to coordinate all data fetching
             const initializeData = async () => {
                 console.log('🚀 DATA: Starting data initialization');
@@ -197,6 +220,8 @@ export const useBusinessData = () => {
                     console.log('✅ DATA: All data fetched successfully');
                 } catch (error) {
                     console.error('❌ DATA: Error during data initialization:', error);
+                } finally {
+                    initializationRef.current = false;
                 }
             };
             
@@ -208,6 +233,7 @@ export const useBusinessData = () => {
             setAvailableDatasets([]);
             setSelectedDatasets([]);
             setError(null);
+            initializationRef.current = false;
         }
     }, [token, isAuthenticated]); // CRITICAL: Only depend on auth state to prevent infinite loops
 
@@ -222,15 +248,18 @@ export const useBusinessData = () => {
             if (!businesses.length) return [];
             return PerformanceMonitor.measure('calculateCategories', () => {
                 const categorySet = new Set<string>();
-                // For large datasets, limit processing to improve performance
-                const businessesToProcess = businesses.length > 5000 ? businesses.slice(0, 5000) : businesses;
-                for (const business of businessesToProcess) {
+                // For large datasets, limit processing to improve performance and use sampling
+                const sampleSize = businesses.length > 5000 ? 2000 : businesses.length;
+                const step = Math.max(1, Math.floor(businesses.length / sampleSize));
+                
+                for (let i = 0; i < businesses.length; i += step) {
+                    const business = businesses[i];
                     if (business.category) {
                         categorySet.add(business.category);
                     }
                 }
                 const result = Array.from(categorySet).sort();
-                console.log('📊 CATEGORIES: Calculated', result.length, 'categories from', businessesToProcess.length, 'businesses');
+                console.log('📊 CATEGORIES: Calculated', result.length, 'categories from', Math.min(sampleSize, businesses.length), 'businesses (sampled)');
                 return result;
             });
         },
@@ -243,15 +272,18 @@ export const useBusinessData = () => {
             if (!businesses.length) return [];
             return PerformanceMonitor.measure('calculateTowns', () => {
                 const townSet = new Set<string>();
-                // For large datasets, limit processing to improve performance
-                const businessesToProcess = businesses.length > 5000 ? businesses.slice(0, 5000) : businesses;
-                for (const business of businessesToProcess) {
+                // For large datasets, limit processing to improve performance and use sampling
+                const sampleSize = businesses.length > 5000 ? 2000 : businesses.length;
+                const step = Math.max(1, Math.floor(businesses.length / sampleSize));
+                
+                for (let i = 0; i < businesses.length; i += step) {
+                    const business = businesses[i];
                     if (business.town) {
                         townSet.add(business.town);
                     }
                 }
                 const result = Array.from(townSet).sort();
-                console.log('🏘️ TOWNS: Calculated', result.length, 'towns from', businessesToProcess.length, 'businesses');
+                console.log('🏘️ TOWNS: Calculated', result.length, 'towns from', Math.min(sampleSize, businesses.length), 'businesses (sampled)');
                 return result;
             });
         },
@@ -264,15 +296,18 @@ export const useBusinessData = () => {
             if (!businesses.length) return [];
             return PerformanceMonitor.measure('calculateProviders', () => {
                 const providerSet = new Set<string>();
-                // For large datasets, limit processing to improve performance
-                const businessesToProcess = businesses.length > 5000 ? businesses.slice(0, 5000) : businesses;
-                for (const business of businessesToProcess) {
+                // For large datasets, limit processing to improve performance and use sampling
+                const sampleSize = businesses.length > 5000 ? 2000 : businesses.length;
+                const step = Math.max(1, Math.floor(businesses.length / sampleSize));
+                
+                for (let i = 0; i < businesses.length; i += step) {
+                    const business = businesses[i];
                     if (business.provider) {
                         providerSet.add(business.provider);
                     }
                 }
                 const result = Array.from(providerSet).sort();
-                console.log('🏢 PROVIDERS: Calculated', result.length, 'providers from', businessesToProcess.length, 'businesses');
+                console.log('🏢 PROVIDERS: Calculated', result.length, 'providers from', Math.min(sampleSize, businesses.length), 'businesses (sampled)');
                 return result;
             });
         },
@@ -289,8 +324,6 @@ export const useBusinessData = () => {
     const filteredBusinesses = useMemo(() => {
         console.log('🔍 FILTER: Starting filteredBusinesses calculation', {
             businessesCount: businesses.length,
-            selectedDatasets: selectedDatasets,
-            availableDatasets: availableDatasets,
             searchTerm,
             selectedCategory,
             selectedTown,

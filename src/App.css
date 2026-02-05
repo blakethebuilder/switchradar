@@ -4,107 +4,19 @@
   justify-content: center;
 }
 
-/* Stable marker styling to prevent hover glitches */
-.custom-marker-stable {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  /* Prevent hover state changes */
+/* Simple, stable marker styling */
+.simple-marker {
+  /* No hover effects, no transitions, just stable rendering */
+}
+
+.simple-marker div {
+  /* Prevent any interference with Leaflet positioning */
   pointer-events: auto;
 }
 
-.custom-marker-stable .marker-content {
-  /* Prevent any transitions or hover effects that cause glitches */
-  transition: none !important;
-  transform: none !important;
-  /* Ensure stable rendering */
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  /* Force hardware acceleration for stability */
-  will-change: auto;
-}
-
-/* Safe hover effect that doesn't cause disappearing - only changes opacity */
-.custom-marker-stable:hover .marker-content {
-  /* Safe hover effect - only opacity change, no transforms */
-  opacity: 0.8;
-  /* Still prevent any transforms that cause glitches */
-  transform: none !important;
-  transition: none !important;
-}
-
-/* Stable cluster styling to prevent hover glitches - ONLY for clusters */
-.leaflet-marker-icon.cluster-icon-stable {
-  /* Prevent any transitions or hover effects that cause glitches */
-  transition: none !important;
-  /* Ensure stable rendering */
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  /* Force hardware acceleration for stability */
-  will-change: auto;
-}
-
-.leaflet-marker-icon.cluster-icon-stable .cluster-marker-stable {
-  /* Prevent any hover state changes */
-  transition: none !important;
-  transform: none !important;
-  /* Stable positioning */
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-}
-
-/* Prevent cluster hover effects that cause jumping - ONLY for clusters */
-.leaflet-marker-icon.cluster-icon-stable:hover .cluster-marker-stable {
-  /* No hover effects to prevent glitches */
-  transform: none !important;
-  transition: none !important;
-}
-
-/* Override any leaflet cluster hover effects - ONLY for clusters */
-.leaflet-marker-icon.cluster-icon-stable:hover {
-  transform: none !important;
-  transition: none !important;
-}
-
-/* Prevent cluster group hover effects - ONLY for clusters */
-.marker-cluster.cluster-icon-stable:hover {
-  transform: none !important;
-  transition: none !important;
-}
-
-/* More comprehensive cluster hover prevention */
-.leaflet-marker-icon.cluster-icon-stable,
-.leaflet-marker-icon.cluster-icon-stable:hover,
-.leaflet-marker-icon.cluster-icon-stable:focus,
-.leaflet-marker-icon.cluster-icon-stable:active {
-  transform: none !important;
-  transition: none !important;
-  animation: none !important;
-  will-change: auto !important;
-}
-
-/* Prevent any Leaflet default cluster animations */
-.leaflet-marker-icon.cluster-icon-stable * {
-  transform: none !important;
-  transition: none !important;
-  animation: none !important;
-}
-
-/* Override MarkerCluster default hover styles */
-.marker-cluster-small.cluster-icon-stable,
-.marker-cluster-medium.cluster-icon-stable,
-.marker-cluster-large.cluster-icon-stable {
-  transform: none !important;
-  transition: none !important;
-  animation: none !important;
-}
-
-.marker-cluster-small.cluster-icon-stable:hover,
-.marker-cluster-medium.cluster-icon-stable:hover,
-.marker-cluster-large.cluster-icon-stable:hover {
-  transform: none !important;
-  transition: none !important;
-  animation: none !important;
+/* Simple cluster styling */
+.custom-cluster-icon {
+  /* Keep clusters simple and stable */
 }
 
 .leaflet-popup-content-wrapper {

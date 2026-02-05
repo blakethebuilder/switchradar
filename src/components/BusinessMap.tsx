@@ -298,7 +298,6 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           key="business-markers"
           businesses={businesses}
           selectedBusinessId={selectedBusinessId}
-          selectedBusinessIds={selectedBusinessIds}
           onBusinessSelect={onBusinessSelect}
         />
       </MapContainer>
