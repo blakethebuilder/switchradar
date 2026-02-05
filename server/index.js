@@ -75,6 +75,82 @@ app.post('/api/auth/login', async (req, res) => {
     }
 });
 
+// User Management Routes (Admin only)
+app.get('/api/users', auth, (req, res) => {
+    if (req.userData.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied: Admin only' });
+    }
+
+    try {
+        const users = db.prepare('SELECT id, username, created_at, last_sync, total_businesses, storage_used_mb FROM users').all();
+        res.json({ success: true, data: users });
+    } catch (error) {
+        console.error('Fetch users error:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch users' });
+    }
+});
+
+app.post('/api/users', auth, async (req, res) => {
+    if (req.userData.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied: Admin only' });
+    }
+
+    const { username, password } = req.body;
+    try {
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
+        const result = stmt.run(username, hashedPassword);
+        res.status(201).json({ success: true, userId: result.lastInsertRowid });
+    } catch (error) {
+        res.status(400).json({ success: false, error: 'Username already exists' });
+    }
+});
+
+app.patch('/api/users/:id', auth, async (req, res) => {
+    if (req.userData.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied: Admin only' });
+    }
+
+    const { id } = req.params;
+    const { username, password } = req.body;
+    try {
+        if (password) {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            db.prepare('UPDATE users SET username = ?, password = ? WHERE id = ?').run(username, hashedPassword, id);
+        } else {
+            db.prepare('UPDATE users SET username = ? WHERE id = ?').run(username, id);
+        }
+        res.json({ success: true, message: 'User updated' });
+    } catch (error) {
+        res.status(400).json({ success: false, error: 'Update failed' });
+    }
+});
+
+app.delete('/api/users/:id', auth, (req, res) => {
+    if (req.userData.role !== 'admin') {
+        return res.status(403).json({ message: 'Access denied: Admin only' });
+    }
+
+    const { id } = req.params;
+    if (parseInt(id) === req.userData.userId) {
+        return res.status(400).json({ success: false, error: 'Cannot delete your own account' });
+    }
+
+    try {
+        // Find user first to prevent deleting the 'blake' user
+        const user = db.prepare('SELECT username FROM users WHERE id = ?').get(id);
+        if (user && user.username === 'blake') {
+            return res.status(403).json({ success: false, error: 'Cannot delete master admin' });
+        }
+
+        db.prepare('DELETE FROM users WHERE id = ?').run(id);
+        res.json({ success: true, message: 'User deleted' });
+    } catch (error) {
+        console.error('Delete user error:', error);
+        res.status(500).json({ success: false, error: 'Delete failed' });
+    }
+});
+
 // Business Routes
 app.get('/api/businesses', auth, (req, res) => {
     try {
