@@ -228,7 +228,7 @@ app.get('/api/businesses', auth, (req, res) => {
             // Normal users see:
             // 1. Their own owned leads
             // 2. Leads shared specifically with them (via shared_towns or shared_businesses)
-            // 3. CENTRALIZED DATA: Any lead that belongs to a dataset created by Blake (user ID 1)
+            // 3. CENTRALIZED DATA: Any lead that belongs to a dataset created by Blake (user ID 1) or any Super Admin
             leads = db.prepare(`
                 SELECT l.* FROM leads l
                 LEFT JOIN datasets d ON l.dataset_id = d.id
@@ -236,7 +236,7 @@ app.get('/api/businesses', auth, (req, res) => {
                     l.userId = ? 
                     OR l.town IN (SELECT town FROM shared_towns WHERE targetUserId = ?)
                     OR l.id IN (SELECT businessId FROM shared_businesses WHERE targetUserId = ?)
-                    OR l.dataset_id IN (SELECT id FROM datasets WHERE created_by = 1)
+                    OR l.dataset_id IN (SELECT id FROM datasets WHERE created_by IN (SELECT id FROM users WHERE role = 'super_admin' OR id = 1))
                 )
                 AND (d.is_active = 1 OR l.dataset_id IS NULL)
             `).all(req.userData.userId, req.userData.userId, req.userData.userId);
@@ -418,12 +418,14 @@ app.get('/api/datasets', auth, (req, res) => {
                 GROUP BY d.id
             `).all();
         } else {
-            // Normal users see their own datasets AND Blake's (centralized) datasets
+            // Normal users see their own datasets AND Blake's or Super Admin's (centralized) datasets
             datasets = db.prepare(`
                 SELECT d.*, COUNT(l.id) as business_count 
                 FROM datasets d 
                 LEFT JOIN leads l ON d.id = l.dataset_id 
-                WHERE d.created_by = ? OR d.created_by = 1 OR d.created_by IS NULL
+                WHERE d.created_by = ? 
+                   OR d.created_by IN (SELECT id FROM users WHERE role = 'super_admin' OR id = 1) 
+                   OR d.created_by IS NULL
                 GROUP BY d.id
             `).all(userId);
         }
