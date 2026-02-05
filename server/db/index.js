@@ -126,8 +126,7 @@ initTables();
 try {
   db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
   console.log('✅ Migration: Added role column to users table');
-  // Set 'blake' and 'smartAdmin' as admin by default if they exist
-  db.prepare("UPDATE users SET role = 'admin' WHERE username = 'blake'").run();
+  // Set 'smartAdmin' as super_admin by default if they exist
   db.prepare("UPDATE users SET role = 'super_admin' WHERE username = 'smartAdmin'").run();
 } catch (err) {
   // Column likely already exists

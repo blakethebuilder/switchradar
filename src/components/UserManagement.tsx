@@ -257,20 +257,13 @@ export const UserManagement: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center">
-                    {user.username.toLowerCase() === 'blake' ? (
-                      <Shield className="h-4 w-4 text-blue-600" />
-                    ) : (
-                      <UserIcon className="h-4 w-4 text-slate-600" />
-                    )}
+                    <UserIcon className="h-4 w-4 text-slate-600" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h4 className="font-semibold text-slate-900">{user.username}</h4>
                       {user.id === currentUser?.id && (
                         <span className="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full">You</span>
-                      )}
-                      {user.username.toLowerCase() === 'blake' && (
-                        <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Admin</span>
                       )}
                       {(user as any).role === 'super_admin' && (
                         <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">Super Admin</span>
@@ -306,7 +299,7 @@ export const UserManagement: React.FC = () => {
                       <Edit className="h-4 w-4" />
                     </button>
                   )}
-                  {user.id !== currentUser?.id && user.username.toLowerCase() !== 'blake' && (
+                  {user.id !== currentUser?.id && (
                     <button
                       onClick={() => handleDeleteUser(user.id, user.username)}
                       disabled={loading}
