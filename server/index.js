@@ -317,8 +317,12 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     const userId = req.userData.userId;
 
     if (!businesses || !Array.isArray(businesses)) {
+        console.error('Sync failed: Invalid businesses data', typeof businesses);
         return res.status(400).json({ message: 'Invalid businesses data' });
     }
+
+    console.log(`SYNC debug: User ${userId} syncing ${businesses.length} businesses. ClearFirst: ${clearFirst}`);
+
 
     const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
     const insertStmt = db.prepare(`
