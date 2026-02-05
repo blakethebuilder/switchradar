@@ -76,6 +76,7 @@ function App() {
     setMapTargetFromBusiness,
     selectBusinessAndShowOnMap,
     selectBusinessForDetails,
+    selectBusinessOnMap,
   } = useAppState();
 
   // Import state hook
@@ -430,7 +431,7 @@ function App() {
               onDatasetChange={setSelectedDatasets}
               onToggleFiltersVisibility={() => setIsFiltersVisible(!isFiltersVisible)}
               onBusinessSelect={selectBusinessForDetails}
-              onMapBusinessSelect={selectBusinessForDetails}
+              onMapBusinessSelect={selectBusinessOnMap}
               onDeleteBusiness={handleDeleteBusiness}
               onTogglePhoneType={togglePhoneType}
               onAddToRoute={addToRoute}

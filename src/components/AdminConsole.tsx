@@ -1,6 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { Users, Share2, Database, Upload, Download, Trash2, Shield, BarChart3, Search, Filter, MapPin, Building2, Phone } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Users, Share2, Database, Upload, Download, Trash2, Shield, BarChart3, Search, Filter, MapPin, Building2, Phone, FolderOpen, Edit3, Plus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { serverDataService } from '../services/serverData';
 import UserManagement from './UserManagement';
 import UserDataManagement from './UserDataManagement';
 
@@ -29,8 +30,8 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onDeleteBusiness,
   onBulkDelete
 }) => {
-  const { isAdmin, user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'database' | 'users' | 'sharing' | 'data'>('overview');
+  const { isAdmin, isSuperAdmin, user, token } = useAuth();
+  const [activeTab, setActiveTab] = useState<'overview' | 'datasets' | 'database' | 'users' | 'sharing' | 'data'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTown, setSelectedTown] = useState('');
   const [selectedProvider, setSelectedProvider] = useState('');
@@ -38,6 +39,140 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   const [selectedBusinesses, setSelectedBusinesses] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
+
+  // Dataset management state
+  const [datasets, setDatasets] = useState<any[]>([]);
+  const [selectedDataset, setSelectedDataset] = useState<any>(null);
+  const [datasetDetails, setDatasetDetails] = useState<any>(null);
+  const [showCreateDataset, setShowCreateDataset] = useState(false);
+  const [showEditDataset, setShowEditDataset] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [newDataset, setNewDataset] = useState({
+    name: '',
+    description: '',
+    town: '',
+    province: ''
+  });
+
+  // Load datasets on component mount
+  useEffect(() => {
+    if (isAdmin && token) {
+      loadDatasets();
+    }
+  }, [isAdmin, token]);
+
+  const loadDatasets = async () => {
+    if (!token) return;
+    
+    try {
+      setLoading(true);
+      const response = await fetch(`https://map.smartintegrate.co.za/api/datasets`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setDatasets(result.datasets || []);
+      }
+    } catch (error) {
+      console.error('Failed to load datasets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateDataset = async () => {
+    if (!token || !newDataset.name || !newDataset.town) return;
+
+    try {
+      setLoading(true);
+      const result = await serverDataService.createDataset(
+        newDataset.name,
+        newDataset.description,
+        newDataset.town,
+        newDataset.province,
+        token
+      );
+
+      if (result.success) {
+        await loadDatasets();
+        setShowCreateDataset(false);
+        setNewDataset({ name: '', description: '', town: '', province: '' });
+      }
+    } catch (error) {
+      console.error('Failed to create dataset:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateDataset = async () => {
+    if (!token || !selectedDataset) return;
+
+    try {
+      setLoading(true);
+      const result = await serverDataService.updateDataset(
+        selectedDataset.id,
+        {
+          name: selectedDataset.name,
+          description: selectedDataset.description,
+          town: selectedDataset.town,
+          province: selectedDataset.province
+        },
+        token
+      );
+
+      if (result.success) {
+        await loadDatasets();
+        setShowEditDataset(false);
+        setSelectedDataset(null);
+      }
+    } catch (error) {
+      console.error('Failed to update dataset:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteDataset = async (datasetId: number) => {
+    if (!token || !isSuperAdmin) return;
+
+    if (confirm('Are you sure you want to delete this dataset? This action cannot be undone.')) {
+      try {
+        setLoading(true);
+        const result = await serverDataService.deleteDataset(datasetId, token);
+
+        if (result.success) {
+          await loadDatasets();
+        }
+      } catch (error) {
+        console.error('Failed to delete dataset:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handleViewDatasetDetails = async (dataset: any) => {
+    if (!token) return;
+
+    try {
+      setLoading(true);
+      const result = await serverDataService.getDatasetDetails(dataset.id, token);
+
+      if (result.success) {
+        setDatasetDetails(result.data);
+        setSelectedDataset(dataset);
+      }
+    } catch (error) {
+      console.error('Failed to load dataset details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Filter businesses based on search and filters
   const filteredBusinesses = useMemo(() => {
@@ -147,6 +282,17 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           >
             <BarChart3 className="h-4 w-4" />
             Overview
+          </button>
+          <button
+            onClick={() => setActiveTab('datasets')}
+            className={`flex-shrink-0 flex items-center justify-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+              activeTab === 'datasets'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <FolderOpen className="h-4 w-4" />
+            Datasets
           </button>
           <button
             onClick={() => setActiveTab('database')}
@@ -322,6 +468,199 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {activeTab === 'datasets' && (
+        <div className="space-y-6">
+          {/* Datasets Header */}
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Dataset Management</h3>
+                <p className="text-slate-600 text-sm">Manage data collections and organize businesses by location or category</p>
+              </div>
+              {isSuperAdmin && (
+                <button
+                  onClick={() => setShowCreateDataset(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Dataset
+                </button>
+              )}
+            </div>
+
+            {/* Datasets Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {datasets.map((dataset) => (
+                <div key={dataset.id} className="border border-slate-200 rounded-lg p-4 hover:border-indigo-300 transition-colors">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h4 className="font-semibold text-slate-900">{dataset.name}</h4>
+                      <p className="text-sm text-slate-600">{dataset.town}{dataset.province && `, ${dataset.province}`}</p>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleViewDatasetDetails(dataset)}
+                        className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                        title="View Details"
+                      >
+                        <FolderOpen className="h-4 w-4" />
+                      </button>
+                      {isSuperAdmin && (
+                        <>
+                          <button
+                            onClick={() => {
+                              setSelectedDataset(dataset);
+                              setShowEditDataset(true);
+                            }}
+                            className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                            title="Edit Dataset"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          {dataset.id !== 1 && (
+                            <button
+                              onClick={() => handleDeleteDataset(dataset.id)}
+                              className="p-1 text-slate-400 hover:text-red-600 transition-colors"
+                              title="Delete Dataset"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600">Businesses:</span>
+                      <span className="font-medium">{dataset.business_count || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600">Created:</span>
+                      <span className="text-slate-500">{new Date(dataset.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-600">Created by:</span>
+                      <span className="text-slate-500">{dataset.created_by_name}</span>
+                    </div>
+                  </div>
+                  
+                  {dataset.description && (
+                    <p className="text-sm text-slate-600 mt-3 line-clamp-2">{dataset.description}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {datasets.length === 0 && !loading && (
+              <div className="text-center py-8">
+                <FolderOpen className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500">No datasets found</p>
+                {isSuperAdmin && (
+                  <button
+                    onClick={() => setShowCreateDataset(true)}
+                    className="mt-2 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                  >
+                    Create your first dataset
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Dataset Details Modal */}
+          {datasetDetails && selectedDataset && (
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">{selectedDataset.name}</h3>
+                  <p className="text-slate-600">{selectedDataset.town}{selectedDataset.province && `, ${selectedDataset.province}`}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setDatasetDetails(null);
+                    setSelectedDataset(null);
+                  }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2">
+                  <h4 className="font-semibold text-slate-900 mb-3">Businesses ({datasetDetails.totalBusinesses})</h4>
+                  <div className="max-h-96 overflow-y-auto border border-slate-200 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50 sticky top-0">
+                        <tr>
+                          <th className="text-left p-3 font-medium text-slate-700">Name</th>
+                          <th className="text-left p-3 font-medium text-slate-700">Town</th>
+                          <th className="text-left p-3 font-medium text-slate-700">Provider</th>
+                          <th className="text-left p-3 font-medium text-slate-700">Category</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {datasetDetails.businesses?.slice(0, 100).map((business: any) => (
+                          <tr key={business.id} className="border-t border-slate-100">
+                            <td className="p-3">{business.name}</td>
+                            <td className="p-3">{business.town}</td>
+                            <td className="p-3">{business.provider}</td>
+                            <td className="p-3">{business.category}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {datasetDetails.businesses?.length > 100 && (
+                      <div className="p-3 text-center text-slate-500 text-sm border-t">
+                        Showing first 100 of {datasetDetails.totalBusinesses} businesses
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold text-slate-900 mb-3">Dataset Info</h4>
+                  <div className="space-y-3 text-sm">
+                    <div>
+                      <span className="text-slate-600">Description:</span>
+                      <p className="text-slate-900 mt-1">{selectedDataset.description || 'No description'}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-600">Total Businesses:</span>
+                      <p className="text-slate-900 font-medium">{datasetDetails.totalBusinesses}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-600">Created:</span>
+                      <p className="text-slate-900">{new Date(selectedDataset.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <div>
+                      <span className="text-slate-600">Created by:</span>
+                      <p className="text-slate-900">{selectedDataset.created_by_name}</p>
+                    </div>
+                  </div>
+
+                  {datasetDetails.permissions?.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="font-semibold text-slate-900 mb-3">Permissions</h4>
+                      <div className="space-y-2">
+                        {datasetDetails.permissions.map((perm: any) => (
+                          <div key={perm.id} className="flex items-center justify-between text-sm">
+                            <span className="text-slate-900">{perm.username}</span>
+                            <span className="text-slate-600 capitalize">{perm.permission_level}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -664,6 +1003,154 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
       {activeTab === 'users' && <UserManagement />}
       {activeTab === 'sharing' && <UserDataManagement />}
+
+      {/* Create Dataset Modal */}
+      {showCreateDataset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Create New Dataset</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={newDataset.name}
+                  onChange={(e) => setNewDataset((prev: any) => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Dataset name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Town *</label>
+                <input
+                  type="text"
+                  value={newDataset.town}
+                  onChange={(e) => setNewDataset((prev: any) => ({ ...prev, town: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Town name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Province</label>
+                <input
+                  type="text"
+                  value={newDataset.province}
+                  onChange={(e) => setNewDataset((prev: any) => ({ ...prev, province: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Province name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <textarea
+                  value={newDataset.description}
+                  onChange={(e) => setNewDataset((prev: any) => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={3}
+                  placeholder="Dataset description"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={handleCreateDataset}
+                disabled={!newDataset.name || !newDataset.town || loading}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? 'Creating...' : 'Create Dataset'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowCreateDataset(false);
+                  setNewDataset({ name: '', description: '', town: '', province: '' });
+                }}
+                className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Dataset Modal */}
+      {showEditDataset && selectedDataset && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-lg font-bold text-slate-900 mb-4">Edit Dataset</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={selectedDataset.name}
+                  onChange={(e) => setSelectedDataset((prev: any) => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Dataset name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Town *</label>
+                <input
+                  type="text"
+                  value={selectedDataset.town}
+                  onChange={(e) => setSelectedDataset((prev: any) => ({ ...prev, town: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Town name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Province</label>
+                <input
+                  type="text"
+                  value={selectedDataset.province || ''}
+                  onChange={(e) => setSelectedDataset((prev: any) => ({ ...prev, province: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Province name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <textarea
+                  value={selectedDataset.description || ''}
+                  onChange={(e) => setSelectedDataset((prev: any) => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={3}
+                  placeholder="Dataset description"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 mt-6">
+              <button
+                onClick={handleUpdateDataset}
+                disabled={!selectedDataset.name || !selectedDataset.town || loading}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {loading ? 'Updating...' : 'Update Dataset'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowEditDataset(false);
+                  setSelectedDataset(null);
+                }}
+                className="px-4 py-2 text-slate-600 hover:text-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

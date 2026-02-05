@@ -64,7 +64,8 @@ const apiAlignment = new APIAlignmentService(app);
 // Seed default users for authentication
 const seedDefaultUsers = async () => {
     const defaultUsers = [
-        { username: 'smartAdmin', password: 'Smart@2026!' }
+        { username: 'smartAdmin', password: 'Smart@2026!' },
+        { username: 'blake', password: 'Blake@2026!' }
     ];
     
     for (const user of defaultUsers) {
@@ -159,10 +160,12 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Determine user role - smartAdmin is always admin
+    // Determine user role - smartAdmin is super admin, blake is regular user
     let role = 'user';
     if (username.toLowerCase() === 'smartadmin') {
-        role = 'admin';
+        role = 'super_admin';
+    } else if (username.toLowerCase() === 'blake') {
+        role = 'user';
     }
 
     console.log('🎫 Generating JWT token with secret:', JWT_SECRET.substring(0, 10) + '...');
@@ -215,8 +218,8 @@ app.get('/api/datasets', auth, (req, res) => {
         const { role } = req.userData;
         
         let datasets;
-        if (role === 'admin') {
-            // Admins can see all datasets
+        if (role === 'admin' || role === 'super_admin') {
+            // Admins and super admins can see all datasets
             datasets = db.prepare(`
                 SELECT d.*, u.username as created_by_name,
                        COUNT(l.id) as business_count
@@ -246,7 +249,7 @@ app.get('/api/datasets', auth, (req, res) => {
         res.json({
             datasets,
             userRole: role,
-            canCreateDatasets: role === 'admin'
+            canCreateDatasets: role === 'admin' || role === 'super_admin'
         });
     } catch (error) {
         console.error('Failed to fetch datasets:', error);
@@ -260,7 +263,7 @@ app.post('/api/datasets', auth, (req, res) => {
         const userId = req.userData.userId;
         const { role } = req.userData;
         
-        if (role !== 'admin') {
+        if (role !== 'admin' && role !== 'super_admin') {
             return res.status(403).json({ message: 'Only admins can create datasets' });
         }
         
@@ -300,7 +303,7 @@ app.post('/api/datasets/:datasetId/permissions', auth, (req, res) => {
         const grantedBy = req.userData.userId;
         const { role } = req.userData;
         
-        if (role !== 'admin') {
+        if (role !== 'admin' && role !== 'super_admin') {
             return res.status(403).json({ message: 'Only admins can grant dataset permissions' });
         }
         
@@ -333,6 +336,186 @@ app.post('/api/datasets/:datasetId/permissions', auth, (req, res) => {
         res.status(500).json({ message: 'Failed to grant permission', error: error.message });
     }
 });
+
+// Enhanced Dataset Management APIs for Super Admin
+
+// Update dataset
+app.put('/api/datasets/:datasetId', auth, (req, res) => {
+    try {
+        const { datasetId } = req.params;
+        const { name, description, town, province } = req.body;
+        const { role } = req.userData;
+        
+        if (role !== 'super_admin' && role !== 'admin') {
+            return res.status(403).json({ message: 'Only admins can update datasets' });
+        }
+        
+        // Check if dataset exists
+        const dataset = db.prepare('SELECT * FROM datasets WHERE id = ? AND is_active = 1').get(datasetId);
+        if (!dataset) {
+            return res.status(404).json({ message: 'Dataset not found' });
+        }
+        
+        // Update dataset
+        db.prepare(`
+            UPDATE datasets 
+            SET name = ?, description = ?, town = ?, province = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `).run(name, description, town, province, datasetId);
+        
+        res.json({
+            message: 'Dataset updated successfully',
+            datasetId,
+            name,
+            town,
+            province
+        });
+    } catch (error) {
+        console.error('Failed to update dataset:', error);
+        res.status(500).json({ message: 'Failed to update dataset', error: error.message });
+    }
+});
+
+// Delete dataset (soft delete)
+app.delete('/api/datasets/:datasetId', auth, (req, res) => {
+    try {
+        const { datasetId } = req.params;
+        const { role } = req.userData;
+        
+        if (role !== 'super_admin') {
+            return res.status(403).json({ message: 'Only super admin can delete datasets' });
+        }
+        
+        // Check if dataset exists
+        const dataset = db.prepare('SELECT * FROM datasets WHERE id = ? AND is_active = 1').get(datasetId);
+        if (!dataset) {
+            return res.status(404).json({ message: 'Dataset not found' });
+        }
+        
+        // Prevent deletion of default dataset
+        if (parseInt(datasetId) === 1) {
+            return res.status(400).json({ message: 'Cannot delete default dataset' });
+        }
+        
+        // Soft delete dataset
+        db.prepare(`
+            UPDATE datasets 
+            SET is_active = 0, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `).run(datasetId);
+        
+        // Also soft delete associated businesses
+        db.prepare(`
+            UPDATE leads 
+            SET sync_status = 'deleted'
+            WHERE dataset_id = ?
+        `).run(datasetId);
+        
+        res.json({
+            message: 'Dataset deleted successfully',
+            datasetId
+        });
+    } catch (error) {
+        console.error('Failed to delete dataset:', error);
+        res.status(500).json({ message: 'Failed to delete dataset', error: error.message });
+    }
+});
+
+// Get dataset details with businesses
+app.get('/api/datasets/:datasetId/details', auth, (req, res) => {
+    try {
+        const { datasetId } = req.params;
+        const { role } = req.userData;
+        
+        if (role !== 'super_admin' && role !== 'admin') {
+            return res.status(403).json({ message: 'Only admins can view dataset details' });
+        }
+        
+        // Get dataset info
+        const dataset = db.prepare(`
+            SELECT d.*, u.username as created_by_name,
+                   COUNT(l.id) as business_count
+            FROM datasets d
+            LEFT JOIN users u ON d.created_by = u.id
+            LEFT JOIN leads l ON d.id = l.dataset_id AND l.sync_status != 'deleted'
+            WHERE d.id = ? AND d.is_active = 1
+            GROUP BY d.id
+        `).get(datasetId);
+        
+        if (!dataset) {
+            return res.status(404).json({ message: 'Dataset not found' });
+        }
+        
+        // Get businesses in dataset
+        const businesses = db.prepare(`
+            SELECT id, name, address, phone, email, provider, category, town, province, 
+                   lat, lng, status, importedAt, source
+            FROM leads 
+            WHERE dataset_id = ? AND sync_status != 'deleted'
+            ORDER BY importedAt DESC
+            LIMIT 1000
+        `).all(datasetId);
+        
+        // Get permissions
+        const permissions = db.prepare(`
+            SELECT dp.*, u.username
+            FROM dataset_permissions dp
+            JOIN users u ON dp.user_id = u.id
+            WHERE dp.dataset_id = ?
+        `).all(datasetId);
+        
+        res.json({
+            dataset,
+            businesses,
+            permissions,
+            totalBusinesses: businesses.length
+        });
+    } catch (error) {
+        console.error('Failed to fetch dataset details:', error);
+        res.status(500).json({ message: 'Failed to fetch dataset details', error: error.message });
+    }
+});
+
+// Bulk move businesses between datasets
+app.post('/api/datasets/:datasetId/move-businesses', auth, (req, res) => {
+    try {
+        const { datasetId } = req.params;
+        const { businessIds, targetDatasetId } = req.body;
+        const { role } = req.userData;
+        
+        if (role !== 'super_admin' && role !== 'admin') {
+            return res.status(403).json({ message: 'Only admins can move businesses between datasets' });
+        }
+        
+        if (!businessIds || !Array.isArray(businessIds) || businessIds.length === 0) {
+            return res.status(400).json({ message: 'Business IDs are required' });
+        }
+        
+        // Check if target dataset exists
+        const targetDataset = db.prepare('SELECT * FROM datasets WHERE id = ? AND is_active = 1').get(targetDatasetId);
+        if (!targetDataset) {
+            return res.status(404).json({ message: 'Target dataset not found' });
+        }
+        
+        // Move businesses
+        const placeholders = businessIds.map(() => '?').join(',');
+        const result = db.prepare(`
+            UPDATE leads 
+            SET dataset_id = ?, last_modified = CURRENT_TIMESTAMP
+            WHERE id IN (${placeholders}) AND dataset_id = ?
+        `).run(targetDatasetId, ...businessIds, datasetId);
+        
+        res.json({
+            message: 'Businesses moved successfully',
+            movedCount: result.changes,
+            targetDatasetId
+        });
+    } catch (error) {
+        console.error('Failed to move businesses:', error);
+        res.status(500).json({ message: 'Failed to move businesses', error: error.message });
+    }
+});
+
 app.delete('/api/workspace', auth, (req, res) => {
     const userId = req.userData.userId;
     const deleteLeads = db.prepare('DELETE FROM leads WHERE userId = ?');

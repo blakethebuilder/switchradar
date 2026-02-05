@@ -31,6 +31,7 @@ interface BusinessMapProps {
   zoom?: number;
   fullScreen?: boolean;
   onBusinessSelect?: (business: Business) => void;
+  onMapBusinessSelect?: (business: Business, currentZoom?: number) => void; // New prop for map-specific selection
   selectedBusinessId?: string;
   selectedBusinessIds?: string[];
   droppedPin: { lat: number, lng: number } | null;
@@ -44,6 +45,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
   zoom,
   fullScreen = false,
   onBusinessSelect,
+  onMapBusinessSelect,
   selectedBusinessId,
   selectedBusinessIds = [],
   droppedPin,
@@ -337,7 +339,10 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           key="business-markers"
           businesses={memoizedBusinesses}
           selectedBusinessId={selectedBusinessId}
-          onBusinessSelect={onBusinessSelect}
+          onBusinessSelect={onMapBusinessSelect ? 
+            (business) => onMapBusinessSelect(business, currentZoom) : 
+            onBusinessSelect
+          }
         />
       </MapContainer>
 

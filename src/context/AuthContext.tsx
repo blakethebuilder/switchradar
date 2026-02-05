@@ -4,7 +4,7 @@ interface User {
     id: number;
     username: string;
     email?: string;
-    role: 'admin' | 'user';
+    role: 'super_admin' | 'admin' | 'user';
     createdAt: string;
 }
 
@@ -15,6 +15,7 @@ interface AuthContextType {
     logout: () => void;
     isAuthenticated: boolean;
     isAdmin: boolean;
+    isSuperAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,12 +25,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedUser = localStorage.getItem('sr_user');
         if (savedUser) {
             const parsedUser = JSON.parse(savedUser);
-            // Ensure blake is always admin
-            if (parsedUser.username && parsedUser.username.toLowerCase() === 'blake' && parsedUser.role !== 'admin') {
-                parsedUser.role = 'admin';
+            // Ensure smartAdmin is always super_admin, blake becomes regular user
+            if (parsedUser.username && parsedUser.username.toLowerCase() === 'smartadmin' && parsedUser.role !== 'super_admin') {
+                parsedUser.role = 'super_admin';
                 parsedUser.createdAt = parsedUser.createdAt || new Date().toISOString();
                 localStorage.setItem('sr_user', JSON.stringify(parsedUser));
-                console.log('Set blake as admin in AuthContext');
+                console.log('Set smartAdmin as super_admin in AuthContext');
+            } else if (parsedUser.username && parsedUser.username.toLowerCase() === 'blake' && parsedUser.role === 'admin') {
+                parsedUser.role = 'user';
+                parsedUser.createdAt = parsedUser.createdAt || new Date().toISOString();
+                localStorage.setItem('sr_user', JSON.stringify(parsedUser));
+                console.log('Set blake as user in AuthContext');
             }
             return parsedUser;
         }
@@ -53,7 +59,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('sr_user');
     };
 
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+    const isSuperAdmin = user?.role === 'super_admin';
 
     return (
         <AuthContext.Provider value={{ 
@@ -62,7 +69,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             login, 
             logout, 
             isAuthenticated: !!token,
-            isAdmin
+            isAdmin,
+            isSuperAdmin
         }}>
             {children}
         </AuthContext.Provider>

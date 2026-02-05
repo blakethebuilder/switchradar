@@ -1044,6 +1044,145 @@ class ServerDataService {
       };
     }
   }
+
+  // Dataset Management Functions
+  async updateDataset(datasetId: number, updates: { name?: string; description?: string; town?: string; province?: string }, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/datasets/${datasetId}`), {
+        method: 'PUT',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify(updates)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to update dataset:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update dataset'
+      };
+    }
+  }
+
+  async deleteDataset(datasetId: number, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/datasets/${datasetId}`), {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to delete dataset:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete dataset'
+      };
+    }
+  }
+
+  async getDatasetDetails(datasetId: number, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/datasets/${datasetId}/details`), {
+        method: 'GET',
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to get dataset details:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get dataset details'
+      };
+    }
+  }
+
+  async moveBusinessesToDataset(fromDatasetId: number, businessIds: string[], targetDatasetId: number, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/datasets/${fromDatasetId}/move-businesses`), {
+        method: 'POST',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify({ businessIds, targetDatasetId })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to move businesses:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to move businesses'
+      };
+    }
+  }
+
+  async createDataset(name: string, description: string, town: string, province?: string, token?: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/datasets'), {
+        method: 'POST',
+        headers: this.getAuthHeaders(token || ''),
+        body: JSON.stringify({ name, description, town, province })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to create dataset:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to create dataset'
+      };
+    }
+  }
 }
 
 export const serverDataService = new ServerDataService();
