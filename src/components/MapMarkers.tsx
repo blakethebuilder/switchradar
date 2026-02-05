@@ -1,10 +1,9 @@
 import React, { useMemo, useCallback } from 'react';
-import { Marker, CircleMarker, Tooltip } from 'react-leaflet';
+import { Marker } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import type { Business } from '../types';
 import { createProviderIcon, createFallbackIcon } from '../utils/mapIcons';
-import { getProviderColor } from '../utils/providerColors';
 
 interface MapMarkersProps {
   businesses: Business[];
@@ -20,9 +19,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
   const businessCount = businesses?.length || 0;
   console.log('🗺️ MAPMARKERS: Rendering', businessCount, 'businesses');
 
-  // PERFORMANCE: Decide whether to use Canvas-based CircleMarkers or DOM-based Markers
-  // CircleMarkers are MUCH faster for large datasets as they render to a single canvas
-  const useCanvasMarkers = businessCount > 500;
+
 
   // Filter valid businesses
   const validBusinesses = useMemo(() => {
@@ -98,37 +95,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
       {validBusinesses.map((business) => {
         const isSelected = business.id === selectedBusinessId;
 
-        // If we use canvas markers (CircleMarker), they render to the canvas layer
-        // which is much more performant for thousands of items.
-        if (useCanvasMarkers && !isSelected) {
-          const color = getProviderColor(business.provider || 'Unknown');
-
-          return (
-            <CircleMarker
-              key={business.id}
-              center={[business.coordinates.lat, business.coordinates.lng]}
-              radius={isSelected ? 8 : 6}
-              pathOptions={{
-                fillColor: color,
-                fillOpacity: 0.9,
-                color: isSelected ? '#fbbf24' : 'white',
-                weight: isSelected ? 3 : 2,
-              }}
-              eventHandlers={{
-                click: (e) => {
-                  L.DomEvent.stopPropagation(e);
-                  handleMarkerClick(business);
-                }
-              }}
-            >
-              <Tooltip direction="top" offset={[0, -5]} opacity={1} permanent={false}>
-                <div className="font-bold text-xs">{business.name}</div>
-              </Tooltip>
-            </CircleMarker>
-          );
-        }
-
-        // Standard Marker with custom icons for detail view or selected item
+        // Standard Marker with custom icons (including provider labels)
         let icon;
         try {
           icon = createProviderIcon(business.provider || 'Unknown', isSelected);
@@ -141,6 +108,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
             key={business.id}
             position={[business.coordinates.lat, business.coordinates.lng]}
             icon={icon}
+            zIndexOffset={isSelected ? 1000 : 0}
             eventHandlers={{
               click: () => handleMarkerClick(business)
             }}

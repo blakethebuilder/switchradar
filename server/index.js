@@ -43,6 +43,29 @@ const seedUsers = async () => {
             console.error(`Error seeding user ${u.username}:`, err.message);
         }
     }
+
+    // DATA MIGRATION: If smartAdmin is empty, but blake has leads, move them to smartAdmin
+    try {
+        const blake = db.prepare('SELECT id FROM users WHERE username = ?').get('blake');
+        const smartAdmin = db.prepare('SELECT id FROM users WHERE username = ?').get('smartAdmin');
+
+        if (blake && smartAdmin) {
+            const blakeLeadCount = db.prepare('SELECT COUNT(*) as count FROM leads WHERE userId = ?').get(blake.id).count;
+            const smartAdminLeadCount = db.prepare('SELECT COUNT(*) as count FROM leads WHERE userId = ?').get(smartAdmin.id).count;
+
+            if (blakeLeadCount > 0 && smartAdminLeadCount === 0) {
+                console.log(`📦 DATA MIGRATION: Moving ${blakeLeadCount} leads from blake to smartAdmin...`);
+                db.prepare('UPDATE leads SET userId = ? WHERE userId = ?').run(smartAdmin.id, blake.id);
+                db.prepare('UPDATE routes SET userId = ? WHERE userId = ?').run(smartAdmin.id, blake.id);
+                db.prepare('UPDATE datasets SET created_by = ? WHERE created_by = ?').run(smartAdmin.id, blake.id);
+                updateUserStats(smartAdmin.id);
+                updateUserStats(blake.id);
+                console.log('✅ DATA MIGRATION: Successful');
+            }
+        }
+    } catch (err) {
+        console.error('❌ Data migration failed:', err.message);
+    }
 };
 seedUsers();
 
