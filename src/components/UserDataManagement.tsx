@@ -63,7 +63,7 @@ export const UserDataManagement: React.FC = () => {
     try {
       const result = await serverDataService.getUsers(token);
       if (result.success) {
-        const users = result.data || [];
+        const users = Array.isArray(result.data) ? result.data : [];
         const stats: UserDataStats[] = users.map((user: any) => ({
           userId: user.id,
           username: user.username,
@@ -75,9 +75,11 @@ export const UserDataManagement: React.FC = () => {
         setUserStats(stats);
       } else {
         setError(result.error || 'Failed to load user statistics');
+        setUserStats([]); // Ensure it's always an array
       }
     } catch (err) {
       setError('Failed to load user statistics');
+      setUserStats([]); // Ensure it's always an array
     }
   };
 
@@ -88,12 +90,22 @@ export const UserDataManagement: React.FC = () => {
     try {
       const result = await serverDataService.getSharedData(token);
       if (result.success) {
-        setSharedDataUsers(result.data || []);
+        const sharedData = Array.isArray(result.data) ? result.data : [];
+        // Ensure each user has proper array properties
+        const processedData = sharedData.map((user: any) => ({
+          userId: user.userId || 0,
+          username: user.username || 'Unknown',
+          sharedBusinesses: Array.isArray(user.sharedBusinesses) ? user.sharedBusinesses : [],
+          sharedTowns: Array.isArray(user.sharedTowns) ? user.sharedTowns : []
+        }));
+        setSharedDataUsers(processedData);
       } else {
         setError(result.error || 'Failed to load shared data');
+        setSharedDataUsers([]); // Ensure it's always an array
       }
     } catch (err) {
       setError('Failed to load shared data');
+      setSharedDataUsers([]); // Ensure it's always an array
     } finally {
       setLoadingSharedData(false);
     }
@@ -105,12 +117,15 @@ export const UserDataManagement: React.FC = () => {
     try {
       const result = await serverDataService.getUserBusinesses(businessUserId, token);
       if (result.success) {
-        setSelectedUserBusinesses(result.data || []);
+        const businesses = Array.isArray(result.data) ? result.data : [];
+        setSelectedUserBusinesses(businesses);
       } else {
         setError(result.error || 'Failed to load user businesses');
+        setSelectedUserBusinesses([]); // Ensure it's always an array
       }
     } catch (err) {
       setError('Failed to load user businesses');
+      setSelectedUserBusinesses([]); // Ensure it's always an array
     }
   };
 
@@ -169,12 +184,15 @@ export const UserDataManagement: React.FC = () => {
     try {
       const result = await serverDataService.getAvailableTowns(token);
       if (result.success) {
-        setAvailableTowns(result.data || []);
+        const towns = Array.isArray(result.data) ? result.data : [];
+        setAvailableTowns(towns);
       } else {
         setError(result.error || 'Failed to load available towns');
+        setAvailableTowns([]); // Ensure it's always an array
       }
     } catch (err) {
       setError('Failed to load available towns');
+      setAvailableTowns([]); // Ensure it's always an array
     }
   };
 
@@ -283,11 +301,11 @@ export const UserDataManagement: React.FC = () => {
     }
   };
 
-  const filteredBusinesses = selectedUserBusinesses.filter(business =>
-    business.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    business.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    business.provider.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredBusinesses = Array.isArray(selectedUserBusinesses) ? selectedUserBusinesses.filter(business =>
+    business?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    business?.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    business?.provider?.toLowerCase().includes(searchTerm.toLowerCase())
+  ) : [];
 
   return (
     <div className="space-y-6">
@@ -342,7 +360,7 @@ export const UserDataManagement: React.FC = () => {
 
       {/* User Statistics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {userStats.map((stat) => (
+        {Array.isArray(userStats) && userStats.map((stat) => (
           <div key={stat.userId} className="bg-white rounded-xl p-6 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -469,7 +487,7 @@ export const UserDataManagement: React.FC = () => {
 
           {/* Business List */}
           <div className="max-h-96 overflow-y-auto">
-            {filteredBusinesses.map((business) => (
+            {Array.isArray(filteredBusinesses) && filteredBusinesses.map((business) => (
               <div key={business.id} className="p-4 border-b border-slate-100 hover:bg-slate-50">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 flex-1">
@@ -622,7 +640,7 @@ export const UserDataManagement: React.FC = () => {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="">Choose a user...</option>
-                {userStats.map((user) => (
+                {Array.isArray(userStats) && userStats.map((user) => (
                   <option key={user.userId} value={user.userId}>
                     {user.username} ({user.businessCount} businesses)
                   </option>
@@ -637,7 +655,7 @@ export const UserDataManagement: React.FC = () => {
                   Select Towns to Share ({selectedTowns.length} selected)
                 </label>
                 <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-lg">
-                  {availableTowns.map((town) => (
+                  {Array.isArray(availableTowns) && availableTowns.map((town) => (
                     <label
                       key={town.name}
                       className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
@@ -669,7 +687,7 @@ export const UserDataManagement: React.FC = () => {
                   Select Businesses to Share ({selectedBusinesses.length} selected)
                 </label>
                 <div className="max-h-60 overflow-y-auto border border-slate-200 rounded-lg">
-                  {filteredBusinesses.map((business) => (
+                  {Array.isArray(filteredBusinesses) && filteredBusinesses.map((business) => (
                     <label
                       key={business.id}
                       className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
@@ -752,12 +770,12 @@ export const UserDataManagement: React.FC = () => {
                   No shared data found
                 </div>
               ) : (
-                sharedDataUsers.map((user) => (
+                Array.isArray(sharedDataUsers) && sharedDataUsers.map((user) => (
                   <div key={user.userId} className="border border-slate-200 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="font-semibold text-slate-900">{user.username}</h4>
                       <div className="flex gap-2">
-                        {user.sharedTowns.length > 0 && (
+                        {Array.isArray(user.sharedTowns) && user.sharedTowns.length > 0 && (
                           <button
                             onClick={() => handleUnshareTowns(user.userId, user.sharedTowns.map(t => t.town))}
                             className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
@@ -765,7 +783,7 @@ export const UserDataManagement: React.FC = () => {
                             Unshare All Towns ({user.sharedTowns.length})
                           </button>
                         )}
-                        {user.sharedBusinesses.length > 0 && (
+                        {Array.isArray(user.sharedBusinesses) && user.sharedBusinesses.length > 0 && (
                           <button
                             onClick={() => handleUnshareBusinesses(user.userId, user.sharedBusinesses.map(b => b.id))}
                             className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
@@ -776,13 +794,14 @@ export const UserDataManagement: React.FC = () => {
                       </div>
                     </div>
                     
-                    {user.sharedTowns.length === 0 && user.sharedBusinesses.length === 0 ? (
+                    {(Array.isArray(user.sharedTowns) ? user.sharedTowns.length : 0) === 0 && 
+                     (Array.isArray(user.sharedBusinesses) ? user.sharedBusinesses.length : 0) === 0 ? (
                       <div className="text-sm text-slate-500">
                         No shared data for this user
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {user.sharedTowns.length > 0 && (
+                        {Array.isArray(user.sharedTowns) && user.sharedTowns.length > 0 && (
                           <div>
                             <h5 className="text-sm font-medium text-slate-700 mb-2">
                               Shared Towns ({user.sharedTowns.length})
@@ -806,7 +825,7 @@ export const UserDataManagement: React.FC = () => {
                           </div>
                         )}
                         
-                        {user.sharedBusinesses.length > 0 && (
+                        {Array.isArray(user.sharedBusinesses) && user.sharedBusinesses.length > 0 && (
                           <div>
                             <h5 className="text-sm font-medium text-slate-700 mb-2">
                               Shared Businesses ({user.sharedBusinesses.length})

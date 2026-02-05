@@ -26,6 +26,17 @@ class CacheService {
     users: 2 * 60 * 1000         // 2 minutes
   };
 
+  constructor() {
+    // Initialize cache management
+    this.manageCacheSize();
+    
+    // Set up periodic cache cleanup (every 5 minutes)
+    setInterval(() => {
+      this.clearExpiredCache();
+      this.manageCacheSize();
+    }, 5 * 60 * 1000);
+  }
+
   private getCacheKey(key: string, userId?: string): string {
     // Include user ID in cache key for user-specific data
     const userSuffix = userId ? `_${userId}` : '';
@@ -54,23 +65,221 @@ class CacheService {
   // Generic cache methods
   set<T>(key: keyof CacheConfig, data: T, userId?: string): void {
     try {
+      // Pre-process data to reduce size before attempting to cache
+      let cacheData = this.preprocessDataForCache(key, data);
+      
       const now = Date.now();
       const duration = this.CACHE_DURATIONS[key];
       
       const cacheItem: CacheItem<T> = {
-        data,
+        data: cacheData,
         timestamp: now,
         expiresAt: now + duration,
         version: this.CACHE_VERSION
       };
       
       const cacheKey = this.getCacheKey(key, userId);
-      localStorage.setItem(cacheKey, JSON.stringify(cacheItem));
+      const serialized = JSON.stringify(cacheItem);
       
-      console.log(`💾 CACHE: Stored ${key} (expires in ${Math.round(duration / 1000)}s)`);
+      // Check size before storing and reduce if necessary
+      const sizeInMB = new Blob([serialized]).size / (1024 * 1024);
+      
+      if (sizeInMB > 3) { // Reduced from 5MB to 3MB
+        console.warn(`⚠️ CACHE: Cache item too large (${sizeInMB.toFixed(2)}MB), reducing size for ${key}`);
+        cacheData = this.aggressivelyReduceSize(key, cacheData);
+        
+        // Recreate cache item with reduced data
+        const reducedCacheItem: CacheItem<T> = {
+          data: cacheData,
+          timestamp: now,
+          expiresAt: now + duration,
+          version: this.CACHE_VERSION
+        };
+        
+        const reducedSerialized = JSON.stringify(reducedCacheItem);
+        const reducedSizeInMB = new Blob([reducedSerialized]).size / (1024 * 1024);
+        
+        if (reducedSizeInMB > 2) { // Still too large, skip caching
+          console.warn(`⚠️ CACHE: Even reduced cache too large (${reducedSizeInMB.toFixed(2)}MB), skipping storage for ${key}`);
+          return;
+        }
+        
+        localStorage.setItem(cacheKey, reducedSerialized);
+        console.log(`💾 CACHE: Stored reduced ${key} (${reducedSizeInMB.toFixed(2)}MB, expires in ${Math.round(duration / 1000)}s)`);
+      } else {
+        localStorage.setItem(cacheKey, serialized);
+        console.log(`💾 CACHE: Stored ${key} (${sizeInMB.toFixed(2)}MB, expires in ${Math.round(duration / 1000)}s)`);
+      }
+      
     } catch (error) {
-      console.warn('⚠️ CACHE: Failed to store cache:', error);
-      // Gracefully handle localStorage quota exceeded
+      if (error instanceof Error && error.name === 'QuotaExceededError') {
+        console.warn(`⚠️ CACHE: Storage quota exceeded for ${key}, attempting emergency cleanup`);
+        this.handleQuotaExceeded(key, data, userId);
+      } else {
+        console.warn('⚠️ CACHE: Failed to store cache:', error);
+      }
+    }
+  }
+
+  // Pre-process data to reduce cache size
+  private preprocessDataForCache<T>(key: keyof CacheConfig, data: T): T {
+    if (key === 'businesses' && Array.isArray(data)) {
+      const businesses = data as any[];
+      
+      // For very large datasets, immediately reduce to essential fields only
+      if (businesses.length > 3000) {
+        console.log(`📦 CACHE: Large dataset (${businesses.length}), using minimal fields only`);
+        
+        return businesses.map(business => ({
+          id: business.id,
+          name: business.name?.substring(0, 100) || '', // Limit name length
+          coordinates: business.coordinates,
+          provider: business.provider,
+          category: business.category?.substring(0, 50) || '', // Limit category length
+          town: business.town?.substring(0, 50) || '', // Limit town length
+          phone: business.phone?.substring(0, 20) || '', // Limit phone length
+          // Remove all other fields to save space
+        })) as T;
+      }
+      
+      // For medium datasets, keep more fields but limit string lengths
+      if (businesses.length > 1000) {
+        console.log(`📦 CACHE: Medium dataset (${businesses.length}), using reduced fields`);
+        
+        return businesses.map(business => ({
+          id: business.id,
+          name: business.name?.substring(0, 150) || '',
+          coordinates: business.coordinates,
+          provider: business.provider,
+          category: business.category?.substring(0, 100) || '',
+          town: business.town?.substring(0, 100) || '',
+          phone: business.phone?.substring(0, 30) || '',
+          address: business.address?.substring(0, 200) || '',
+          // Skip description and other large fields
+        })) as T;
+      }
+    }
+    
+    return data;
+  }
+
+  // Aggressively reduce data size for caching
+  private aggressivelyReduceSize<T>(key: keyof CacheConfig, data: T): T {
+    if (key === 'businesses' && Array.isArray(data)) {
+      const businesses = data as any[];
+      
+      // Take only the first 500 businesses with minimal data
+      const minimalBusinesses = businesses.slice(0, 500).map(business => ({
+        id: business.id,
+        name: business.name?.substring(0, 50) || '',
+        coordinates: business.coordinates,
+        provider: business.provider?.substring(0, 20) || '',
+        town: business.town?.substring(0, 30) || '',
+      }));
+      
+      console.log(`📦 CACHE: Aggressively reduced from ${businesses.length} to ${minimalBusinesses.length} minimal records`);
+      return minimalBusinesses as T;
+    }
+    
+    return data;
+  }
+
+  // Handle quota exceeded by cleaning up old cache and retrying with smaller data
+  private handleQuotaExceeded<T>(key: keyof CacheConfig, data: T, userId?: string): void {
+    try {
+      console.log('🧹 CACHE: Emergency cleanup - clearing all cache to free space');
+      
+      // Emergency: Clear ALL cache to free up maximum space
+      this.clearAll();
+      
+      // Also clear any other localStorage items that might be taking space
+      const allKeys = Object.keys(localStorage);
+      allKeys.forEach(storageKey => {
+        if (!storageKey.startsWith('sr_token') && !storageKey.startsWith('sr_user')) {
+          // Keep auth tokens but clear everything else
+          try {
+            localStorage.removeItem(storageKey);
+          } catch (e) {
+            // Ignore errors when clearing
+          }
+        }
+      });
+      
+      // If it's businesses data, try with a very minimal sample
+      if (key === 'businesses' && Array.isArray(data)) {
+        const businesses = data as any[];
+        
+        // Ultra-minimal sample - only 100 businesses with bare minimum data
+        const ultraMinimal = businesses.slice(0, 100).map(business => ({
+          id: business.id,
+          name: (business.name || '').substring(0, 30),
+          coordinates: business.coordinates,
+          provider: (business.provider || '').substring(0, 10),
+        }));
+        
+        console.log(`📦 CACHE: Emergency storage - ultra minimal sample (${ultraMinimal.length} records)`);
+        
+        try {
+          const now = Date.now();
+          const duration = this.CACHE_DURATIONS[key];
+          const cacheItem: CacheItem<T> = {
+            data: ultraMinimal as T,
+            timestamp: now,
+            expiresAt: now + duration,
+            version: this.CACHE_VERSION
+          };
+          
+          const cacheKey = this.getCacheKey(key, userId);
+          const serialized = JSON.stringify(cacheItem);
+          const sizeKB = new Blob([serialized]).size / 1024;
+          
+          if (sizeKB < 500) { // Only store if less than 500KB
+            localStorage.setItem(cacheKey, serialized);
+            console.log(`💾 CACHE: Emergency storage successful (${sizeKB.toFixed(1)}KB)`);
+          } else {
+            console.warn(`⚠️ CACHE: Even emergency cache too large (${sizeKB.toFixed(1)}KB), giving up`);
+          }
+        } catch (emergencyError) {
+          console.warn(`⚠️ CACHE: Emergency storage also failed:`, emergencyError);
+          // Complete failure - disable caching for this session
+          console.log('🚫 CACHE: Disabling cache for this session due to persistent quota issues');
+        }
+      }
+    } catch (retryError) {
+      console.warn(`⚠️ CACHE: Emergency cleanup failed:`, retryError);
+    }
+  }
+
+  // Clear expired cache entries to free up space
+  private clearExpiredCache(): void {
+    try {
+      const keys = Object.keys(localStorage);
+      const cacheKeys = keys.filter(key => key.startsWith(this.CACHE_PREFIX));
+      const now = Date.now();
+      let clearedCount = 0;
+      
+      cacheKeys.forEach(key => {
+        try {
+          const cached = localStorage.getItem(key);
+          if (cached) {
+            const item: CacheItem<any> = JSON.parse(cached);
+            if (now > item.expiresAt) {
+              localStorage.removeItem(key);
+              clearedCount++;
+            }
+          }
+        } catch {
+          // Invalid cache entry, remove it
+          localStorage.removeItem(key);
+          clearedCount++;
+        }
+      });
+      
+      if (clearedCount > 0) {
+        console.log(`🗑️ CACHE: Cleared ${clearedCount} expired cache entries`);
+      }
+    } catch (error) {
+      console.warn('⚠️ CACHE: Failed to clear expired cache:', error);
     }
   }
 
@@ -254,6 +463,39 @@ class CacheService {
     } catch (error) {
       console.warn('⚠️ CACHE: Failed to get stats:', error);
       return { totalSize: 0, itemCount: 0, items: [] };
+    }
+  }
+
+  // Monitor and manage cache size
+  manageCacheSize(): void {
+    try {
+      const stats = this.getStats();
+      const sizeMB = stats.totalSize / (1024 * 1024);
+      
+      console.log(`📊 CACHE: Current size: ${sizeMB.toFixed(2)}MB (${stats.itemCount} items)`);
+      
+      // If cache is getting large (>8MB), clean up
+      if (sizeMB > 8) {
+        console.log('🧹 CACHE: Cache size exceeded 8MB, cleaning up...');
+        
+        // Remove expired items first
+        this.clearExpiredCache();
+        
+        // If still too large, remove oldest items
+        const updatedStats = this.getStats();
+        if (updatedStats.totalSize / (1024 * 1024) > 8) {
+          const sortedItems = updatedStats.items.sort((a, b) => b.age - a.age);
+          const itemsToRemove = sortedItems.slice(0, Math.ceil(sortedItems.length / 2));
+          
+          itemsToRemove.forEach(item => {
+            localStorage.removeItem(this.CACHE_PREFIX + item.key);
+          });
+          
+          console.log(`🗑️ CACHE: Removed ${itemsToRemove.length} oldest cache items`);
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ CACHE: Failed to manage cache size:', error);
     }
   }
 }

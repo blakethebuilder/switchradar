@@ -83,13 +83,13 @@ export const useBusinessData = () => {
                 initializationRef.current = true;
                 isInitializing.current = false;
                 
-                // Optionally fetch fresh data in background
-                setTimeout(() => {
+                // Optionally fetch fresh data in background after a delay
+                const backgroundRefreshTimer = setTimeout(() => {
                     console.log('🔄 CACHE: Refreshing data in background');
                     initializeDataFromServer(true); // Background refresh
-                }, 1000);
+                }, 2000); // Increased delay to prevent immediate refetch
                 
-                return;
+                return () => clearTimeout(backgroundRefreshTimer);
             }
             
             // No cached data, show loading and fetch from server
@@ -110,8 +110,14 @@ export const useBusinessData = () => {
         }
     }, [token, isAuthenticated]); // CRITICAL: Only depend on auth state to prevent infinite loops
 
-    // Separate function for server data initialization
-    const initializeDataFromServer = async (isBackgroundRefresh = false) => {
+    // Separate function for server data initialization with debouncing
+    const initializeDataFromServer = useCallback(async (isBackgroundRefresh = false) => {
+        // Prevent multiple simultaneous initializations
+        if (isInitializing.current && !isBackgroundRefresh) {
+            console.log('🔐 DATA: Already initializing, skipping duplicate call');
+            return;
+        }
+        
         try {
             console.log('🚀 DATA: Starting data initialization', { isBackgroundRefresh });
             
@@ -168,9 +174,10 @@ export const useBusinessData = () => {
                 }
             }
             
-            // Process businesses
+            // Process businesses with performance optimization
             if (businessesResult.success) {
                 const businessData = businessesResult.data || [];
+                
                 if (businessData.length > 2000) {
                     console.log('📊 FETCH: Large dataset detected, enabling performance mode');
                     setIsProcessingLargeDataset(true);
@@ -182,9 +189,9 @@ export const useBusinessData = () => {
                     };
                     
                     if (window.requestIdleCallback) {
-                        window.requestIdleCallback(processLargeDataset, { timeout: 500 });
+                        window.requestIdleCallback(processLargeDataset, { timeout: 1000 });
                     } else {
-                        setTimeout(processLargeDataset, 25);
+                        setTimeout(processLargeDataset, 100);
                     }
                 } else {
                     setBusinesses(businessData);
@@ -209,7 +216,7 @@ export const useBusinessData = () => {
                 setLoading(false);
             }
         }
-    };
+    }, [token]); // Add token as dependency
 
     // Clear caches when businesses change
     useEffect(() => {
@@ -385,6 +392,12 @@ export const useBusinessData = () => {
         refetch: useCallback(async (forceRefresh = false) => {
             console.log('🔄 REFETCH: Manual refetch triggered', { forceRefresh });
             
+            // Prevent multiple simultaneous refetches
+            if (isInitializing.current) {
+                console.log('🔄 REFETCH: Already initializing, skipping refetch');
+                return;
+            }
+            
             if (forceRefresh) {
                 // Clear all caches when force refresh is requested
                 cacheService.clearAll();
@@ -394,6 +407,7 @@ export const useBusinessData = () => {
             setLastFetch(null); // Clear cache indicator
             setLoading(true);
             setCacheStatus('loading');
+            isInitializing.current = true;
             
             try {
                 // Fetch businesses first
@@ -403,10 +417,18 @@ export const useBusinessData = () => {
                     if (businessData.length > 2000) {
                         console.log('📊 REFETCH: Large dataset detected, enabling performance mode');
                         setIsProcessingLargeDataset(true);
-                        setTimeout(() => {
+                        
+                        // Use requestIdleCallback for better performance
+                        const processLargeDataset = () => {
                             setBusinesses(businessData);
                             setIsProcessingLargeDataset(false);
-                        }, 50);
+                        };
+                        
+                        if (window.requestIdleCallback) {
+                            window.requestIdleCallback(processLargeDataset, { timeout: 1000 });
+                        } else {
+                            setTimeout(processLargeDataset, 100);
+                        }
                     } else {
                         setBusinesses(businessData);
                     }
@@ -464,6 +486,7 @@ export const useBusinessData = () => {
                 console.error('❌ REFETCH: Error during manual refetch:', error);
                 setCacheStatus('error');
             } finally {
+                isInitializing.current = false;
                 setLoading(false);
             }
             
