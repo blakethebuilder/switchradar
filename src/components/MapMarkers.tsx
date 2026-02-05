@@ -11,20 +11,58 @@ interface MapMarkersProps {
   onBusinessSelect?: (business: Business) => void;
 }
 
-export const MapMarkers: React.FC<MapMarkersProps> = ({
+export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
   businesses,
   selectedBusinessId,
   onBusinessSelect
 }) => {
-  // Simple validation - only check what we need
-  const validBusinesses = businesses.filter(business => 
-    business?.id && 
-    business.coordinates && 
-    typeof business.coordinates.lat === 'number' && 
-    typeof business.coordinates.lng === 'number' &&
-    !isNaN(business.coordinates.lat) && 
-    !isNaN(business.coordinates.lng)
-  );
+  console.log('🗺️ MAPMARKERS: Rendering', businesses?.length || 0, 'businesses');
+
+  // CRITICAL: Limit markers to prevent browser freeze with large datasets
+  const validBusinesses = React.useMemo(() => {
+    if (!businesses || businesses.length === 0) return [];
+    
+    // Filter valid businesses first
+    const filtered = businesses.filter(business => 
+      business?.id && 
+      business.coordinates && 
+      typeof business.coordinates.lat === 'number' && 
+      typeof business.coordinates.lng === 'number' &&
+      !isNaN(business.coordinates.lat) && 
+      !isNaN(business.coordinates.lng) &&
+      Math.abs(business.coordinates.lat) > 0.001 && // Exclude 0,0 coordinates
+      Math.abs(business.coordinates.lng) > 0.001
+    );
+    
+    // PERFORMANCE: Limit to maximum 2000 markers to prevent freezing
+    const MAX_MARKERS = 2000;
+    if (filtered.length > MAX_MARKERS) {
+      console.log(`🗺️ MAPMARKERS: Large dataset (${filtered.length}), limiting to ${MAX_MARKERS} markers for performance`);
+      
+      // Always include selected business if it exists
+      let result = [];
+      if (selectedBusinessId) {
+        const selectedBusiness = filtered.find(b => b.id === selectedBusinessId);
+        if (selectedBusiness) {
+          result.push(selectedBusiness);
+        }
+      }
+      
+      // Take a representative sample of the rest
+      const step = Math.ceil(filtered.length / MAX_MARKERS);
+      const sampled = filtered.filter((_, index) => index % step === 0);
+      
+      // Combine selected + sampled, remove duplicates
+      const combined = [...result, ...sampled];
+      const unique = combined.filter((business, index, arr) => 
+        arr.findIndex(b => b.id === business.id) === index
+      );
+      
+      return unique.slice(0, MAX_MARKERS);
+    }
+    
+    return filtered;
+  }, [businesses, selectedBusinessId]);
 
   // Simple cluster radius - fewer zoom levels, clearer behavior
   const clusterRadius = (zoom: number) => {
@@ -113,4 +151,4 @@ export const MapMarkers: React.FC<MapMarkersProps> = ({
       })}
     </MarkerClusterGroup>
   );
-};
+});

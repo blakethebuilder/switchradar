@@ -11,7 +11,7 @@ const db = new Database(dbPath);
 
 async function seed() {
     const users = [
-        { username: 'blake', password: 'Smart@2026!' },
+        { username: 'smartAdmin', password: 'Smart@2026!' },
         { username: 'Sean', password: 'Smart@2026!' }
     ];
 

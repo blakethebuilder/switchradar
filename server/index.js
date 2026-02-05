@@ -64,7 +64,7 @@ const apiAlignment = new APIAlignmentService(app);
 // Seed default users for authentication
 const seedDefaultUsers = async () => {
     const defaultUsers = [
-        { username: 'blake', password: 'Smart@2026!' }
+        { username: 'smartAdmin', password: 'Smart@2026!' }
     ];
     
     for (const user of defaultUsers) {
@@ -84,7 +84,7 @@ const seedDefaultUsers = async () => {
     try {
         const defaultDataset = db.prepare('SELECT * FROM datasets WHERE id = 1').get();
         if (!defaultDataset) {
-            // Get the first user (should be blake with ID 1)
+            // Get the first user (should be smartAdmin with ID 1)
             const firstUser = db.prepare('SELECT * FROM users ORDER BY id LIMIT 1').get();
             if (firstUser) {
                 db.prepare(`
@@ -159,9 +159,9 @@ app.post('/api/auth/login', async (req, res) => {
         return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Determine user role - blake is always admin
+    // Determine user role - smartAdmin is always admin
     let role = 'user';
-    if (username.toLowerCase() === 'blake') {
+    if (username.toLowerCase() === 'smartadmin') {
         role = 'admin';
     }
 
@@ -177,7 +177,6 @@ app.post('/api/auth/login', async (req, res) => {
         userId: user.id, 
         username: user.username,
         role,
-        email: username.toLowerCase() === 'blake' ? 'blake@smartintegrateco.za' : `${username.toLowerCase()}@switchradar.com`,
         createdAt: user.created_at
     };
     

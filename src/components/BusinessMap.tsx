@@ -56,12 +56,20 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
   const [currentZoom, setCurrentZoom] = useState(6);
   const [isMapLoading, setIsMapLoading] = useState(true);
 
-  console.log('🗺️ MAP: BusinessMap render', {
-    businessesCount: businesses?.length || 0,
-    fullScreen,
-    selectedBusinessId,
-    selectedBusinessIds: selectedBusinessIds.length
-  });
+  // Memoize businesses to prevent unnecessary re-renders
+  const memoizedBusinesses = React.useMemo(() => {
+    return businesses || [];
+  }, [businesses]);
+
+  // Only log when businesses count actually changes
+  React.useEffect(() => {
+    console.log('🗺️ MAP: BusinessMap businesses updated', {
+      businessesCount: memoizedBusinesses.length,
+      fullScreen,
+      selectedBusinessId,
+      selectedBusinessIds: selectedBusinessIds.length
+    });
+  }, [memoizedBusinesses.length, fullScreen, selectedBusinessId, selectedBusinessIds.length]);
 
   // Handle map ready
   const handleMapReady = useCallback((map: L.Map) => {
@@ -296,7 +304,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
         {/* Business markers */}
         <MapMarkers
           key="business-markers"
-          businesses={businesses}
+          businesses={memoizedBusinesses}
           selectedBusinessId={selectedBusinessId}
           onBusinessSelect={onBusinessSelect}
         />

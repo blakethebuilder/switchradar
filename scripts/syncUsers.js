@@ -8,7 +8,7 @@ const PRODUCTION_API = 'https://map.smartintegrate.co.za/api';
 const LOCAL_DB_PATH = path.resolve(__dirname, '../data/switchradar.db');
 
 // Production credentials
-const PROD_USERNAME = 'blake';
+const PROD_USERNAME = 'smartAdmin';
 const PROD_PASSWORD = 'Smart@2026!';
 
 async function syncUsersFromProduction() {
