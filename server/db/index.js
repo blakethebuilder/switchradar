@@ -7,7 +7,7 @@ const dbPath = path.resolve(__dirname, '../../data/switchradar.db');
 // Ensure data directory exists
 const dataDir = path.dirname(dbPath);
 if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+  fs.mkdirSync(dataDir, { recursive: true });
 }
 
 const db = new Database(dbPath);
@@ -21,6 +21,7 @@ db.exec(`
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE,
     password TEXT,
+    role TEXT DEFAULT 'user',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_sync DATETIME,
     total_businesses INTEGER DEFAULT 0,
@@ -77,6 +78,17 @@ db.exec(`
     FOREIGN KEY(userId) REFERENCES users(id)
   );
 `);
+
+// Migration: Add role column if not exists
+try {
+  db.exec("ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user'");
+  console.log('✅ Migration: Added role column to users table');
+  // Set 'blake' and 'smartAdmin' as admin by default if they exist
+  db.prepare("UPDATE users SET role = 'admin' WHERE username = 'blake'").run();
+  db.prepare("UPDATE users SET role = 'super_admin' WHERE username = 'smartAdmin'").run();
+} catch (err) {
+  // Column likely already exists
+}
 
 // Add performance indexes
 db.exec(`

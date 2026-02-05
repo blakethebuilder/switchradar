@@ -26,17 +26,18 @@ const updateUserStats = (userId) => {
 // Auto-seed requested users
 const seedUsers = async () => {
     const users = [
-        { username: 'blake', password: 'Smart@2026!' },
-        { username: 'Sean', password: 'Smart@2026!' },
-        { username: 'Jarred', password: 'Smart@2026!' }
+        { username: 'blake', password: 'Smart@2026!', role: 'admin' },
+        { username: 'smartAdmin', password: 'Smart@2026!', role: 'super_admin' },
+        { username: 'Sean', password: 'Smart@2026!', role: 'user' },
+        { username: 'Jarred', password: 'Smart@2026!', role: 'user' }
     ];
     for (const u of users) {
         try {
             const existing = db.prepare('SELECT * FROM users WHERE username = ?').get(u.username);
             if (!existing) {
                 const hashedPassword = await bcrypt.hash(u.password, 10);
-                db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(u.username, hashedPassword);
-                console.log(`Successfully seeded user: ${u.username}`);
+                db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run(u.username, hashedPassword, u.role || 'user');
+                console.log(`Successfully seeded user: ${u.username} as ${u.role || 'user'}`);
             }
         } catch (err) {
             console.error(`Error seeding user ${u.username}:`, err.message);
@@ -67,8 +68,14 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ userId: user.id, username: user.username, role: user.username === 'blake' ? 'admin' : 'user' }, JWT_SECRET, { expiresIn: '24h' });
-        res.json({ token, userId: user.id, username: user.username });
+        const role = user.role || (user.username === 'blake' ? 'admin' : 'user');
+        const token = jwt.sign({ userId: user.id, username: user.username, role }, JWT_SECRET, { expiresIn: '24h' });
+        res.json({
+            token,
+            userId: user.id,
+            username: user.username,
+            role: role
+        });
     } catch (error) {
         console.error('Login error:', error);
         res.status(500).json({ message: 'Internal server error during login' });
@@ -77,7 +84,7 @@ app.post('/api/auth/login', async (req, res) => {
 
 // User Management Routes (Admin only)
 app.get('/api/users', auth, (req, res) => {
-    if (req.userData.role !== 'admin') {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
         return res.status(403).json({ message: 'Access denied: Admin only' });
     }
 
@@ -91,15 +98,15 @@ app.get('/api/users', auth, (req, res) => {
 });
 
 app.post('/api/users', auth, async (req, res) => {
-    if (req.userData.role !== 'admin') {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
         return res.status(403).json({ message: 'Access denied: Admin only' });
     }
 
-    const { username, password } = req.body;
+    const { username, password, role } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        const stmt = db.prepare('INSERT INTO users (username, password) VALUES (?, ?)');
-        const result = stmt.run(username, hashedPassword);
+        const stmt = db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)');
+        const result = stmt.run(username, hashedPassword, role || 'user');
         res.status(201).json({ success: true, userId: result.lastInsertRowid });
     } catch (error) {
         res.status(400).json({ success: false, error: 'Username already exists' });
@@ -107,18 +114,18 @@ app.post('/api/users', auth, async (req, res) => {
 });
 
 app.put('/api/users/:id', auth, async (req, res) => {
-    if (req.userData.role !== 'admin') {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
         return res.status(403).json({ message: 'Access denied: Admin only' });
     }
 
     const { id } = req.params;
-    const { username, password } = req.body;
+    const { username, password, role } = req.body;
     try {
         if (password) {
             const hashedPassword = await bcrypt.hash(password, 10);
-            db.prepare('UPDATE users SET username = ?, password = ? WHERE id = ?').run(username, hashedPassword, id);
+            db.prepare('UPDATE users SET username = ?, password = ?, role = ? WHERE id = ?').run(username, hashedPassword, role || 'user', id);
         } else {
-            db.prepare('UPDATE users SET username = ? WHERE id = ?').run(username, id);
+            db.prepare('UPDATE users SET username = ?, role = ? WHERE id = ?').run(username, role || 'user', id);
         }
         res.json({ success: true, message: 'User updated' });
     } catch (error) {
@@ -127,7 +134,7 @@ app.put('/api/users/:id', auth, async (req, res) => {
 });
 
 app.delete('/api/users/:id', auth, (req, res) => {
-    if (req.userData.role !== 'admin') {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
         return res.status(403).json({ message: 'Access denied: Admin only' });
     }
 

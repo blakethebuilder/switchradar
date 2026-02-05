@@ -272,6 +272,9 @@ export const UserManagement: React.FC = () => {
                       {user.username.toLowerCase() === 'blake' && (
                         <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Admin</span>
                       )}
+                      {(user as any).role === 'super_admin' && (
+                        <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">Super Admin</span>
+                      )}
                     </div>
                     <div className="flex items-center gap-4 mt-1">
                       <div className="flex items-center gap-1 text-sm text-slate-600">
