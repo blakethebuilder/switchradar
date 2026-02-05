@@ -169,7 +169,7 @@ class ServerDataService {
           };
         }
         
-        throw new Error(`JSON parsing failed: ${jsonError.message}`);
+        throw new Error(`JSON parsing failed: ${(jsonError as Error).message}`);
       }
 
       const businesses = result.data || result; // Handle both paginated and direct responses
@@ -305,63 +305,8 @@ class ServerDataService {
       };
     }
   }
-  async getBusinessesChunked(token: string, chunkSize = 1000): Promise<ServerDataResult> {
-    try {
-      console.log('📦 API: Fetching businesses in chunks');
-      let allBusinesses: any[] = [];
-      let page = 1;
-      let hasMore = true;
 
-      while (hasMore) {
-        console.log(`📦 API: Fetching chunk ${page} (${chunkSize} per page)`);
-        
-        const response = await this.makeRequest(
-          this.getApiUrl(`/api/businesses?page=${page}&limit=${chunkSize}`), 
-          {
-            headers: this.getAuthHeaders(token)
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        const businesses = result.data || result.businesses || [];
-        
-        if (!Array.isArray(businesses) || businesses.length === 0) {
-          hasMore = false;
-        } else {
-          allBusinesses = [...allBusinesses, ...businesses];
-          hasMore = businesses.length === chunkSize; // If we got less than requested, we're done
-          page++;
-        }
-
-        // Safety limit to prevent infinite loops
-        if (page > 50) {
-          console.warn('⚠️ API: Reached maximum page limit (50), stopping');
-          break;
-        }
-      }
-
-      console.log(`✅ API: Fetched ${allBusinesses.length} businesses in ${page - 1} chunks`);
-      
-      // Cache the result
-      cacheService.setBusinesses(allBusinesses);
-
-      return {
-        success: true,
-        data: allBusinesses,
-        count: allBusinesses.length
-      };
-    } catch (error) {
-      console.error('Failed to fetch businesses in chunks:', error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch businesses in chunks'
-      };
-    }
-  }
+  async saveBusinesses(businesses: Business[], token: string, metadata?: any): Promise<ServerDataResult> {
     console.log('🚀 API: saveBusinesses called');
     console.log('📊 API: Business count:', businesses.length);
     console.log('🔐 API: Token present:', !!token, 'length:', token?.length);
@@ -399,45 +344,32 @@ class ServerDataService {
       console.log('📦 API: Request body size:', bodySize, 'characters', (bodySize / 1024 / 1024).toFixed(2), 'MB');
       console.log('🔄 API: Clear existing data:', requestBody.clearFirst);
 
-      console.log('🌐 API: Making fetch request...');
-      
-      const response = await this.makeRequest(this.getApiUrl('/api/businesses/sync'), {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(requestBody)
-      });
-
-      console.log('📥 API: Response received:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/businesses/sync'),
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(requestBody)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ API: Response error text:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('✅ API: Response result:', result);
-      
+      console.log('✅ API: Businesses saved successfully');
+
       // Invalidate cache after successful save
       cacheService.invalidateRelated('businesses');
-      
+
       return {
         success: true,
-        data: result,
-        count: businesses.length
+        data: result
       };
     } catch (error) {
-      console.error('💥 API: saveBusinesses error:', error);
-      console.error('API Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
-      
+      console.error('Failed to save businesses:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to save businesses'
@@ -445,126 +377,103 @@ class ServerDataService {
     }
   }
 
-  private async saveBusinessesChunked(businesses: Business[], token: string, chunkSize: number = 500, metadata?: { source?: string; town?: string; clearFirst?: boolean }): Promise<ServerDataResult> {
-    console.log(`🔄 Starting chunked upload: ${businesses.length} businesses in chunks of ${chunkSize}`);
-    
-    const chunks = [];
-    for (let i = 0; i < businesses.length; i += chunkSize) {
-      chunks.push(businesses.slice(i, i + chunkSize));
-    }
-    
-    console.log(`📦 Created ${chunks.length} chunks`);
-    
+  // Save businesses in chunks for large datasets
+  async saveBusinessesChunked(businesses: Business[], token: string, chunkSize = 1000, metadata?: any): Promise<ServerDataResult> {
     try {
-      // Only clear existing data if explicitly requested
-      if (metadata?.clearFirst === true) {
-        console.log('🗑️ Clearing existing server data...');
-        const clearResult = await this.clearWorkspace(token);
-        if (!clearResult.success) {
-          console.warn('⚠️ Failed to clear workspace, continuing anyway:', clearResult.error);
-        }
-      } else {
-        console.log('📝 Appending to existing data (not clearing)');
+      console.log(`📦 API: Saving ${businesses.length} businesses in chunks of ${chunkSize}`);
+      
+      const chunks = [];
+      for (let i = 0; i < businesses.length; i += chunkSize) {
+        chunks.push(businesses.slice(i, i + chunkSize));
       }
-      
-      let totalSuccess = 0;
-      let totalErrors = 0;
-      const allErrors: any[] = [];
-      
-      // Upload chunks sequentially to avoid overwhelming the server
+
+      console.log(`📦 API: Created ${chunks.length} chunks`);
+
+      // Clear existing data only on first chunk if requested
+      let clearFirst = metadata?.clearFirst || false;
+
       for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        console.log(`📤 Uploading chunk ${i + 1}/${chunks.length} (${chunk.length} businesses)...`);
+        console.log(`📦 API: Uploading chunk ${i + 1}/${chunks.length} (${chunks[i].length} businesses)`);
         
-        try {
-          const response = await this.makeRequest(this.getApiUrl('/api/businesses/sync'), {
+        const chunkMetadata = {
+          ...metadata,
+          clearFirst: clearFirst && i === 0, // Only clear on first chunk
+          chunkIndex: i,
+          totalChunks: chunks.length,
+          isLastChunk: i === chunks.length - 1
+        };
+
+        const response = await this.makeRequest(
+          this.getApiUrl('/api/businesses/sync'),
+          {
             method: 'POST',
             headers: this.getAuthHeaders(token),
-            body: JSON.stringify({ 
-              businesses: chunk,
-              isChunked: true,
-              chunkIndex: i,
-              totalChunks: chunks.length,
-              clearFirst: false, // Never clear on chunks since we handled it above
-              ...metadata // Include source and town metadata
+            body: JSON.stringify({
+              businesses: chunks[i],
+              ...chunkMetadata
             })
-          });
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Chunk ${i + 1} failed: HTTP ${response.status}: ${errorText}`);
           }
-          
-          const result = await response.json();
-          totalSuccess += result.successCount || chunk.length;
-          totalErrors += result.errorCount || 0;
-          if (result.errors) {
-            allErrors.push(...result.errors);
-          }
-          
-          console.log(`✅ Chunk ${i + 1}/${chunks.length} completed: ${result.successCount || chunk.length} success, ${result.errorCount || 0} errors`);
-          
-          // Small delay between chunks to be nice to the server
-          if (i < chunks.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-          }
-          
-        } catch (error) {
-          console.error(`❌ Chunk ${i + 1} failed:`, error);
-          totalErrors += chunk.length;
-          allErrors.push({
-            chunk: i + 1,
-            error: error instanceof Error ? error.message : String(error)
-          });
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
+
+        // Don't clear on subsequent chunks
+        clearFirst = false;
       }
-      
-      console.log(`🎉 Chunked upload completed: ${totalSuccess} success, ${totalErrors} errors`);
-      
+
+      console.log(`✅ API: All ${chunks.length} chunks uploaded successfully`);
+
+      // Invalidate cache after successful save
+      cacheService.invalidateRelated('businesses');
+
       return {
-        success: totalErrors < businesses.length, // Success if at least some businesses were uploaded
-        data: {
-          message: 'Chunked upload completed',
-          totalReceived: businesses.length,
-          successCount: totalSuccess,
-          errorCount: totalErrors,
-          errors: allErrors,
-          chunksProcessed: chunks.length
-        },
-        count: totalSuccess
+        success: true,
+        data: { message: `Successfully uploaded ${businesses.length} businesses in ${chunks.length} chunks` }
       };
-      
     } catch (error) {
-      console.error('💥 Chunked upload failed:', error);
+      console.error('Failed to save businesses in chunks:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Chunked upload failed'
+        error: error instanceof Error ? error.message : 'Failed to save businesses in chunks'
       };
     }
   }
 
   async addBusiness(business: Business, token: string): Promise<ServerDataResult> {
-    // For single business, we'll get all businesses, add the new one, and save all
-    const currentResult = await this.getBusinesses(token);
-    if (!currentResult.success) {
-      return currentResult;
-    }
+    try {
+      const currentResult = await this.getBusinesses(token);
+      if (!currentResult.success) {
+        return currentResult;
+      }
 
-    const businesses = currentResult.data || [];
-    businesses.push(business);
-    
-    return this.saveBusinesses(businesses, token);
+      const businesses = currentResult.data || [];
+      businesses.push(business);
+
+      return await this.saveBusinesses(businesses, token);
+    } catch (error) {
+      console.error('Failed to add business:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to add business'
+      };
+    }
   }
 
   async updateBusiness(businessId: string, updates: Partial<Business>, token: string): Promise<ServerDataResult> {
     try {
-      console.log('🔄 Updating single business:', businessId, 'with updates:', Object.keys(updates));
+      console.log('🔄 API: Updating business:', businessId);
       
-      const response = await this.makeRequest(this.getApiUrl(`/api/businesses/${businessId}`), {
-        method: 'PUT',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify(updates)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/businesses/${businessId}`),
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify(updates)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -572,21 +481,16 @@ class ServerDataService {
       }
 
       const result = await response.json();
-      console.log('✅ Business updated successfully');
-      
+
+      // Invalidate cache after successful update
+      cacheService.invalidateRelated('businesses');
+
       return {
         success: true,
-        data: result.business
+        data: result
       };
     } catch (error) {
-      console.error('❌ Failed to update business:', error);
-      
-      // Fallback to the old method if the new endpoint doesn't exist
-      if (error instanceof Error && error.message.includes('404')) {
-        console.log('🔄 Falling back to full sync method...');
-        return this.updateBusinessFallback(businessId, updates, token);
-      }
-      
+      console.error('Failed to update business:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to update business'
@@ -594,38 +498,50 @@ class ServerDataService {
     }
   }
 
-  // Fallback method using the old approach
-  private async updateBusinessFallback(businessId: string, updates: Partial<Business>, token: string): Promise<ServerDataResult> {
-    const currentResult = await this.getBusinesses(token);
-    if (!currentResult.success) {
-      return currentResult;
-    }
+  async updateBusinessFallback(businessId: string, updates: Partial<Business>, token: string): Promise<ServerDataResult> {
+    try {
+      const currentResult = await this.getBusinesses(token);
+      if (!currentResult.success) {
+        return currentResult;
+      }
 
-    const businesses = currentResult.data || [];
-    const businessIndex = businesses.findIndex((b: Business) => b.id === businessId);
-    
-    if (businessIndex === -1) {
+      const businesses = currentResult.data || [];
+      const businessIndex = businesses.findIndex((b: Business) => b.id === businessId);
+      
+      if (businessIndex === -1) {
+        throw new Error('Business not found');
+      }
+
+      businesses[businessIndex] = { ...businesses[businessIndex], ...updates };
+
+      return await this.saveBusinesses(businesses, token);
+    } catch (error) {
+      console.error('Failed to update business (fallback):', error);
       return {
         success: false,
-        error: 'Business not found'
+        error: error instanceof Error ? error.message : 'Failed to update business'
       };
     }
-
-    businesses[businessIndex] = { ...businesses[businessIndex], ...updates };
-    
-    return this.saveBusinesses(businesses, token);
   }
 
   async deleteBusiness(businessId: string, token: string): Promise<ServerDataResult> {
-    const currentResult = await this.getBusinesses(token);
-    if (!currentResult.success) {
-      return currentResult;
-    }
+    try {
+      const currentResult = await this.getBusinesses(token);
+      if (!currentResult.success) {
+        return currentResult;
+      }
 
-    const businesses = currentResult.data || [];
-    const filteredBusinesses = businesses.filter((b: Business) => b.id !== businessId);
-    
-    return this.saveBusinesses(filteredBusinesses, token);
+      const businesses = currentResult.data || [];
+      const filteredBusinesses = businesses.filter((b: Business) => b.id !== businessId);
+
+      return await this.saveBusinesses(filteredBusinesses, token);
+    } catch (error) {
+      console.error('Failed to delete business:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to delete business'
+      };
+    }
   }
 
   // Route Operations
@@ -635,7 +551,6 @@ class ServerDataService {
       if (!forceRefresh) {
         const cachedRoutes = cacheService.getRoutes();
         if (cachedRoutes) {
-          console.log('📦 CACHE: Using cached routes', cachedRoutes.length);
           return {
             success: true,
             data: cachedRoutes,
@@ -644,20 +559,22 @@ class ServerDataService {
         }
       }
 
-      console.log('🌐 API: Fetching routes from server');
-      const response = await fetch(this.getApiUrl('/api/route'), {
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/routes'),
+        {
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      const routes = await response.json();
+      const result = await response.json();
+      const routes = result.data || result;
 
       // Cache the result
       cacheService.setRoutes(routes);
-      console.log('💾 CACHE: Cached routes', routes.length);
 
       return {
         success: true,
@@ -667,14 +584,13 @@ class ServerDataService {
     } catch (error) {
       console.error('Failed to fetch routes:', error);
       
-      // Try to return cached data as fallback if available
+      // Try to return cached data as fallback
       const cachedRoutes = cacheService.getRoutes();
       if (cachedRoutes) {
-        console.log('📦 CACHE: Using stale cache as fallback', cachedRoutes.length);
         return {
           success: true,
           data: cachedRoutes,
-          count: cachedRoutes.length
+          count: cachedRoutes ? cachedRoutes.length : 0
         };
       }
       
@@ -687,11 +603,14 @@ class ServerDataService {
 
   async saveRoutes(routeItems: RouteItem[], token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/route/sync'), {
-        method: 'POST',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ routeItems })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/routes'),
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ routeItems })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -699,11 +618,13 @@ class ServerDataService {
       }
 
       const result = await response.json();
-      
+
+      // Invalidate cache after successful save
+      cacheService.invalidateRelated('routes');
+
       return {
         success: true,
-        data: result,
-        count: routeItems.length
+        data: result
       };
     } catch (error) {
       console.error('Failed to save routes:', error);
@@ -717,14 +638,14 @@ class ServerDataService {
   // Bulk Operations
   async bulkDelete(businessIds: string[], token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/businesses/bulk'), {
-        method: 'POST',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ 
-          action: 'delete', 
-          businessIds 
-        })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/businesses/bulk-delete'),
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ businessIds })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -732,32 +653,36 @@ class ServerDataService {
       }
 
       const result = await response.json();
-      
+
+      // Invalidate cache after successful delete
+      cacheService.invalidateRelated('businesses');
+
       return {
         success: true,
-        data: result,
-        count: businessIds.length
+        data: result
       };
     } catch (error) {
-      console.error('Failed to bulk delete:', error);
+      console.error('Failed to bulk delete businesses:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to bulk delete'
+        error: error instanceof Error ? error.message : 'Failed to bulk delete businesses'
       };
     }
   }
 
   async bulkUpdate(businessIds: string[], updates: Partial<Business>, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/businesses/bulk'), {
-        method: 'POST',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ 
-          action: 'update', 
-          businessIds,
-          updates 
-        })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/businesses/bulk-update'),
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ 
+            businessIds,
+            updates 
+          })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -765,28 +690,33 @@ class ServerDataService {
       }
 
       const result = await response.json();
-      
+
+      // Invalidate cache after successful update
+      cacheService.invalidateRelated('businesses');
+
       return {
         success: true,
-        data: result,
-        count: businessIds.length
+        data: result
       };
     } catch (error) {
-      console.error('Failed to bulk update:', error);
+      console.error('Failed to bulk update businesses:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to bulk update'
+        error: error instanceof Error ? error.message : 'Failed to bulk update businesses'
       };
     }
   }
 
-  // Clear all data
+  // Workspace Operations
   async clearWorkspace(token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/workspace'), {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/workspace/clear'),
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -794,7 +724,10 @@ class ServerDataService {
       }
 
       const result = await response.json();
-      
+
+      // Clear all caches after workspace clear
+      cacheService.clearAll();
+
       return {
         success: true,
         data: result
@@ -808,14 +741,16 @@ class ServerDataService {
     }
   }
 
-  // Remove duplicates
   async removeDuplicates(token: string, dryRun = false): Promise<ServerDataResult> {
     try {
-      const response = await this.makeRequest(this.getApiUrl('/api/businesses/remove-duplicates'), {
-        method: 'POST',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ dryRun })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/businesses/remove-duplicates?dryRun=${dryRun}`),
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ dryRun })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -823,6 +758,11 @@ class ServerDataService {
       }
 
       const result = await response.json();
+
+      // Invalidate cache after successful operation (if not dry run)
+      if (!dryRun) {
+        cacheService.invalidateRelated('businesses');
+      }
 
       return {
         success: true,
@@ -837,49 +777,42 @@ class ServerDataService {
     }
   }
 
-  // Connection test with detailed diagnostics
+  // Connection and Health
   async testConnection(): Promise<boolean> {
     try {
-      const apiUrl = this.getApiUrl('/api/auth/ping');
-      console.log('🔍 Testing connection to:', apiUrl);
-      
-      // Create abort controller for timeout
+      const apiUrl = environmentConfig.getApiUrl();
+      console.log('🔗 Testing connection to:', apiUrl);
+
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
-      const response = await fetch(apiUrl, {
-        method: 'GET',
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const response = await fetch(`${apiUrl}/api/health`, {
         signal: controller.signal
       });
-      
+
       clearTimeout(timeoutId);
       const isConnected = response.ok;
-      console.log(`🌐 Connection test result: ${isConnected ? '✅ Connected' : '❌ Failed'}`);
-      
-      if (isConnected) {
-        const data = await response.json();
-        console.log('📡 Server response:', data);
-      }
-      
+      console.log('🔗 Connection test result:', isConnected);
       return isConnected;
     } catch (error) {
-      console.error('🚨 Connection test failed:', error);
+      console.error('Connection test failed:', error);
       return false;
     }
   }
 
-  // Health check with detailed info
   async healthCheck(): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/health'), {
-        method: 'GET'
-      });
-      
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/health'),
+        {}
+      );
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const health = await response.json();
+
       return {
         success: true,
         data: health
@@ -893,12 +826,15 @@ class ServerDataService {
     }
   }
 
-  // Get server statistics for current user's workspace
+  // Statistics
   async getStats(token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/stats'), {
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/stats'),
+        {
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -919,12 +855,14 @@ class ServerDataService {
     }
   }
 
-  // Admin-only: Get all workspaces overview
   async getWorkspaces(token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/workspaces'), {
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/workspaces'),
+        {
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -945,29 +883,27 @@ class ServerDataService {
     }
   }
 
-  // User Management (Admin only)
+  // User Management
   async getUsers(token: string): Promise<ServerDataResult> {
     try {
-      console.log('🌐 Fetching users from:', this.getApiUrl('/api/users'));
-      const response = await fetch(this.getApiUrl('/api/users'), {
-        headers: this.getAuthHeaders(token)
-      });
-
-      console.log('📥 Users response status:', response.status, response.statusText);
+      console.log('👥 API: Fetching users');
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/users'),
+        {
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Users response error:', errorText);
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const users = await response.json();
-      console.log('📊 Users response data:', users);
 
       return {
         success: true,
-        data: users.data || users, // Handle both formats
-        count: (users.data || users).length
+        data: users
       };
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -980,23 +916,22 @@ class ServerDataService {
 
   async createUser(username: string, password: string, token: string): Promise<ServerDataResult> {
     try {
-      console.log('🚀 Creating user:', username, 'at:', this.getApiUrl('/api/users'));
-      const response = await fetch(this.getApiUrl('/api/users'), {
-        method: 'POST',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ username, password })
-      });
-
-      console.log('📥 Create user response status:', response.status, response.statusText);
+      console.log('👤 API: Creating user:', username);
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/users'),
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ username, password })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('❌ Create user error:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('✅ Create user success:', result);
 
       return {
         success: true,
@@ -1013,10 +948,13 @@ class ServerDataService {
 
   async deleteUser(userId: number, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/users/${userId}`), {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/users/${userId}`),
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1040,9 +978,12 @@ class ServerDataService {
 
   async getUserBusinesses(userId: number, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/users/${userId}/businesses`), {
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/users/${userId}/businesses`),
+        {
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1052,8 +993,7 @@ class ServerDataService {
 
       return {
         success: true,
-        data: businesses,
-        count: businesses.length
+        data: businesses
       };
     } catch (error) {
       console.error('Failed to fetch user businesses:', error);
@@ -1066,10 +1006,13 @@ class ServerDataService {
 
   async deleteUserBusiness(userId: number, businessId: string, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/users/${userId}/businesses/${businessId}`), {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/users/${userId}/businesses/${businessId}`),
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1093,10 +1036,13 @@ class ServerDataService {
 
   async clearUserBusinesses(userId: number, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/users/${userId}/businesses`), {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/users/${userId}/businesses`),
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1121,9 +1067,12 @@ class ServerDataService {
   // Sharing Operations
   async getAvailableTowns(token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/share/towns'), {
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/share/towns/available'),
+        {
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1133,8 +1082,7 @@ class ServerDataService {
 
       return {
         success: true,
-        data: result.towns || [],
-        count: result.towns?.length || 0
+        data: result
       };
     } catch (error) {
       console.error('Failed to fetch available towns:', error);
@@ -1147,11 +1095,14 @@ class ServerDataService {
 
   async shareTowns(targetUserId: number, towns: string[], token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/share/towns'), {
-        method: 'POST',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ targetUserId, towns })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/share/towns'),
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ targetUserId, towns })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1175,11 +1126,14 @@ class ServerDataService {
 
   async shareBusinesses(targetUserId: number, businessIds: string[], token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/share/businesses'), {
-        method: 'POST',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ targetUserId, businessIds })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/share/businesses'),
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ targetUserId, businessIds })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1204,9 +1158,12 @@ class ServerDataService {
   // Unshare Operations
   async getSharedData(token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/share/shared'), {
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/share/shared'),
+        {
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -1229,11 +1186,14 @@ class ServerDataService {
 
   async unshareTowns(targetUserId: number, towns: string[], token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/share/towns'), {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ targetUserId, towns })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/share/towns'),
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ targetUserId, towns })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1257,11 +1217,14 @@ class ServerDataService {
 
   async unshareBusinesses(targetUserId: number, businessIds: string[], token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/share/businesses'), {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ targetUserId, businessIds })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/share/businesses'),
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ targetUserId, businessIds })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1286,11 +1249,14 @@ class ServerDataService {
   // User Password Management
   async updateUserPassword(userId: number, newPassword: string, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/users/${userId}/password`), {
-        method: 'PUT',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ password: newPassword })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/users/${userId}/password`),
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ password: newPassword })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1314,11 +1280,14 @@ class ServerDataService {
 
   async updateUser(userId: number, updates: { username?: string; password?: string }, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/users/${userId}`), {
-        method: 'PUT',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify(updates)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/users/${userId}`),
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify(updates)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1343,11 +1312,14 @@ class ServerDataService {
   // Dataset Management Functions
   async updateDataset(datasetId: number, updates: { name?: string; description?: string; town?: string; province?: string }, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/datasets/${datasetId}`), {
-        method: 'PUT',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify(updates)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/datasets/${datasetId}`),
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify(updates)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1371,10 +1343,13 @@ class ServerDataService {
 
   async deleteDataset(datasetId: number, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/datasets/${datasetId}`), {
-        method: 'DELETE',
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/datasets/${datasetId}`),
+        {
+          method: 'DELETE',
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1398,10 +1373,13 @@ class ServerDataService {
 
   async getDatasetDetails(datasetId: number, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/datasets/${datasetId}/details`), {
-        method: 'GET',
-        headers: this.getAuthHeaders(token)
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/datasets/${datasetId}/details`),
+        {
+          method: 'GET',
+          headers: this.getAuthHeaders(token)
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1425,11 +1403,14 @@ class ServerDataService {
 
   async moveBusinessesToDataset(fromDatasetId: number, businessIds: string[], targetDatasetId: number, token: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl(`/api/datasets/${fromDatasetId}/move-businesses`), {
-        method: 'POST',
-        headers: this.getAuthHeaders(token),
-        body: JSON.stringify({ businessIds, targetDatasetId })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl(`/api/datasets/${fromDatasetId}/move-businesses`),
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(token),
+          body: JSON.stringify({ businessIds, targetDatasetId })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1453,11 +1434,14 @@ class ServerDataService {
 
   async createDataset(name: string, description: string, town: string, province?: string, token?: string): Promise<ServerDataResult> {
     try {
-      const response = await fetch(this.getApiUrl('/api/datasets'), {
-        method: 'POST',
-        headers: this.getAuthHeaders(token || ''),
-        body: JSON.stringify({ name, description, town, province })
-      });
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/datasets'),
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(token || ''),
+          body: JSON.stringify({ name, description, town, province })
+        }
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -1475,6 +1459,35 @@ class ServerDataService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to create dataset'
+      };
+    }
+  }
+
+  // Dataset Operations
+  async getDatasets(token: string): Promise<ServerDataResult> {
+    try {
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/datasets'),
+        {
+          headers: this.getAuthHeaders(token)
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const datasets = await response.json();
+
+      return {
+        success: true,
+        data: datasets
+      };
+    } catch (error) {
+      console.error('Failed to fetch datasets:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch datasets'
       };
     }
   }
