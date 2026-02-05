@@ -77,6 +77,23 @@ db.exec(`
     last_modified DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(userId) REFERENCES users(id)
   );
+
+  CREATE TABLE IF NOT EXISTS shared_towns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    targetUserId INTEGER,
+    town TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(targetUserId) REFERENCES users(id)
+  );
+
+  CREATE TABLE IF NOT EXISTS shared_businesses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    targetUserId INTEGER,
+    businessId TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(targetUserId) REFERENCES users(id),
+    FOREIGN KEY(businessId) REFERENCES leads(id)
+  );
 `);
 
 // Migration: Add role column if not exists

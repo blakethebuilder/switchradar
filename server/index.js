@@ -188,7 +188,12 @@ app.get('/api/businesses', auth, (req, res) => {
         if (req.userData.role === 'super_admin') {
             leads = db.prepare('SELECT * FROM leads').all();
         } else {
-            leads = db.prepare('SELECT * FROM leads WHERE userId = ?').all(req.userData.userId);
+            leads = db.prepare(`
+                SELECT * FROM leads 
+                WHERE userId = ? 
+                OR town IN (SELECT town FROM shared_towns WHERE targetUserId = ?)
+                OR id IN (SELECT businessId FROM shared_businesses WHERE targetUserId = ?)
+            `).all(req.userData.userId, req.userData.userId, req.userData.userId);
         }
         res.json(leads.map(lead => ({
             ...lead,
@@ -299,9 +304,20 @@ app.get('/api/datasets', auth, (req, res) => {
     try {
         let datasets;
         if (req.userData.role === 'super_admin') {
-            datasets = db.prepare('SELECT * FROM datasets').all();
+            datasets = db.prepare(`
+                SELECT d.*, COUNT(l.id) as business_count 
+                FROM datasets d 
+                LEFT JOIN leads l ON d.id = l.dataset_id 
+                GROUP BY d.id
+            `).all();
         } else {
-            datasets = db.prepare('SELECT * FROM datasets WHERE created_by = ? OR created_by IS NULL').all(userId);
+            datasets = db.prepare(`
+                SELECT d.*, COUNT(l.id) as business_count 
+                FROM datasets d 
+                LEFT JOIN leads l ON d.id = l.dataset_id 
+                WHERE d.created_by = ? OR d.created_by IS NULL
+                GROUP BY d.id
+            `).all(userId);
         }
         res.json({ success: true, datasets });
     } catch (err) {
@@ -322,6 +338,138 @@ app.post('/api/datasets', auth, (req, res) => {
     } catch (err) {
         console.error('Error creating dataset:', err);
         res.status(500).json({ message: 'Failed to create dataset' });
+    }
+});
+
+// User Data Management & Sharing Routes
+app.get('/api/user-businesses/:userId', auth, (req, res) => {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    const { userId } = req.params;
+    try {
+        const businesses = db.prepare('SELECT * FROM leads WHERE userId = ?').all(userId);
+        res.json({ success: true, data: businesses });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to fetch user businesses' });
+    }
+});
+
+app.get('/api/share/towns/available', auth, (req, res) => {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    try {
+        const towns = db.prepare('SELECT town as name, COUNT(*) as businessCount FROM leads GROUP BY town').all();
+        res.json({ success: true, data: towns });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to fetch available towns' });
+    }
+});
+
+app.post('/api/share/towns', auth, (req, res) => {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    const { targetUserId, towns } = req.body;
+    try {
+        const insert = db.prepare('INSERT INTO shared_towns (targetUserId, town) VALUES (?, ?)');
+        const transaction = db.transaction((userId, townList) => {
+            for (const town of townList) {
+                insert.run(userId, town);
+            }
+        });
+        transaction(targetUserId, towns);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to share towns' });
+    }
+});
+
+app.delete('/api/share/towns', auth, (req, res) => {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    const { targetUserId, towns } = req.body;
+    try {
+        const del = db.prepare('DELETE FROM shared_towns WHERE targetUserId = ? AND town = ?');
+        const transaction = db.transaction((userId, townList) => {
+            for (const town of townList) {
+                del.run(userId, town);
+            }
+        });
+        transaction(targetUserId, towns);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to unshare towns' });
+    }
+});
+
+app.post('/api/share/businesses', auth, (req, res) => {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    const { targetUserId, businessIds } = req.body;
+    try {
+        const insert = db.prepare('INSERT INTO shared_businesses (targetUserId, businessId) VALUES (?, ?)');
+        const transaction = db.transaction((userId, ids) => {
+            for (const id of ids) {
+                insert.run(userId, id);
+            }
+        });
+        transaction(targetUserId, businessIds);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to share businesses' });
+    }
+});
+
+app.delete('/api/share/businesses', auth, (req, res) => {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    const { targetUserId, businessIds } = req.body;
+    try {
+        const del = db.prepare('DELETE FROM shared_businesses WHERE targetUserId = ? AND businessId = ?');
+        const transaction = db.transaction((userId, ids) => {
+            for (const id of ids) {
+                del.run(userId, id);
+            }
+        });
+        transaction(targetUserId, businessIds);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ success: false, error: 'Failed to unshare businesses' });
+    }
+});
+
+app.get('/api/share/shared', auth, (req, res) => {
+    if (req.userData.role !== 'admin' && req.userData.role !== 'super_admin') {
+        return res.status(403).json({ message: 'Access denied' });
+    }
+    try {
+        const users = db.prepare('SELECT id as userId, username FROM users').all();
+        const sharedData = users.map(user => {
+            const sharedTowns = db.prepare('SELECT town FROM shared_towns WHERE targetUserId = ?').all(user.userId);
+            const sharedBusIds = db.prepare('SELECT businessId FROM shared_businesses WHERE targetUserId = ?').all(user.userId);
+
+            let sharedBusinesses = [];
+            if (sharedBusIds.length > 0) {
+                const placeholders = sharedBusIds.map(() => '?').join(',');
+                sharedBusinesses = db.prepare(`SELECT * FROM leads WHERE id IN (${placeholders})`).all(sharedBusIds.map(b => b.businessId));
+            }
+
+            return {
+                userId: user.userId,
+                username: user.username,
+                sharedTowns: sharedTowns.map(t => ({ town: t.town })),
+                sharedBusinesses
+            };
+        });
+        res.json({ success: true, data: sharedData });
+    } catch (err) {
+        console.error('Shared data fetch error:', err);
+        res.status(500).json({ success: false, error: 'Failed to fetch shared data' });
     }
 });
 
