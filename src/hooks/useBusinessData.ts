@@ -52,6 +52,7 @@ export const useBusinessData = () => {
         
         if (isAuthenticated && token) {
             isInitializing.current = true;
+            setLoading(true); // Set loading to true when starting initialization
             
             // Use a single async function to coordinate all data fetching
             const initializeData = async () => {
@@ -155,6 +156,7 @@ export const useBusinessData = () => {
             setAvailableDatasets([]);
             setSelectedDatasets([]);
             setError(null);
+            setLoading(false); // Ensure loading is false when not authenticated
             initializationRef.current = false;
             isInitializing.current = false;
         }
