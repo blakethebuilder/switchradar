@@ -141,13 +141,9 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
   const providerCount = availableProviders.length;
 
   // Show loading only when:
-  // 1. We're not on dashboard view AND we're loading/processing
-  // 2. OR we're on dashboard but have absolutely no data AND we're loading
-  const shouldShowLoading = (
-    viewMode !== 'dashboard' && (loading || isProcessingLargeDataset)
-  ) || (
-    viewMode === 'dashboard' && businesses.length === 0 && loading
-  );
+  // 1. We're loading/processing AND we have no businesses at all
+  // 2. BUT never show loading on dashboard if we have any businesses (even if processing)
+  const shouldShowLoading = (loading || isProcessingLargeDataset) && businesses.length === 0;
 
   if (shouldShowLoading) {
     return (

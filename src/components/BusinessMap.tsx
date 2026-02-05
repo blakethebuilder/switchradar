@@ -56,10 +56,41 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
   const [currentZoom, setCurrentZoom] = useState(6);
   const [isMapLoading, setIsMapLoading] = useState(true);
 
-  // Memoize businesses to prevent unnecessary re-renders
+  // Memoize businesses to prevent unnecessary re-renders and limit for performance
   const memoizedBusinesses = React.useMemo(() => {
-    return businesses || [];
-  }, [businesses]);
+    const validBusinesses = (businesses || []).filter(business => 
+      business?.id && 
+      business.coordinates && 
+      typeof business.coordinates.lat === 'number' && 
+      typeof business.coordinates.lng === 'number' &&
+      !isNaN(business.coordinates.lat) && 
+      !isNaN(business.coordinates.lng) &&
+      Math.abs(business.coordinates.lat) > 0.001 && 
+      Math.abs(business.coordinates.lng) > 0.001
+    );
+    
+    // CRITICAL: Limit businesses for map performance
+    const MAX_MAP_BUSINESSES = 1500;
+    if (validBusinesses.length > MAX_MAP_BUSINESSES) {
+      console.log(`🗺️ MAP: Limiting businesses from ${validBusinesses.length} to ${MAX_MAP_BUSINESSES} for performance`);
+      
+      // Always include selected business
+      let result = [];
+      if (selectedBusinessId) {
+        const selected = validBusinesses.find(b => b.id === selectedBusinessId);
+        if (selected) result.push(selected);
+      }
+      
+      // Sample the rest
+      const remaining = validBusinesses.filter(b => b.id !== selectedBusinessId);
+      const step = Math.ceil(remaining.length / (MAX_MAP_BUSINESSES - result.length));
+      const sampled = remaining.filter((_, index) => index % step === 0);
+      
+      return [...result, ...sampled].slice(0, MAX_MAP_BUSINESSES);
+    }
+    
+    return validBusinesses;
+  }, [businesses, selectedBusinessId]);
 
   // Only log when businesses count actually changes
   React.useEffect(() => {

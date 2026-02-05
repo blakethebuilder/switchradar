@@ -16,96 +16,7 @@ export const useBusinessData = () => {
     const [lastFetch, setLastFetch] = useState<Date | null>(null);
     const [isProcessingLargeDataset, setIsProcessingLargeDataset] = useState(false);
 
-    // Memoized fetch function to prevent unnecessary re-renders
-    const fetchBusinesses = useCallback(async (forceRefresh = false) => {
-        console.log('🚀 FETCH: fetchBusinesses called, forceRefresh:', forceRefresh);
-        console.log('🔐 FETCH: Auth status - token present:', !!token, 'isAuthenticated:', isAuthenticated);
-        
-        if (!token || !isAuthenticated) {
-            console.log('❌ FETCH: No auth, clearing businesses');
-            setBusinesses([]);
-            setError(null);
-            return;
-        }
-
-        // Don't refetch if we have recent data (unless forced) - increased cache time for performance
-        if (!forceRefresh && lastFetch && Date.now() - lastFetch.getTime() < 60000) { // Increased to 60 seconds
-            console.log('⏭️ FETCH: Skipping fetch, recent data available');
-            return;
-        }
-
-        // Prevent duplicate concurrent requests
-        if (loading && !forceRefresh) {
-            console.log('⏭️ FETCH: Already loading, skipping duplicate request');
-            return;
-        }
-
-        console.log('🚀 FETCH: Starting data fetch from server');
-        setLoading(true);
-        setError(null);
-
-        try {
-            const result = await serverDataService.getBusinesses(token);
-            console.log('📥 FETCH: Server response:', result);
-            
-            if (result.success) {
-                console.log('✅ FETCH: Success, businesses count:', result.data?.length || 0);
-                const businessData = result.data || [];
-                
-                // Handle large datasets with better performance
-                if (businessData.length > 5000) {
-                    console.log('📊 FETCH: Large dataset detected, enabling performance mode');
-                    setIsProcessingLargeDataset(true);
-                    
-                    // Use requestIdleCallback for better performance if available
-                    const processLargeDataset = () => {
-                        setBusinesses(businessData);
-                        setIsProcessingLargeDataset(false);
-                    };
-                    
-                    if (window.requestIdleCallback) {
-                        window.requestIdleCallback(processLargeDataset, { timeout: 1000 });
-                    } else {
-                        setTimeout(processLargeDataset, 50);
-                    }
-                } else {
-                    setBusinesses(businessData);
-                }
-                
-                setLastFetch(new Date());
-                setError(null); // Clear any previous errors
-            } else {
-                // Don't set error for empty data - just log it
-                console.warn('⚠️ FETCH: Failed to fetch businesses:', result.error);
-                setBusinesses([]); // Set empty array instead of error
-                setError(null); // Don't show error to user for data loading failures
-            }
-        } catch (err) {
-            console.error('❌ FETCH: Network error fetching businesses:', err);
-            setBusinesses([]); // Set empty array instead of error
-            setError(null); // Don't show error to user for network failures
-        } finally {
-            console.log('🏁 FETCH: Fetch completed, setting loading to false');
-            setLoading(false);
-        }
-    }, [token, isAuthenticated, lastFetch, loading]);
-
-    // Memoized fetch routes function
-    const fetchRoutes = useCallback(async () => {
-        if (!token || !isAuthenticated) {
-            setRouteItems([]);
-            return;
-        }
-
-        try {
-            const result = await serverDataService.getRoutes(token);
-            if (result.success) {
-                setRouteItems(result.data || []);
-            }
-        } catch (err) {
-            console.error('Failed to fetch routes:', err);
-        }
-    }, [token, isAuthenticated]);
+    // Note: fetchBusinesses removed - businesses are now fetched in the initialization effect
 
     const [searchInput, setSearchInput] = useState('');
     const searchTerm = useDebounce(searchInput, 300);
@@ -124,104 +35,115 @@ export const useBusinessData = () => {
     const [droppedPin, setDroppedPin] = useState<{ lat: number, lng: number } | null>(null);
     const [radiusKm, setRadiusKm] = useState<number>(0.5);
 
-    // Fetch available datasets
-    const fetchDatasets = useCallback(async () => {
-        if (!token || !isAuthenticated) {
-            setAvailableDatasets([]);
-            return;
-        }
-
-        try {
-            const response = await fetch(`${environmentConfig.getApiUrl()}/api/datasets`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                console.log('📊 DATASETS: Raw response:', result);
-                
-                // Handle different response formats with better error handling
-                let datasets = [];
-                if (Array.isArray(result)) {
-                    datasets = result;
-                } else if (result && typeof result === 'object') {
-                    if (Array.isArray(result.data)) {
-                        datasets = result.data;
-                    } else if (Array.isArray(result.datasets)) {
-                        datasets = result.datasets;
-                    } else {
-                        console.warn('📊 DATASETS: No valid datasets array found in response, using empty array');
-                        datasets = [];
-                    }
-                } else {
-                    console.warn('📊 DATASETS: Invalid response format, using empty array');
-                    datasets = [];
-                }
-                
-                console.log('📊 DATASETS: Processed datasets:', datasets);
-                
-                // Safely map datasets with validation
-                const validDatasets = datasets
-                    .filter((d: any) => d && typeof d === 'object' && d.id && d.name)
-                    .map((d: any) => ({
-                        id: d.id,
-                        name: d.name,
-                        town: d.town || ''
-                    }));
-                
-                setAvailableDatasets(validDatasets);
-                
-                // Auto-select all datasets if none selected and we have valid datasets
-                if (validDatasets.length > 0) {
-                    setSelectedDatasets(prev => prev.length === 0 ? validDatasets.map((d: any) => d.id) : prev);
-                }
-            } else {
-                console.warn('📊 DATASETS: API response not ok:', response.status, response.statusText);
-                setAvailableDatasets([]);
-            }
-        } catch (err) {
-            console.error('Failed to fetch datasets:', err);
-            // Set empty arrays to prevent errors
-            setAvailableDatasets([]);
-        }
-    }, [token, isAuthenticated]); // Remove selectedDatasets.length dependency
+    // Note: fetchDatasets removed - datasets are now fetched in the initialization effect
 
     // Auto-fetch on mount and auth changes - Prevent duplicate calls with ref
     const initializationRef = useRef(false);
+    const isInitializing = useRef(false);
     
     useEffect(() => {
         console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
         
         // Prevent duplicate initialization
-        if (initializationRef.current) {
-            console.log('🔐 DATA: Initialization already in progress, skipping');
+        if (initializationRef.current || isInitializing.current) {
+            console.log('🔐 DATA: Initialization already completed or in progress, skipping');
             return;
         }
         
         if (isAuthenticated && token) {
-            initializationRef.current = true;
+            isInitializing.current = true;
             
             // Use a single async function to coordinate all data fetching
             const initializeData = async () => {
                 console.log('🚀 DATA: Starting data initialization');
                 try {
-                    // Fetch datasets first to avoid dependency issues
-                    await fetchDatasets();
+                    // Fetch all data in parallel for better performance
+                    const [datasetsResult, businessesResult, routesResult] = await Promise.all([
+                        (async () => {
+                            try {
+                                const response = await fetch(`${environmentConfig.getApiUrl()}/api/datasets`, {
+                                    headers: {
+                                        'Authorization': `Bearer ${token}`,
+                                        'Content-Type': 'application/json'
+                                    }
+                                });
+                                if (response.ok) {
+                                    const result = await response.json();
+                                    console.log('📊 DATASETS: Fetched datasets:', result);
+                                    return result;
+                                }
+                            } catch (err) {
+                                console.error('Failed to fetch datasets:', err);
+                            }
+                            return null;
+                        })(),
+                        serverDataService.getBusinesses(token),
+                        serverDataService.getRoutes(token)
+                    ]);
                     
-                    // Then fetch businesses
-                    await fetchBusinesses(true); // Force refresh on auth change
+                    // Process datasets
+                    if (datasetsResult) {
+                        let datasets = [];
+                        if (Array.isArray(datasetsResult)) {
+                            datasets = datasetsResult;
+                        } else if (datasetsResult && typeof datasetsResult === 'object') {
+                            if (Array.isArray(datasetsResult.data)) {
+                                datasets = datasetsResult.data;
+                            } else if (Array.isArray(datasetsResult.datasets)) {
+                                datasets = datasetsResult.datasets;
+                            }
+                        }
+                        
+                        const validDatasets = datasets
+                            .filter((d: any) => d && typeof d === 'object' && d.id && d.name)
+                            .map((d: any) => ({
+                                id: d.id,
+                                name: d.name,
+                                town: d.town || ''
+                            }));
+                        
+                        setAvailableDatasets(validDatasets);
+                        if (validDatasets.length > 0) {
+                            setSelectedDatasets(prev => prev.length === 0 ? validDatasets.map((d: any) => d.id) : prev);
+                        }
+                    }
                     
-                    // Finally fetch routes
-                    await fetchRoutes();
+                    // Process businesses
+                    if (businessesResult.success) {
+                        const businessData = businessesResult.data || [];
+                        if (businessData.length > 2000) {
+                            console.log('📊 FETCH: Large dataset detected, enabling performance mode');
+                            setIsProcessingLargeDataset(true);
+                            
+                            // Use requestIdleCallback for better performance
+                            const processLargeDataset = () => {
+                                setBusinesses(businessData);
+                                setIsProcessingLargeDataset(false);
+                            };
+                            
+                            if (window.requestIdleCallback) {
+                                window.requestIdleCallback(processLargeDataset, { timeout: 500 });
+                            } else {
+                                setTimeout(processLargeDataset, 25);
+                            }
+                        } else {
+                            setBusinesses(businessData);
+                        }
+                        setLastFetch(new Date());
+                    }
+                    
+                    // Process routes
+                    if (routesResult.success) {
+                        setRouteItems(routesResult.data || []);
+                    }
                     
                     console.log('✅ DATA: All data fetched successfully');
+                    initializationRef.current = true;
                 } catch (error) {
                     console.error('❌ DATA: Error during data initialization:', error);
                 } finally {
-                    initializationRef.current = false;
+                    isInitializing.current = false;
+                    setLoading(false);
                 }
             };
             
@@ -234,6 +156,7 @@ export const useBusinessData = () => {
             setSelectedDatasets([]);
             setError(null);
             initializationRef.current = false;
+            isInitializing.current = false;
         }
     }, [token, isAuthenticated]); // CRITICAL: Only depend on auth state to prevent infinite loops
 
@@ -249,7 +172,7 @@ export const useBusinessData = () => {
             return PerformanceMonitor.measure('calculateCategories', () => {
                 const categorySet = new Set<string>();
                 // For large datasets, limit processing to improve performance and use sampling
-                const sampleSize = businesses.length > 5000 ? 2000 : businesses.length;
+                const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
                 const step = Math.max(1, Math.floor(businesses.length / sampleSize));
                 
                 for (let i = 0; i < businesses.length; i += step) {
@@ -273,7 +196,7 @@ export const useBusinessData = () => {
             return PerformanceMonitor.measure('calculateTowns', () => {
                 const townSet = new Set<string>();
                 // For large datasets, limit processing to improve performance and use sampling
-                const sampleSize = businesses.length > 5000 ? 2000 : businesses.length;
+                const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
                 const step = Math.max(1, Math.floor(businesses.length / sampleSize));
                 
                 for (let i = 0; i < businesses.length; i += step) {
@@ -297,7 +220,7 @@ export const useBusinessData = () => {
             return PerformanceMonitor.measure('calculateProviders', () => {
                 const providerSet = new Set<string>();
                 // For large datasets, limit processing to improve performance and use sampling
-                const sampleSize = businesses.length > 5000 ? 2000 : businesses.length;
+                const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
                 const step = Math.max(1, Math.floor(businesses.length / sampleSize));
                 
                 for (let i = 0; i < businesses.length; i += step) {
@@ -336,8 +259,8 @@ export const useBusinessData = () => {
             return [];
         }
         
-        // For very large datasets (>5000), show loading indicator and defer heavy calculations
-        if (businesses.length > 5000) {
+        // For very large datasets (>2000), show loading indicator and defer heavy calculations
+        if (businesses.length > 2000) {
             console.log('🔍 FILTER: Large dataset detected, optimizing performance');
         }
         
@@ -416,13 +339,13 @@ export const useBusinessData = () => {
                 const businessResult = await serverDataService.getBusinesses(token || '');
                 if (businessResult.success) {
                     const businessData = businessResult.data || [];
-                    if (businessData.length > 5000) {
+                    if (businessData.length > 2000) {
                         console.log('📊 REFETCH: Large dataset detected, enabling performance mode');
                         setIsProcessingLargeDataset(true);
                         setTimeout(() => {
                             setBusinesses(businessData);
                             setIsProcessingLargeDataset(false);
-                        }, 100);
+                        }, 50);
                     } else {
                         setBusinesses(businessData);
                     }
@@ -487,7 +410,9 @@ export const useBusinessData = () => {
             if (token) {
                 try {
                     await serverDataService.clearWorkspace(token);
-                    await fetchBusinesses(true);
+                    // Trigger a refetch by clearing the cache
+                    setLastFetch(null);
+                    setBusinesses([]);
                 } catch (err) {
                     console.error('Failed to reset database:', err);
                 }

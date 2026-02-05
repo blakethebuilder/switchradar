@@ -34,8 +34,8 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
       Math.abs(business.coordinates.lng) > 0.001
     );
     
-    // PERFORMANCE: Limit to maximum 2000 markers to prevent freezing
-    const MAX_MARKERS = 2000;
+    // PERFORMANCE: Limit to maximum 1500 markers to prevent freezing (reduced from 2000)
+    const MAX_MARKERS = 1500;
     if (filtered.length > MAX_MARKERS) {
       console.log(`🗺️ MAPMARKERS: Large dataset (${filtered.length}), limiting to ${MAX_MARKERS} markers for performance`);
       
@@ -48,17 +48,15 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
         }
       }
       
-      // Take a representative sample of the rest
-      const step = Math.ceil(filtered.length / MAX_MARKERS);
-      const sampled = filtered.filter((_, index) => index % step === 0);
+      // Take a representative sample of the rest, but use better sampling
+      const remaining = filtered.filter(b => b.id !== selectedBusinessId);
+      const step = Math.ceil(remaining.length / (MAX_MARKERS - result.length));
+      const sampled = remaining.filter((_, index) => index % step === 0);
       
-      // Combine selected + sampled, remove duplicates
-      const combined = [...result, ...sampled];
-      const unique = combined.filter((business, index, arr) => 
-        arr.findIndex(b => b.id === business.id) === index
-      );
+      // Combine selected + sampled
+      result = [...result, ...sampled];
       
-      return unique.slice(0, MAX_MARKERS);
+      return result.slice(0, MAX_MARKERS);
     }
     
     return filtered;
@@ -66,9 +64,9 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
 
   // Simple cluster radius - fewer zoom levels, clearer behavior
   const clusterRadius = (zoom: number) => {
-    if (zoom < 10) return 80;  // Clustered
-    if (zoom < 14) return 40;  // Less clustered  
-    return 20; // Minimal clustering before scatter
+    if (zoom < 10) return 60;  // More clustered for better performance
+    if (zoom < 14) return 30;  // Less clustered  
+    return 15; // Minimal clustering before scatter
   };
 
   // Simple cluster icon
@@ -123,10 +121,13 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
       disableClusteringAtZoom={15} // Scatter at zoom 15
       iconCreateFunction={createClusterIcon}
       eventHandlers={{ clusterclick: handleClusterClick }}
-      // Simple performance settings
+      // Optimized performance settings for large datasets
       chunkedLoading={true}
       removeOutsideVisibleBounds={true}
       animate={false}
+      spiderfyOnMaxZoom={false} // Disable spiderfy for performance
+      showCoverageOnHover={false} // Disable coverage for performance
+      zoomToBoundsOnClick={true}
     >
       {validBusinesses.map((business) => {
         const isSelected = business.id === selectedBusinessId;
