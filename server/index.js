@@ -1581,6 +1581,59 @@ app.delete('/api/share/businesses', auth, (req, res) => {
     }
 });
 
+// Get shared data overview for all users
+app.get('/api/share/shared', auth, (req, res) => {
+    const { role } = req.userData;
+    
+    if (role !== 'admin' && role !== 'super_admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    try {
+        // Get all users and their shared data
+        const users = db.prepare('SELECT id, username FROM users ORDER BY username').all();
+        
+        const sharedData = users.map(user => {
+            // Get shared businesses for this user
+            const sharedBusinesses = db.prepare(`
+                SELECT id, name, address, town, provider, category, phone
+                FROM leads 
+                WHERE userId = ? AND source = 'shared'
+                ORDER BY name
+            `).all(user.id);
+            
+            // Get unique shared towns for this user
+            const sharedTowns = db.prepare(`
+                SELECT DISTINCT town, COUNT(*) as businessCount
+                FROM leads 
+                WHERE userId = ? AND source = 'shared' AND town IS NOT NULL AND town != ''
+                GROUP BY town
+                ORDER BY town
+            `).all(user.id);
+            
+            return {
+                userId: user.id,
+                username: user.username,
+                sharedBusinesses: sharedBusinesses || [],
+                sharedTowns: sharedTowns || []
+            };
+        });
+        
+        res.json({
+            success: true,
+            data: sharedData
+        });
+        
+    } catch (error) {
+        console.error('Failed to get shared data:', error);
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to get shared data', 
+            error: error.message 
+        });
+    }
+});
+
 // Helper function to update user statistics
 const updateUserStats = (userId) => {
     try {

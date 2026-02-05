@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, User as UserIcon, LogOut, Menu, X, Route, Settings, Eye, Presentation, Home } from 'lucide-react';
+import { Download, Map, Table, Trash2, Upload, LayoutPanelLeft, BarChart3, User as UserIcon, LogOut, Menu, X, Route, Settings, Eye, Presentation, Home, Wifi, WifiOff, Clock, CheckCircle } from 'lucide-react';
 import type { ViewMode } from '../types';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,6 +12,8 @@ interface TopNavProps {
   totalCount: number;
   onLoginClick: () => void;
   routeItemsCount?: number; // Add route items count
+  cacheStatus?: 'loading' | 'cached' | 'fresh' | 'error';
+  onRefresh?: (forceRefresh?: boolean) => void;
 }
 
 export const TopNav = ({
@@ -23,10 +25,48 @@ export const TopNav = ({
   totalCount,
   onLoginClick,
   routeItemsCount = 0, // Add default value
+  cacheStatus = 'loading',
+  onRefresh
 }: TopNavProps) => {
   const { user, isAuthenticated, logout, isAdmin } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+
+  const getCacheStatusInfo = () => {
+    switch (cacheStatus) {
+      case 'cached':
+        return {
+          icon: Clock,
+          color: 'text-amber-600 bg-amber-50 border-amber-200',
+          text: 'Cached',
+          title: 'Using cached data - click to refresh'
+        };
+      case 'fresh':
+        return {
+          icon: CheckCircle,
+          color: 'text-green-600 bg-green-50 border-green-200',
+          text: 'Fresh',
+          title: 'Data is up to date'
+        };
+      case 'error':
+        return {
+          icon: WifiOff,
+          color: 'text-red-600 bg-red-50 border-red-200',
+          text: 'Error',
+          title: 'Failed to load data - click to retry'
+        };
+      default:
+        return {
+          icon: Wifi,
+          color: 'text-blue-600 bg-blue-50 border-blue-200',
+          text: 'Loading',
+          title: 'Loading data from server'
+        };
+    }
+  };
+
+  const statusInfo = getCacheStatusInfo();
+  const StatusIcon = statusInfo.icon;
 
   return (
     <header className="sticky-navbar border-b border-slate-200/60 bg-white/95 backdrop-blur-md">
@@ -122,6 +162,16 @@ export const TopNav = ({
 
         {/* Right: Actions - Responsive layout */}
         <div className="hidden sm:flex items-center gap-2 md:gap-3 lg:gap-6 shrink-0">
+          {/* Cache Status Indicator */}
+          <button
+            onClick={() => onRefresh?.(cacheStatus === 'cached')}
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors hover:opacity-80 border ${statusInfo.color}`}
+            title={statusInfo.title}
+          >
+            <StatusIcon className="w-3 h-3" />
+            <span className="hidden lg:inline">{statusInfo.text}</span>
+          </button>
+          
           <div className="hidden lg:block h-8 w-px bg-slate-200" />
           
           {/* Main Actions - Compact on tablet - Admin Only */}

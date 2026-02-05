@@ -19,6 +19,13 @@ interface AvailableTown {
   businessCount: number;
 }
 
+interface SharedDataUser {
+  userId: number;
+  username: string;
+  sharedBusinesses: Business[];
+  sharedTowns: { town: string; businessCount: number }[];
+}
+
 export const UserDataManagement: React.FC = () => {
   const { token } = useAuth();
   const [userStats, setUserStats] = useState<UserDataStats[]>([]);
@@ -35,6 +42,8 @@ export const UserDataManagement: React.FC = () => {
   const [targetUserId, setTargetUserId] = useState<number | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [showSharedDataModal, setShowSharedDataModal] = useState(false);
+  const [sharedDataUsers, setSharedDataUsers] = useState<SharedDataUser[]>([]);
+  const [loadingSharedData, setLoadingSharedData] = useState(false);
   const [newBusiness, setNewBusiness] = useState<Partial<Business>>({
     name: '',
     address: '',
@@ -69,6 +78,24 @@ export const UserDataManagement: React.FC = () => {
       }
     } catch (err) {
       setError('Failed to load user statistics');
+    }
+  };
+
+  const loadSharedData = async () => {
+    if (!token) return;
+    
+    setLoadingSharedData(true);
+    try {
+      const result = await serverDataService.getSharedData(token);
+      if (result.success) {
+        setSharedDataUsers(result.data || []);
+      } else {
+        setError(result.error || 'Failed to load shared data');
+      }
+    } catch (err) {
+      setError('Failed to load shared data');
+    } finally {
+      setLoadingSharedData(false);
     }
   };
 
@@ -196,13 +223,14 @@ export const UserDataManagement: React.FC = () => {
   };
 
   const handleUnshareTowns = async (targetUserId: number, towns: string[]) => {
-    if (!token) return;
+    if (!token || towns.length === 0) return;
     
     try {
       const result = await serverDataService.unshareTowns(targetUserId, towns, token);
       if (result.success) {
         alert(`Successfully unshared ${towns.length} towns from user!`);
         loadUserStats(); // Refresh stats
+        loadSharedData(); // Refresh shared data modal
       } else {
         setError(result.error || 'Failed to unshare towns');
       }
@@ -212,13 +240,14 @@ export const UserDataManagement: React.FC = () => {
   };
 
   const handleUnshareBusinesses = async (targetUserId: number, businessIds: string[]) => {
-    if (!token) return;
+    if (!token || businessIds.length === 0) return;
     
     try {
       const result = await serverDataService.unshareBusinesses(targetUserId, businessIds, token);
       if (result.success) {
         alert(`Successfully unshared ${businessIds.length} businesses from user!`);
         loadUserStats(); // Refresh stats
+        loadSharedData(); // Refresh shared data modal
       } else {
         setError(result.error || 'Failed to unshare businesses');
       }
@@ -278,7 +307,10 @@ export const UserDataManagement: React.FC = () => {
           {/* Share Actions */}
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowSharedDataModal(true)}
+              onClick={() => {
+                setShowSharedDataModal(true);
+                loadSharedData();
+              }}
               className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
             >
               <Eye className="h-4 w-4" />
@@ -710,31 +742,99 @@ export const UserDataManagement: React.FC = () => {
             </div>
             
             <div className="space-y-6">
-              {userStats.map((user) => (
-                <div key={user.userId} className="border border-slate-200 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-semibold text-slate-900">{user.username}</h4>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleUnshareTowns(user.userId, ['example-town'])}
-                        className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                      >
-                        Unshare Towns
-                      </button>
-                      <button
-                        onClick={() => handleUnshareBusinesses(user.userId, ['example-business'])}
-                        className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-                      >
-                        Unshare Businesses
-                      </button>
-                    </div>
-                  </div>
-                  <div className="text-sm text-slate-600">
-                    <p>Shared data will be displayed here when the backend API is fully implemented.</p>
-                    <p className="mt-1">This includes shared towns and businesses for each user.</p>
-                  </div>
+              {loadingSharedData ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                  <span className="ml-3 text-slate-600">Loading shared data...</span>
                 </div>
-              ))}
+              ) : sharedDataUsers.length === 0 ? (
+                <div className="text-center py-8 text-slate-500">
+                  No shared data found
+                </div>
+              ) : (
+                sharedDataUsers.map((user) => (
+                  <div key={user.userId} className="border border-slate-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-semibold text-slate-900">{user.username}</h4>
+                      <div className="flex gap-2">
+                        {user.sharedTowns.length > 0 && (
+                          <button
+                            onClick={() => handleUnshareTowns(user.userId, user.sharedTowns.map(t => t.town))}
+                            className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                          >
+                            Unshare All Towns ({user.sharedTowns.length})
+                          </button>
+                        )}
+                        {user.sharedBusinesses.length > 0 && (
+                          <button
+                            onClick={() => handleUnshareBusinesses(user.userId, user.sharedBusinesses.map(b => b.id))}
+                            className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                          >
+                            Unshare All Businesses ({user.sharedBusinesses.length})
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {user.sharedTowns.length === 0 && user.sharedBusinesses.length === 0 ? (
+                      <div className="text-sm text-slate-500">
+                        No shared data for this user
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {user.sharedTowns.length > 0 && (
+                          <div>
+                            <h5 className="text-sm font-medium text-slate-700 mb-2">
+                              Shared Towns ({user.sharedTowns.length})
+                            </h5>
+                            <div className="flex flex-wrap gap-2">
+                              {user.sharedTowns.map((town) => (
+                                <div key={town.town} className="flex items-center gap-2">
+                                  <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                                    {town.town} ({town.businessCount} businesses)
+                                  </span>
+                                  <button
+                                    onClick={() => handleUnshareTowns(user.userId, [town.town])}
+                                    className="text-red-500 hover:text-red-700 text-xs"
+                                    title="Unshare this town"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {user.sharedBusinesses.length > 0 && (
+                          <div>
+                            <h5 className="text-sm font-medium text-slate-700 mb-2">
+                              Shared Businesses ({user.sharedBusinesses.length})
+                            </h5>
+                            <div className="max-h-40 overflow-y-auto space-y-1">
+                              {user.sharedBusinesses.map((business) => (
+                                <div key={business.id} className="flex items-center justify-between p-2 bg-slate-50 rounded text-xs">
+                                  <div className="flex-1">
+                                    <div className="font-medium text-slate-900">{business.name}</div>
+                                    <div className="text-slate-500">{business.address} • {business.town}</div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleUnshareBusinesses(user.userId, [business.id])}
+                                    className="text-red-500 hover:text-red-700 ml-2"
+                                    title="Unshare this business"
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
             
             <div className="mt-6 flex justify-end">

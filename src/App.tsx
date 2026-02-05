@@ -58,7 +58,8 @@ function App() {
     dbError,
     handleDatabaseReset,
     refetch,
-    isProcessingLargeDataset
+    isProcessingLargeDataset,
+    cacheStatus
   } = useBusinessData();
 
   // App state hook
@@ -385,6 +386,8 @@ function App() {
           totalCount={businesses.length}
           onLoginClick={() => setIsLoginOpen(true)}
           routeItemsCount={routeItems.length}
+          cacheStatus={cacheStatus}
+          onRefresh={refetch}
         />
         
         <main className="flex-1 flex flex-col overflow-hidden relative">
