@@ -573,7 +573,8 @@ app.get('/api/businesses', auth, (req, res) => {
         let params = [];
         
         // For regular users, only show their data or data they have permission to see
-        if (role !== 'admin') {
+        // Super admins and admins can see all data
+        if (role !== 'admin' && role !== 'super_admin') {
             baseQuery += ` AND (l.userId = ? OR l.dataset_id IN (
                 SELECT dp.dataset_id FROM dataset_permissions dp 
                 WHERE dp.user_id = ?
@@ -654,7 +655,7 @@ app.get('/api/businesses', auth, (req, res) => {
         let countQuery = `SELECT COUNT(*) as total FROM leads l WHERE 1=1`;
         let countParams = [];
         
-        if (role !== 'admin') {
+        if (role !== 'admin' && role !== 'super_admin') {
             countQuery += ` AND (l.userId = ? OR l.dataset_id IN (
                 SELECT dp.dataset_id FROM dataset_permissions dp 
                 WHERE dp.user_id = ?
@@ -1487,6 +1488,96 @@ app.get('/api/share/towns', auth, (req, res) => {
     } catch (error) {
         console.error('Failed to fetch towns:', error);
         res.status(500).json({ message: 'Failed to fetch towns', error: error.message });
+    }
+});
+
+// Unshare towns from users
+app.delete('/api/share/towns', auth, (req, res) => {
+    const { role } = req.userData;
+    const { targetUserId, towns } = req.body;
+    
+    if (role !== 'admin' && role !== 'super_admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    if (!targetUserId || !towns || !Array.isArray(towns)) {
+        return res.status(400).json({ message: 'Target user ID and towns array required' });
+    }
+    
+    try {
+        // Check if target user exists
+        const targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(targetUserId);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Target user not found' });
+        }
+        
+        let removedCount = 0;
+        
+        // Remove businesses from specified towns for the target user
+        for (const town of towns) {
+            const result = db.prepare(`
+                DELETE FROM leads 
+                WHERE userId = ? AND town = ? AND source = 'shared'
+            `).run(targetUserId, town);
+            
+            removedCount += result.changes;
+        }
+        
+        // Update user statistics
+        updateUserStats(targetUserId);
+        
+        res.json({
+            message: `Successfully unshared ${removedCount} businesses from ${towns.length} towns`,
+            unsharedTowns: towns,
+            businessesRemoved: removedCount,
+            targetUser: targetUser.username
+        });
+        
+    } catch (error) {
+        console.error('Failed to unshare towns:', error);
+        res.status(500).json({ message: 'Failed to unshare towns', error: error.message });
+    }
+});
+
+// Unshare specific businesses from users
+app.delete('/api/share/businesses', auth, (req, res) => {
+    const { role } = req.userData;
+    const { targetUserId, businessIds } = req.body;
+    
+    if (role !== 'admin' && role !== 'super_admin') {
+        return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    if (!targetUserId || !businessIds || !Array.isArray(businessIds)) {
+        return res.status(400).json({ message: 'Target user ID and business IDs array required' });
+    }
+    
+    try {
+        // Check if target user exists
+        const targetUser = db.prepare('SELECT * FROM users WHERE id = ?').get(targetUserId);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Target user not found' });
+        }
+        
+        // Remove specific businesses for the target user
+        const placeholders = businessIds.map(() => '?').join(',');
+        const result = db.prepare(`
+            DELETE FROM leads 
+            WHERE userId = ? AND id IN (${placeholders}) AND source = 'shared'
+        `).run(targetUserId, ...businessIds);
+        
+        // Update user statistics
+        updateUserStats(targetUserId);
+        
+        res.json({
+            message: `Successfully unshared ${result.changes} businesses`,
+            businessesRemoved: result.changes,
+            targetUser: targetUser.username
+        });
+        
+    } catch (error) {
+        console.error('Failed to unshare businesses:', error);
+        res.status(500).json({ message: 'Failed to unshare businesses', error: error.message });
     }
 });
 

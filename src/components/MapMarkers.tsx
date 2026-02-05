@@ -1,5 +1,5 @@
 import React from 'react';
-import { Marker } from 'react-leaflet';
+import { Marker, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import type { Business } from '../types';
@@ -16,6 +16,7 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
   selectedBusinessId,
   onBusinessSelect
 }) => {
+  const map = useMap(); // Get access to the map instance
   console.log('🗺️ MAPMARKERS: Rendering', businesses?.length || 0, 'businesses');
 
   // CRITICAL: Limit markers to prevent browser freeze with large datasets

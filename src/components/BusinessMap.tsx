@@ -55,7 +55,7 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
   const [isDropMode, setIsDropMode] = useState(false);
   const [currentBusinessIndex, setCurrentBusinessIndex] = useState(0);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
-  const [currentZoom, setCurrentZoom] = useState(6);
+  const [currentZoom, setCurrentZoom] = useState(13); // Better default zoom level
   const [isMapLoading, setIsMapLoading] = useState(true);
 
   // Memoize businesses to prevent unnecessary re-renders and limit for performance
@@ -340,7 +340,12 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
           businesses={memoizedBusinesses}
           selectedBusinessId={selectedBusinessId}
           onBusinessSelect={onMapBusinessSelect ? 
-            (business) => onMapBusinessSelect(business, currentZoom) : 
+            (business) => {
+              // Get actual current zoom from map instance if available, otherwise use state
+              const actualZoom = mapInstance ? mapInstance.getZoom() : currentZoom;
+              console.log('🗺️ BUSINESS SELECT: Using zoom', actualZoom, 'from', mapInstance ? 'map instance' : 'state');
+              onMapBusinessSelect(business, actualZoom);
+            } : 
             onBusinessSelect
           }
         />
