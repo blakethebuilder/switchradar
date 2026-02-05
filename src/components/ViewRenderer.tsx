@@ -145,7 +145,8 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
 }) => {
   const providerCount = availableProviders.length;
 
-  if (loading || isProcessingLargeDataset) {
+  // Only show loading for non-dashboard views or when there are no businesses at all
+  if ((loading || isProcessingLargeDataset) && (viewMode !== 'dashboard' || businesses.length === 0)) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
