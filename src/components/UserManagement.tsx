@@ -140,6 +140,35 @@ export const UserManagement: React.FC = () => {
     setError('');
   };
 
+  const handleSystemReset = async () => {
+    if (!token || !isAdmin) return;
+
+    // Double confirmation for safety
+    if (!window.confirm('⚠️ CRITICAL WARNING ⚠️\n\nThis will:\n1. Move ALL leads from ALL users to smartAdmin\n2. Move ALL datasets to smartAdmin\n3. WIPE all sharing settings\n4. Remove Admin access from everyone else\n\nAre you absolutely sure?')) {
+      return;
+    }
+
+    if (!window.confirm('Confirming again: This action CANNOT be undone. Proceed with system centralization?')) {
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await serverDataService.resetSystem(token);
+      if (result.success) {
+        setSuccess('System fully reset and centralized to smartAdmin.');
+        await loadUsers();
+        setTimeout(() => window.location.reload(), 2000); // Full reload to refresh permissions
+      } else {
+        setError(result.error || 'Reset failed');
+      }
+    } catch (err) {
+      setError('System reset failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleUpdateUser = async () => {
     if (!token || !editingUser) return;
 
@@ -226,6 +255,18 @@ export const UserManagement: React.FC = () => {
             <Plus className="h-4 w-4" />
             Add User
           </button>
+
+          {currentUser?.role === 'super_admin' && (
+            <button
+              onClick={handleSystemReset}
+              disabled={loading}
+              className="ml-2 flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-bold"
+              title="Only perform this if you want to centralize EVERYTHING to smartAdmin"
+            >
+              <Shield className="h-4 w-4" />
+              Reset & Centralize System
+            </button>
+          )}
         </div>
 
         {/* Status Messages */}

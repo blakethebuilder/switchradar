@@ -1410,6 +1410,35 @@ class ServerDataService {
     }
   }
 
+  async resetSystem(token: string): Promise<ServerDataResult> {
+    try {
+      const response = await this.makeRequest(
+        this.getApiUrl('/api/admin/reset-system'),
+        {
+          method: 'POST',
+          headers: this.getAuthHeaders(token)
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || `HTTP ${response.status}`);
+      }
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('System reset failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'System reset failed'
+      };
+    }
+  }
+
   async moveBusinessesToDataset(fromDatasetId: number, businessIds: string[], targetDatasetId: number, token: string): Promise<ServerDataResult> {
     try {
       const response = await this.makeRequest(

@@ -580,7 +580,55 @@ app.post('/api/share/businesses', auth, (req, res) => {
         transaction(targetUserId, businessIds);
         res.json({ success: true });
     } catch (err) {
+        console.error('Share businesses error:', err); // Better logging
         res.status(500).json({ success: false, error: 'Failed to share businesses' });
+    }
+});
+
+// MASTER RESET ROUTE
+app.post('/api/admin/reset-system', auth, (req, res) => {
+    // Only super_admin can do this
+    if (req.userData.role !== 'super_admin') {
+        return res.status(403).json({ success: false, error: 'Super Admin access required' });
+    }
+
+    try {
+        // 1. Get smartAdmin ID
+        const smartAdmin = db.prepare("SELECT id FROM users WHERE username = 'smartAdmin'").get();
+        if (!smartAdmin) {
+            return res.status(404).json({ success: false, error: 'smartAdmin user not found' });
+        }
+
+        const transaction = db.transaction(() => {
+            // 2. Transfer ALL leads to smartAdmin
+            db.prepare('UPDATE leads SET userId = ?').run(smartAdmin.id);
+
+            // 3. Transfer ALL datasets to smartAdmin
+            db.prepare('UPDATE datasets SET created_by = ?').run(smartAdmin.id);
+
+            // 4. Clear ALL shared data
+            db.prepare('DELETE FROM shared_towns').run();
+            db.prepare('DELETE FROM shared_businesses').run();
+
+            // 5. Reset all other users to 'user' role
+            db.prepare('UPDATE users SET role = "user" WHERE id != ?').run(smartAdmin.id);
+
+            // 6. Ensure smartAdmin is super_admin
+            db.prepare('UPDATE users SET role = "super_admin" WHERE id = ?').run(smartAdmin.id);
+        });
+
+        transaction();
+
+        // Recalculate stats for everyone
+        const users = db.prepare('SELECT id FROM users').all();
+        for (const user of users) {
+            updateUserStats(user.id);
+        }
+
+        res.json({ success: true, message: 'System fully centralized to smartAdmin' });
+    } catch (error) {
+        console.error('System reset error:', error);
+        res.status(500).json({ success: false, error: 'System reset failed' });
     }
 });
 
