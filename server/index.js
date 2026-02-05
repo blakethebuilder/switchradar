@@ -106,7 +106,7 @@ app.post('/api/users', auth, async (req, res) => {
     }
 });
 
-app.patch('/api/users/:id', auth, async (req, res) => {
+app.put('/api/users/:id', auth, async (req, res) => {
     if (req.userData.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied: Admin only' });
     }
