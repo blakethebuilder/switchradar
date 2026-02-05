@@ -1,5 +1,6 @@
 import type { Business, RouteItem } from '../types';
 import { environmentConfig } from '../config/environment';
+import { cacheService } from './cacheService';
 
 export interface ServerDataResult {
   success: boolean;
@@ -79,8 +80,22 @@ class ServerDataService {
   }
 
   // Business Operations
-  async getBusinesses(token: string): Promise<ServerDataResult> {
+  async getBusinesses(token: string, forceRefresh = false): Promise<ServerDataResult> {
     try {
+      // Check cache first unless force refresh is requested
+      if (!forceRefresh) {
+        const cachedBusinesses = cacheService.getBusinesses();
+        if (cachedBusinesses) {
+          console.log('📦 CACHE: Using cached businesses', cachedBusinesses.length);
+          return {
+            success: true,
+            data: cachedBusinesses,
+            count: cachedBusinesses.length
+          };
+        }
+      }
+
+      console.log('🌐 API: Fetching businesses from server');
       const response = await this.makeRequest(this.getApiUrl('/api/businesses'), {
         headers: this.getAuthHeaders(token)
       });
@@ -92,6 +107,10 @@ class ServerDataService {
       const result = await response.json();
       const businesses = result.data || result; // Handle both paginated and direct responses
 
+      // Cache the result
+      cacheService.setBusinesses(businesses);
+      console.log('💾 CACHE: Cached businesses', businesses.length);
+
       return {
         success: true,
         data: businesses,
@@ -99,6 +118,18 @@ class ServerDataService {
       };
     } catch (error) {
       console.error('Failed to fetch businesses:', error);
+      
+      // Try to return cached data as fallback if available
+      const cachedBusinesses = cacheService.getBusinesses();
+      if (cachedBusinesses) {
+        console.log('📦 CACHE: Using stale cache as fallback', cachedBusinesses.length);
+        return {
+          success: true,
+          data: cachedBusinesses,
+          count: cachedBusinesses.length
+        };
+      }
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch businesses'
@@ -121,7 +152,14 @@ class ServerDataService {
     // If dataset is large (>800 businesses), use chunked upload
     if (businesses.length > 800) {
       console.log('📦 API: Large dataset detected, using chunked upload...');
-      return this.saveBusinessesChunked(businesses, token, 1000, metadata); // Increased chunk size
+      const result = await this.saveBusinessesChunked(businesses, token, 1000, metadata); // Increased chunk size
+      
+      // Invalidate cache after successful save
+      if (result.success) {
+        cacheService.invalidateRelated('businesses');
+      }
+      
+      return result;
     }
 
     try {
@@ -159,6 +197,9 @@ class ServerDataService {
 
       const result = await response.json();
       console.log('✅ API: Response result:', result);
+      
+      // Invalidate cache after successful save
+      cacheService.invalidateRelated('businesses');
       
       return {
         success: true,
@@ -364,8 +405,22 @@ class ServerDataService {
   }
 
   // Route Operations
-  async getRoutes(token: string): Promise<ServerDataResult> {
+  async getRoutes(token: string, forceRefresh = false): Promise<ServerDataResult> {
     try {
+      // Check cache first unless force refresh is requested
+      if (!forceRefresh) {
+        const cachedRoutes = cacheService.getRoutes();
+        if (cachedRoutes) {
+          console.log('📦 CACHE: Using cached routes', cachedRoutes.length);
+          return {
+            success: true,
+            data: cachedRoutes,
+            count: cachedRoutes.length
+          };
+        }
+      }
+
+      console.log('🌐 API: Fetching routes from server');
       const response = await fetch(this.getApiUrl('/api/route'), {
         headers: this.getAuthHeaders(token)
       });
@@ -376,6 +431,10 @@ class ServerDataService {
 
       const routes = await response.json();
 
+      // Cache the result
+      cacheService.setRoutes(routes);
+      console.log('💾 CACHE: Cached routes', routes.length);
+
       return {
         success: true,
         data: routes,
@@ -383,6 +442,18 @@ class ServerDataService {
       };
     } catch (error) {
       console.error('Failed to fetch routes:', error);
+      
+      // Try to return cached data as fallback if available
+      const cachedRoutes = cacheService.getRoutes();
+      if (cachedRoutes) {
+        console.log('📦 CACHE: Using stale cache as fallback', cachedRoutes.length);
+        return {
+          success: true,
+          data: cachedRoutes,
+          count: cachedRoutes.length
+        };
+      }
+      
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to fetch routes'

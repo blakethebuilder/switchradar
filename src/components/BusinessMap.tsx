@@ -57,6 +57,8 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [currentZoom, setCurrentZoom] = useState(13); // Better default zoom level
   const [isMapLoading, setIsMapLoading] = useState(true);
+  const previousBusinessCountRef = React.useRef<number>(0);
+  const hasInitialFitRef = React.useRef<boolean>(false);
 
   // Memoize businesses to prevent unnecessary re-renders and limit for performance
   const memoizedBusinesses = React.useMemo(() => {
@@ -177,17 +179,43 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
     }
   }, [businesses, mapInstance]);
 
-  // Auto-fit bounds when businesses change
+  // Auto-fit bounds when businesses change (but not when just selection changes)
   useEffect(() => {
-    if (businesses.length > 0 && mapInstance) {
+    const currentBusinessCount = businesses.length;
+    const previousBusinessCount = previousBusinessCountRef.current;
+    
+    // Only fit bounds if:
+    // 1. This is the initial load (no previous fit)
+    // 2. The business count has significantly changed (not just +1/-1 from selection)
+    // 3. We don't have a target location (user isn't navigating to specific business)
+    const shouldFitBounds = (
+      (!hasInitialFitRef.current && currentBusinessCount > 0) || // Initial load
+      (Math.abs(currentBusinessCount - previousBusinessCount) > 1) // Significant change
+    ) && !targetLocation; // Not navigating to specific location
+    
+    if (shouldFitBounds && mapInstance) {
+      console.log('🗺️ AUTO-FIT: Fitting bounds', {
+        currentCount: currentBusinessCount,
+        previousCount: previousBusinessCount,
+        isInitial: !hasInitialFitRef.current,
+        hasTarget: !!targetLocation
+      });
+      
       // Small delay to ensure markers are rendered
       const timer = setTimeout(() => {
         handleFitBounds();
+        hasInitialFitRef.current = true;
       }, 500);
       
+      // Update the ref
+      previousBusinessCountRef.current = currentBusinessCount;
+      
       return () => clearTimeout(timer);
+    } else {
+      // Just update the ref without fitting bounds
+      previousBusinessCountRef.current = currentBusinessCount;
     }
-  }, [businesses.length, mapInstance, handleFitBounds]);
+  }, [businesses.length, mapInstance, handleFitBounds, targetLocation]);
 
   const handleToggleDropMode = useCallback(() => {
     if (isDropMode) {

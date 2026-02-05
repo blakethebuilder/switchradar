@@ -1,4 +1,4 @@
-import { Table, Map, Download, Upload, Settings } from 'lucide-react';
+import { Table, Map, Download, Upload, Settings, Wifi, WifiOff, Clock, CheckCircle } from 'lucide-react';
 
 interface HeaderProps {
   viewMode: 'table' | 'map';
@@ -7,6 +7,8 @@ interface HeaderProps {
   onExportClick: () => void;
   onSettingsClick: () => void;
   businessCount: number;
+  cacheStatus?: 'loading' | 'cached' | 'fresh' | 'error';
+  onRefresh?: (forceRefresh?: boolean) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,8 +17,45 @@ export const Header: React.FC<HeaderProps> = ({
   onImportClick,
   onExportClick,
   onSettingsClick,
-  businessCount
+  businessCount,
+  cacheStatus = 'loading',
+  onRefresh
 }) => {
+  const getCacheStatusInfo = () => {
+    switch (cacheStatus) {
+      case 'cached':
+        return {
+          icon: Clock,
+          color: 'text-amber-600 bg-amber-50',
+          text: 'Cached data',
+          title: 'Using cached data - click to refresh'
+        };
+      case 'fresh':
+        return {
+          icon: CheckCircle,
+          color: 'text-green-600 bg-green-50',
+          text: 'Fresh data',
+          title: 'Data is up to date'
+        };
+      case 'error':
+        return {
+          icon: WifiOff,
+          color: 'text-red-600 bg-red-50',
+          text: 'Error',
+          title: 'Failed to load data - click to retry'
+        };
+      default:
+        return {
+          icon: Wifi,
+          color: 'text-blue-600 bg-blue-50',
+          text: 'Loading...',
+          title: 'Loading data from server'
+        };
+    }
+  };
+
+  const statusInfo = getCacheStatusInfo();
+  const StatusIcon = statusInfo.icon;
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -58,9 +97,21 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           </div>
 
-          {/* Stats */}
-          <div className="text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-md">
-            {businessCount} businesses
+          {/* Stats and Cache Status */}
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-gray-600 bg-gray-50 px-3 py-1 rounded-md">
+              {businessCount} businesses
+            </div>
+            
+            {/* Cache Status Indicator */}
+            <button
+              onClick={() => onRefresh?.(cacheStatus === 'cached')}
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors hover:opacity-80 ${statusInfo.color}`}
+              title={statusInfo.title}
+            >
+              <StatusIcon className="w-3 h-3" />
+              {statusInfo.text}
+            </button>
           </div>
 
           {/* Action Buttons */}
