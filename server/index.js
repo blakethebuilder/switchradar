@@ -611,10 +611,10 @@ app.post('/api/admin/reset-system', auth, (req, res) => {
             db.prepare('DELETE FROM shared_businesses').run();
 
             // 5. Reset all other users to 'user' role
-            db.prepare('UPDATE users SET role = "user" WHERE id != ?').run(smartAdmin.id);
+            db.prepare("UPDATE users SET role = 'user' WHERE id != ?").run(smartAdmin.id);
 
             // 6. Ensure smartAdmin is super_admin
-            db.prepare('UPDATE users SET role = "super_admin" WHERE id = ?').run(smartAdmin.id);
+            db.prepare("UPDATE users SET role = 'super_admin' WHERE id = ?").run(smartAdmin.id);
         });
 
         transaction();
