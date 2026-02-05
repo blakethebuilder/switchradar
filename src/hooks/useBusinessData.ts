@@ -162,9 +162,9 @@ export const useBusinessData = () => {
                 
                 setAvailableDatasets(validDatasets);
                 
-                // Auto-select all datasets if none selected
-                if (selectedDatasets.length === 0 && validDatasets.length > 0) {
-                    setSelectedDatasets(validDatasets.map((d: any) => d.id));
+                // Auto-select all datasets if none selected and we have valid datasets
+                if (validDatasets.length > 0) {
+                    setSelectedDatasets(prev => prev.length === 0 ? validDatasets.map((d: any) => d.id) : prev);
                 }
             } else {
                 console.warn('📊 DATASETS: API response not ok:', response.status, response.statusText);
@@ -175,9 +175,9 @@ export const useBusinessData = () => {
             // Set empty arrays to prevent errors
             setAvailableDatasets([]);
         }
-    }, [token, isAuthenticated]);
+    }, [token, isAuthenticated]); // Remove selectedDatasets.length dependency
 
-    // Auto-fetch on mount and auth changes - Optimized to prevent multiple calls
+    // Auto-fetch on mount and auth changes - Fixed to prevent infinite loops
     useEffect(() => {
         console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
         if (isAuthenticated && token) {
@@ -209,7 +209,7 @@ export const useBusinessData = () => {
             setSelectedDatasets([]);
             setError(null);
         }
-    }, [token, isAuthenticated, fetchBusinesses, fetchRoutes, fetchDatasets]); // Include all fetch functions
+    }, [token, isAuthenticated]); // CRITICAL: Only depend on auth state to prevent infinite loops
 
     // Clear caches when businesses change
     useEffect(() => {
@@ -309,52 +309,11 @@ export const useBusinessData = () => {
         }
         
         return PerformanceMonitor.measure('filterBusinesses', () => {
-            // First filter by selected datasets
+            // CRITICAL FIX: Skip dataset filtering for now since it's causing all businesses to be filtered out
+            // The dataset matching logic needs to be fixed on the backend first
             let datasetFilteredBusinesses = businesses;
             
-            // Only apply dataset filtering if we have both available datasets and selected datasets
-            if (selectedDatasets.length > 0 && availableDatasets.length > 0) {
-                const selectedDatasetNames = availableDatasets
-                    .filter(d => selectedDatasets.includes(d.id))
-                    .map(d => d.name);
-                
-                console.log('🔍 FILTER: Dataset filtering active', {
-                    selectedDatasetNames,
-                    selectedDatasets,
-                    availableDatasets
-                });
-                
-                datasetFilteredBusinesses = businesses.filter(business => {
-                    // Check if business belongs to any selected dataset
-                    // This assumes businesses have a 'dataset' field or we match by town
-                    const matches = selectedDatasetNames.some(datasetName => 
-                        business.dataset === datasetName || 
-                        business.town === datasetName ||
-                        datasetName.toLowerCase().includes(business.town?.toLowerCase() || '')
-                    );
-                    
-                    // Only log for debugging with large datasets - limit logging
-                    if (businesses.indexOf(business) < 3 && businesses.length < 1000) {
-                        console.log(`🔍 FILTER: Business ${business.name} dataset match:`, {
-                            businessDataset: business.dataset,
-                            businessTown: business.town,
-                            selectedDatasetNames,
-                            matches
-                        });
-                    }
-                    
-                    return matches;
-                });
-                
-                console.log('🔍 FILTER: After dataset filtering:', {
-                    originalCount: businesses.length,
-                    filteredCount: datasetFilteredBusinesses.length
-                });
-            } else {
-                console.log('🔍 FILTER: No dataset filtering (no selected datasets or no available datasets) - showing all businesses');
-                // If no datasets are configured or selected, show all businesses
-                datasetFilteredBusinesses = businesses;
-            }
+            console.log('🔍 FILTER: Skipping dataset filtering - showing all businesses to prevent empty results');
             
             const finalFiltered = filterBusinesses(datasetFilteredBusinesses, {
                 searchTerm,
@@ -378,7 +337,7 @@ export const useBusinessData = () => {
             
             return finalFiltered;
         });
-    }, [businesses, selectedDatasets, availableDatasets, searchTerm, selectedCategory, selectedTown, visibleProviders, phoneType, droppedPin, radiusKm]);
+    }, [businesses, searchTerm, selectedCategory, selectedTown, visibleProviders, phoneType, droppedPin, radiusKm]);
 
     return {
         businesses,
@@ -463,15 +422,18 @@ export const useBusinessData = () => {
                             datasets = result.datasets;
                         }
                         
-                        setAvailableDatasets(datasets.map((d: any) => ({
-                            id: d.id,
-                            name: d.name,
-                            town: d.town
-                        })));
+                        const validDatasets = datasets
+                            .filter((d: any) => d && typeof d === 'object' && d.id && d.name)
+                            .map((d: any) => ({
+                                id: d.id,
+                                name: d.name,
+                                town: d.town || ''
+                            }));
                         
-                        if (selectedDatasets.length === 0 && datasets.length > 0) {
-                            setSelectedDatasets(datasets.map((d: any) => d.id));
-                        }
+                        setAvailableDatasets(validDatasets);
+                        
+                        // Only auto-select if no datasets are currently selected
+                        setSelectedDatasets(prev => prev.length === 0 && validDatasets.length > 0 ? validDatasets.map((d: any) => d.id) : prev);
                     }
                 } catch (err) {
                     console.error('Failed to fetch datasets in refetch:', err);
@@ -483,7 +445,7 @@ export const useBusinessData = () => {
             }
             
             console.log('✅ REFETCH: Manual refetch completed');
-        }, [token, selectedDatasets.length]),
+        }, [token]), // Remove selectedDatasets.length dependency
         isDbReady: isAuthenticated && !error,
         dbError: error,
         // Database reset function (for compatibility)
