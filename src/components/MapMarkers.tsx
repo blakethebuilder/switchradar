@@ -85,12 +85,12 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        border: 2px solid white;
         box-shadow: 0 2px 8px rgba(0,0,0,0.3);
         cursor: pointer;
       ">${count}</div>`,
       iconSize: [size, size],
-      iconAnchor: [size / 2, size / 2]
+      iconAnchor: [size / 2, size / 2],
+      className: '' // Remove default leaflet icon classes that add borders
     });
   };
 

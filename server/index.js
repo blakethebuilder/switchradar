@@ -919,8 +919,8 @@ app.get('/api/users', auth, (req, res) => {
     console.log('📥 GET /api/users - Request received from user:', req.userData.username);
     const { role } = req.userData;
     
-    if (role !== 'admin') {
-        console.log('❌ Access denied - user is not admin:', role);
+    if (role !== 'admin' && role !== 'super_admin') {
+        console.log('❌ Access denied - user is not admin or super_admin:', role);
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -949,8 +949,8 @@ app.post('/api/users', auth, (req, res) => {
     
     console.log('📊 Request data:', { username, passwordLength: password?.length, userRole: role });
     
-    if (role !== 'admin') {
-        console.log('❌ Access denied - user is not admin:', role);
+    if (role !== 'admin' && role !== 'super_admin') {
+        console.log('❌ Access denied - user is not admin or super_admin:', role);
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -1000,8 +1000,8 @@ app.put('/api/users/:userId', auth, async (req, res) => {
     
     console.log('📊 Request data:', { userId, username, passwordLength: password?.length, userRole: role });
     
-    if (role !== 'admin') {
-        console.log('❌ Access denied - user is not admin:', role);
+    if (role !== 'admin' && role !== 'super_admin') {
+        console.log('❌ Access denied - user is not admin or super_admin:', role);
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -1076,7 +1076,7 @@ app.delete('/api/users/:userId', auth, (req, res) => {
     const { role, userId: currentUserId } = req.userData;
     const { userId } = req.params;
     
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'super_admin') {
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -1107,7 +1107,7 @@ app.get('/api/users/:userId/businesses', auth, (req, res) => {
     const { role } = req.userData;
     const { userId } = req.params;
     
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'super_admin') {
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -1132,7 +1132,7 @@ app.delete('/api/users/:userId/businesses/:businessId', auth, (req, res) => {
     const { role } = req.userData;
     const { userId, businessId } = req.params;
     
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'super_admin') {
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -1157,7 +1157,7 @@ app.delete('/api/users/:userId/businesses', auth, (req, res) => {
     const { role } = req.userData;
     const { userId } = req.params;
     
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'super_admin') {
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -1244,7 +1244,7 @@ app.get('/api/stats', auth, (req, res) => {
 app.get('/api/workspaces', auth, (req, res) => {
     const { role } = req.userData;
     
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'super_admin') {
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -1286,7 +1286,7 @@ app.post('/api/share/towns', auth, (req, res) => {
     const { targetUserId, towns } = req.body;
     const sharedBy = req.userData.userId;
     
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'super_admin') {
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -1376,7 +1376,7 @@ app.post('/api/share/businesses', auth, (req, res) => {
     const { targetUserId, businessIds } = req.body;
     const sharedBy = req.userData.userId;
     
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'super_admin') {
         return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -1464,7 +1464,7 @@ app.get('/api/share/towns', auth, (req, res) => {
     const { role } = req.userData;
     const userId = req.userData.userId;
     
-    if (role !== 'admin') {
+    if (role !== 'admin' && role !== 'super_admin') {
         return res.status(403).json({ message: 'Admin access required' });
     }
     
