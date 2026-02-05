@@ -198,7 +198,7 @@ app.get('/api/businesses', auth, (req, res) => {
 });
 
 app.post('/api/businesses/sync', auth, (req, res) => {
-    const { businesses } = req.body;
+    const { businesses, clearFirst } = req.body;
     const userId = req.userData.userId;
 
     if (!businesses || !Array.isArray(businesses)) {
@@ -207,12 +207,14 @@ app.post('/api/businesses/sync', auth, (req, res) => {
 
     const deleteStmt = db.prepare('DELETE FROM leads WHERE userId = ?');
     const insertStmt = db.prepare(`
-        INSERT INTO leads (id, userId, name, address, phone, email, website, provider, category, town, province, lat, lng, status, notes, importedAt, source, metadata)
+        INSERT OR REPLACE INTO leads (id, userId, name, address, phone, email, website, provider, category, town, province, lat, lng, status, notes, importedAt, source, metadata)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    const transaction = db.transaction((businessesToSync) => {
-        deleteStmt.run(userId);
+    const transaction = db.transaction((businessesToSync, shouldClear) => {
+        if (shouldClear) {
+            deleteStmt.run(userId);
+        }
         for (const business of businessesToSync) {
             insertStmt.run(
                 business.id,
@@ -238,9 +240,9 @@ app.post('/api/businesses/sync', auth, (req, res) => {
     });
 
     try {
-        transaction(businesses);
+        transaction(businesses, clearFirst === true);
         updateUserStats(userId);
-        res.json({ message: 'Sync successful' });
+        res.json({ message: 'Sync successful', count: businesses.length });
     } catch (error) {
         console.error('Sync error:', error);
         res.status(500).json({ message: 'Sync failed', error: error.message });

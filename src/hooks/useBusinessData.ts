@@ -446,13 +446,14 @@ export const useBusinessData = () => {
                         hasMore = false;
                     } else {
                         allBusinesses = [...allBusinesses, ...businessesChunk];
-                        if (page % 2 === 0 || businessesChunk.length < chunkSize) {
+                        // Only update state every 5 chunks (10k items) to prevent UI freezing
+                        if (page % 5 === 0 || businessesChunk.length < chunkSize) {
                             setBusinesses([...allBusinesses]);
                         }
                         hasMore = businessesChunk.length === chunkSize;
                         page++;
                     }
-                    if (page > 100) break;
+                    if (page > 200) break; // Safety limit
                 }
 
                 setBusinesses(allBusinesses);

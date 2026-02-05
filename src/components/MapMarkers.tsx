@@ -1,9 +1,10 @@
 import React, { useMemo, useCallback } from 'react';
-import { Marker } from 'react-leaflet';
+import { Marker, CircleMarker, Tooltip } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 import type { Business } from '../types';
 import { createProviderIcon, createFallbackIcon } from '../utils/mapIcons';
+import { getProviderColor } from '../utils/providerColors';
 
 interface MapMarkersProps {
   businesses: Business[];
@@ -19,7 +20,9 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
   const businessCount = businesses?.length || 0;
   console.log('🗺️ MAPMARKERS: Rendering', businessCount, 'businesses');
 
-
+  // PERFORMANCE: Decide whether to use Canvas-based CircleMarkers or DOM-based Markers
+  // CircleMarkers are MUCH faster for large datasets as they render to a single canvas
+  const useCanvasMarkers = businessCount > 1000;
 
   // Filter valid businesses
   const validBusinesses = useMemo(() => {
@@ -94,6 +97,41 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
     >
       {validBusinesses.map((business) => {
         const isSelected = business.id === selectedBusinessId;
+
+        // If we have MANY markers, use Canvas-based CircleMarker for non-selected items.
+        // This prevents the browser from becoming unresponsive due to thousands of DOM elements.
+        if (useCanvasMarkers && !isSelected) {
+          try {
+            const color = getProviderColor(business.provider || 'Unknown');
+            return (
+              <CircleMarker
+                key={business.id}
+                center={[business.coordinates.lat, business.coordinates.lng]}
+                radius={6}
+                pathOptions={{
+                  fillColor: color,
+                  fillOpacity: 0.9,
+                  color: 'white',
+                  weight: 1.5,
+                }}
+                eventHandlers={{
+                  click: (e) => {
+                    L.DomEvent.stopPropagation(e as any);
+                    handleMarkerClick(business);
+                  }
+                }}
+              >
+                <Tooltip direction="top" offset={[0, -5]} opacity={1}>
+                  <div className="font-bold text-xs">
+                    [{business.provider?.slice(0, 3).toUpperCase()}] {business.name}
+                  </div>
+                </Tooltip>
+              </CircleMarker>
+            );
+          } catch (e) {
+            // Fallback to Marker if CircleMarker fails
+          }
+        }
 
         // Standard Marker with custom icons (including provider labels)
         let icon;

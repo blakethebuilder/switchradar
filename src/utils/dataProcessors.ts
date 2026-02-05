@@ -116,7 +116,7 @@ const buildCoordinates = (row: Record<string, unknown>, mapping: ImportMapping, 
       mapsLinkValue: getValue(row, mapping.mapsLink)
     });
   }
-  
+
   const latValue = getValue(row, mapping.lat);
   const lngValue = getValue(row, mapping.lng);
 
@@ -165,34 +165,30 @@ export const processImportedData = async (
     hasProgressCallback: !!onProgress,
     timestamp: new Date().toISOString()
   });
-  
+
   const now = Date.now();
   const results: Business[] = [];
-  // Optimize chunk size based on data size
-  const chunkSize = rows.length > 5000 ? 1000 : 500; // Larger chunks for big datasets
-  
+  // Optimize chunk size based on data size - smaller chunks for better UI responsiveness
+  const chunkSize = 250;
+
   console.log('🚀 PROCESS: Processing', rows.length, 'rows in chunks of', chunkSize);
-  
+
   for (let i = 0; i < rows.length; i += chunkSize) {
     const chunk = rows.slice(i, i + chunkSize);
-    console.log(`🚀 PROCESS: Processing chunk ${Math.floor(i/chunkSize) + 1}/${Math.ceil(rows.length/chunkSize)} (${chunk.length} rows)`);
-    
-    // Process chunk with batch coordinate extraction
-    const chunkResults = await processChunkOptimized(chunk, i, now, mapping);
+
+    // Process chunk synchronously (takes < 50ms for 250 items)
+    const chunkResults = processChunkSync(chunk, i, now, mapping);
     results.push(...chunkResults);
-    
+
     // Report progress
     if (onProgress) {
-      console.log(`🚀 PROCESS: Progress callback - ${results.length}/${rows.length} processed`);
       onProgress(results.length, rows.length);
     }
-    
-    // Reduced delay for better performance
-    if (i + chunkSize < rows.length) {
-      await new Promise(resolve => setTimeout(resolve, 2)); // Reduced from 5ms to 2ms
-    }
+
+    // Yield to main thread to keep UI responsive
+    await new Promise(resolve => setTimeout(resolve, 0));
   }
-  
+
   console.log('✅ PROCESS: processImportedData completed', {
     inputRows: rows.length,
     outputBusinesses: results.length,
@@ -203,19 +199,19 @@ export const processImportedData = async (
       provider: results[0].provider
     } : null
   });
-  
+
   return results;
 };
 
 // Optimized chunk processing with batch coordinate extraction
-const processChunkOptimized = async (
+const processChunkSync = (
   chunk: Record<string, unknown>[],
   startIndex: number,
   timestamp: number,
   mapping?: ImportMapping
-): Promise<Business[]> => {
+): Business[] => {
   const resolvedMapping = mapping ?? {};
-  
+
   return chunk.map((row, chunkIndex) => {
     const index = startIndex + chunkIndex;
     const name = getValue(row, resolvedMapping.name) ?? `Business ${index + 1}`;
@@ -245,7 +241,7 @@ const processChunkOptimized = async (
       metadata: row,
       mapsLink: resolvedMapping.mapsLink ? String(getValue(row, resolvedMapping.mapsLink) ?? '') : undefined
     };
-    
+
     // Log coordinate extraction for first few businesses only
     if (index < 5) {
       console.log(`🚀 PROCESS: Business ${index} detailed info:`, {
@@ -256,7 +252,7 @@ const processChunkOptimized = async (
         mapping: resolvedMapping
       });
     }
-    
+
     return business;
   });
 };
@@ -289,20 +285,20 @@ const filterCache = new Map<string, Business[]>();
 // Optimized search with caching and early exit
 const optimizedSearch = (businesses: Business[], searchTerm: string): Business[] => {
   if (!searchTerm) return businesses;
-  
+
   const cacheKey = searchTerm.toLowerCase();
   if (searchCache.has(cacheKey)) {
     return searchCache.get(cacheKey)!;
   }
-  
+
   const lowerSearchTerm = cacheKey;
   const results = businesses.filter(biz => {
     // Early exit optimizations - check most likely matches first
     return biz.name.toLowerCase().includes(lowerSearchTerm) ||
-           biz.provider.toLowerCase().includes(lowerSearchTerm) ||
-           biz.address.toLowerCase().includes(lowerSearchTerm);
+      biz.provider.toLowerCase().includes(lowerSearchTerm) ||
+      biz.address.toLowerCase().includes(lowerSearchTerm);
   });
-  
+
   // Cache results but limit cache size
   if (searchCache.size > 50) {
     const firstKey = searchCache.keys().next().value;
@@ -311,7 +307,7 @@ const optimizedSearch = (businesses: Business[], searchTerm: string): Business[]
     }
   }
   searchCache.set(cacheKey, results);
-  
+
   return results;
 };
 
@@ -335,29 +331,29 @@ export const filterBusinesses = (
   }
 
   const { droppedPin, radiusKm, searchTerm, selectedCategory, selectedTown, visibleProviders, phoneType } = filters;
-  
+
   // Early exit if no providers selected
   if (visibleProviders.length === 0) {
     return [];
   }
-  
+
   // Start with search filtering (most selective usually)
   let filtered = searchTerm ? optimizedSearch(businesses, searchTerm) : businesses;
-  
+
   // Apply other filters in order of selectivity
   if (selectedCategory) {
     filtered = filtered.filter(biz => biz.category === selectedCategory);
   }
-  
+
   // Town filtering
   if (selectedTown) {
     filtered = filtered.filter(biz => biz.town === selectedTown);
   }
-  
+
   // Provider filtering with Set for O(1) lookup
   const providerSet = new Set(visibleProviders);
   filtered = filtered.filter(biz => providerSet.has(biz.provider));
-  
+
   // Phone type filtering
   if (phoneType && phoneType !== 'all') {
     filtered = filtered.filter(biz => {
@@ -367,7 +363,7 @@ export const filterBusinesses = (
       return phoneType === 'mobile' ? isMobile : !isMobile;
     });
   }
-  
+
   // Distance filtering (most expensive, do last)
   if (droppedPin && radiusKm && filtered.length > 0) {
     filtered = filtered.filter(biz => {
@@ -380,7 +376,7 @@ export const filterBusinesses = (
       ) <= radiusKm;
     });
   }
-  
+
   // Cache results but limit cache size
   if (filterCache.size > 20) {
     const firstKey = filterCache.keys().next().value;
@@ -389,7 +385,7 @@ export const filterBusinesses = (
     }
   }
   filterCache.set(cacheKey, filtered);
-  
+
   return filtered;
 };
 
