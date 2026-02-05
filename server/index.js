@@ -186,13 +186,19 @@ app.get('/api/businesses', auth, (req, res) => {
     try {
         let leads;
         if (req.userData.role === 'super_admin') {
-            leads = db.prepare('SELECT * FROM leads').all();
+            leads = db.prepare(`
+                SELECT l.* FROM leads l
+                LEFT JOIN datasets d ON l.dataset_id = d.id
+                WHERE d.is_active = 1 OR l.dataset_id IS NULL
+            `).all();
         } else {
             leads = db.prepare(`
-                SELECT * FROM leads 
-                WHERE userId = ? 
-                OR town IN (SELECT town FROM shared_towns WHERE targetUserId = ?)
-                OR id IN (SELECT businessId FROM shared_businesses WHERE targetUserId = ?)
+                SELECT l.* FROM leads l
+                LEFT JOIN datasets d ON l.dataset_id = d.id
+                WHERE (l.userId = ? 
+                OR l.town IN (SELECT town FROM shared_towns WHERE targetUserId = ?)
+                OR l.id IN (SELECT businessId FROM shared_businesses WHERE targetUserId = ?))
+                AND (d.is_active = 1 OR l.dataset_id IS NULL)
             `).all(req.userData.userId, req.userData.userId, req.userData.userId);
         }
         res.json(leads.map(lead => ({
@@ -323,6 +329,38 @@ app.get('/api/datasets', auth, (req, res) => {
     } catch (err) {
         console.error('Error fetching datasets:', err);
         res.status(500).json({ message: 'Failed to retrieve datasets' });
+    }
+});
+
+app.put('/api/datasets/:id', auth, (req, res) => {
+    const { id } = req.params;
+    const { name, description, town, province, is_active } = req.body;
+    try {
+        const dataset = db.prepare('SELECT * FROM datasets WHERE id = ?').get(id);
+        if (!dataset) {
+            return res.status(404).json({ success: false, error: 'Dataset not found' });
+        }
+
+        // Only super_admin or owner can update
+        if (req.userData.role !== 'super_admin' && dataset.created_by !== req.userData.userId) {
+            return res.status(403).json({ success: false, error: 'Access denied' });
+        }
+
+        db.prepare(`
+            UPDATE datasets 
+            SET name = COALESCE(?, name),
+                description = COALESCE(?, description),
+                town = COALESCE(?, town),
+                province = COALESCE(?, province),
+                is_active = COALESCE(?, is_active),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        `).run(name, description, town, province, is_active !== undefined ? (is_active ? 1 : 0) : null, id);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Error updating dataset:', err);
+        res.status(500).json({ success: false, error: 'Failed to update dataset' });
     }
 });
 

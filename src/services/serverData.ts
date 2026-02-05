@@ -1319,7 +1319,7 @@ class ServerDataService {
   }
 
   // Dataset Management Functions
-  async updateDataset(datasetId: number, updates: { name?: string; description?: string; town?: string; province?: string }, token: string): Promise<ServerDataResult> {
+  async updateDataset(datasetId: number, updates: { name?: string; description?: string; town?: string; province?: string; is_active?: boolean }, token: string): Promise<ServerDataResult> {
     try {
       const response = await this.makeRequest(
         this.getApiUrl(`/api/datasets/${datasetId}`),

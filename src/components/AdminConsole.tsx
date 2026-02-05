@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Users, Share2, Database, Upload, Trash2, Shield, BarChart3, Search, MapPin, Building2, Phone, FolderOpen, Edit3, Plus } from 'lucide-react';
+import { Users, Share2, Database, Upload, Trash2, Shield, BarChart3, Search, MapPin, Building2, Phone, FolderOpen, Edit3, Plus, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { serverDataService } from '../services/serverData';
 import { environmentConfig } from '../config/environment';
@@ -211,6 +211,28 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       setSelectedBusinesses([]);
     } else {
       setSelectedBusinesses(filteredBusinesses.map(b => b.id));
+    }
+  };
+
+  const handleToggleDatasetStatus = async (dataset: any) => {
+    if (!token) return;
+
+    try {
+      setLoading(true);
+      const newStatus = !dataset.is_active;
+      const result = await serverDataService.updateDataset(
+        dataset.id,
+        { is_active: newStatus },
+        token
+      );
+
+      if (result.success) {
+        await loadDatasets();
+      }
+    } catch (error) {
+      console.error('Failed to toggle dataset status:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -489,7 +511,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               </div>
               {isSuperAdmin && (
                 <button
-                  onClick={() => setShowCreateDataset(true)}
+                  onClick={onImportClick}
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
                 >
                   <Plus className="h-4 w-4" />
@@ -500,13 +522,23 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {datasets.map((dataset) => (
-                <div key={dataset.id} className="border border-slate-200 rounded-lg p-4 hover:border-indigo-300 transition-colors">
+                <div key={dataset.id} className={`border rounded-lg p-4 transition-colors ${dataset.is_active ? 'border-slate-200 hover:border-indigo-300' : 'border-slate-200 bg-slate-50 opacity-75 opacity-75'}`}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-slate-900 truncate">{dataset.name}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className={`font-semibold truncate ${dataset.is_active ? 'text-slate-900' : 'text-slate-500'}`}>{dataset.name}</h4>
+                        {!dataset.is_active && <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded font-medium">DISABLED</span>}
+                      </div>
                       <p className="text-sm text-slate-600 truncate">{dataset.town}{dataset.province && `, ${dataset.province}`}</p>
                     </div>
                     <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleToggleDatasetStatus(dataset)}
+                        className={`p-1 transition-colors ${dataset.is_active ? 'text-green-600 hover:text-green-700' : 'text-slate-400 hover:text-slate-600'}`}
+                        title={dataset.is_active ? 'Disable Dataset' : 'Enable Dataset'}
+                      >
+                        {dataset.is_active ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
                       <button onClick={() => handleViewDatasetDetails(dataset)} className="p-1 text-slate-400 hover:text-indigo-600 transition-colors">
                         <FolderOpen className="h-4 w-4" />
                       </button>
@@ -515,17 +547,15 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                           <button onClick={() => { setSelectedDataset(dataset); setShowEditDataset(true); }} className="p-1 text-slate-400 hover:text-blue-600 transition-colors">
                             <Edit3 className="h-4 w-4" />
                           </button>
-                          {dataset.id !== 1 && (
-                            <button onClick={() => handleDeleteDataset(dataset.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
+                          <button onClick={() => handleDeleteDataset(dataset.id)} className="p-1 text-slate-400 hover:text-red-600 transition-colors">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </>
                       )}
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs text-slate-500 mt-2">
-                    <span>{dataset.business_count || 0} leads</span>
+                    <span>{dataset.business_count || 0} businesses</span>
                     <span>{new Date(dataset.created_at).toLocaleDateString()}</span>
                   </div>
                 </div>
