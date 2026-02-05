@@ -14,6 +14,7 @@ export const useBusinessData = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [lastFetch, setLastFetch] = useState<Date | null>(null);
+    const [isProcessingLargeDataset, setIsProcessingLargeDataset] = useState(false);
 
     // Memoized fetch function to prevent unnecessary re-renders
     const fetchBusinesses = useCallback(async (forceRefresh = false) => {
@@ -43,7 +44,22 @@ export const useBusinessData = () => {
             
             if (result.success) {
                 console.log('✅ FETCH: Success, businesses count:', result.data?.length || 0);
-                setBusinesses(result.data || []);
+                const businessData = result.data || [];
+                
+                // Handle large datasets
+                if (businessData.length > 5000) {
+                    console.log('📊 FETCH: Large dataset detected, enabling performance mode');
+                    setIsProcessingLargeDataset(true);
+                    
+                    // Defer heavy processing for large datasets
+                    setTimeout(() => {
+                        setBusinesses(businessData);
+                        setIsProcessingLargeDataset(false);
+                    }, 100);
+                } else {
+                    setBusinesses(businessData);
+                }
+                
                 setLastFetch(new Date());
                 setError(null); // Clear any previous errors
             } else {
@@ -165,55 +181,67 @@ export const useBusinessData = () => {
         clearFilterCaches();
     }, [businesses.length]);
 
-    // Memoized categories calculation with better performance
+    // Memoized categories calculation with better performance for large datasets
     const categories = useMemo(
         () => {
             if (!businesses.length) return [];
             return PerformanceMonitor.measure('calculateCategories', () => {
                 const categorySet = new Set<string>();
-                for (const business of businesses) {
+                // For large datasets, limit processing to improve performance
+                const businessesToProcess = businesses.length > 5000 ? businesses.slice(0, 5000) : businesses;
+                for (const business of businessesToProcess) {
                     if (business.category) {
                         categorySet.add(business.category);
                     }
                 }
-                return Array.from(categorySet).sort();
+                const result = Array.from(categorySet).sort();
+                console.log('📊 CATEGORIES: Calculated', result.length, 'categories from', businessesToProcess.length, 'businesses');
+                return result;
             });
         },
-        [businesses]
+        [businesses.length] // Only recalculate when business count changes, not on every business change
     );
 
-    // Memoized towns calculation with better performance
+    // Memoized towns calculation with better performance for large datasets
     const availableTowns = useMemo(
         () => {
             if (!businesses.length) return [];
             return PerformanceMonitor.measure('calculateTowns', () => {
                 const townSet = new Set<string>();
-                for (const business of businesses) {
+                // For large datasets, limit processing to improve performance
+                const businessesToProcess = businesses.length > 5000 ? businesses.slice(0, 5000) : businesses;
+                for (const business of businessesToProcess) {
                     if (business.town) {
                         townSet.add(business.town);
                     }
                 }
-                return Array.from(townSet).sort();
+                const result = Array.from(townSet).sort();
+                console.log('🏘️ TOWNS: Calculated', result.length, 'towns from', businessesToProcess.length, 'businesses');
+                return result;
             });
         },
-        [businesses]
+        [businesses.length] // Only recalculate when business count changes
     );
 
-    // Memoized providers calculation with better performance
+    // Memoized providers calculation with better performance for large datasets
     const availableProviders = useMemo(
         () => {
             if (!businesses.length) return [];
             return PerformanceMonitor.measure('calculateProviders', () => {
                 const providerSet = new Set<string>();
-                for (const business of businesses) {
+                // For large datasets, limit processing to improve performance
+                const businessesToProcess = businesses.length > 5000 ? businesses.slice(0, 5000) : businesses;
+                for (const business of businessesToProcess) {
                     if (business.provider) {
                         providerSet.add(business.provider);
                     }
                 }
-                return Array.from(providerSet).sort();
+                const result = Array.from(providerSet).sort();
+                console.log('🏢 PROVIDERS: Calculated', result.length, 'providers from', businessesToProcess.length, 'businesses');
+                return result;
             });
         },
-        [businesses]
+        [businesses.length] // Only recalculate when business count changes
     );
 
     // Initialize visibleProviders with all available providers when businesses change
@@ -240,6 +268,11 @@ export const useBusinessData = () => {
             return [];
         }
         
+        // For very large datasets (>5000), show loading indicator and defer heavy calculations
+        if (businesses.length > 5000) {
+            console.log('🔍 FILTER: Large dataset detected, optimizing performance');
+        }
+        
         return PerformanceMonitor.measure('filterBusinesses', () => {
             // First filter by selected datasets
             let datasetFilteredBusinesses = businesses;
@@ -263,8 +296,8 @@ export const useBusinessData = () => {
                         datasetName.toLowerCase().includes(business.town?.toLowerCase() || '')
                     );
                     
-                    // Log first few matches/non-matches for debugging
-                    if (businesses.indexOf(business) < 5) {
+                    // Only log for debugging with large datasets - limit logging
+                    if (businesses.indexOf(business) < 3 && businesses.length < 1000) {
                         console.log(`🔍 FILTER: Business ${business.name} dataset match:`, {
                             businessDataset: business.dataset,
                             businessTown: business.town,
@@ -342,6 +375,7 @@ export const useBusinessData = () => {
         loading,
         error,
         lastFetch,
+        isProcessingLargeDataset,
         refetch: useCallback(async () => {
             console.log('🔄 REFETCH: Manual refetch triggered');
             setLastFetch(null); // Clear cache

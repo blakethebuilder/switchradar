@@ -56,7 +56,8 @@ function App() {
     loading,
     dbError,
     handleDatabaseReset,
-    refetch
+    refetch,
+    isProcessingLargeDataset
   } = useBusinessData();
 
   // App state hook
@@ -423,6 +424,7 @@ function App() {
               isFiltersVisible={isFiltersVisible}
               lastImportName={lastImportName}
               loading={loading}
+              isProcessingLargeDataset={isProcessingLargeDataset}
               searchTerm={searchTerm}
               selectedCategory={selectedCategory}
               selectedTown={selectedTown}

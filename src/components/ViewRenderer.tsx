@@ -36,6 +36,7 @@ interface ViewRendererProps {
   isFiltersVisible: boolean;
   lastImportName: string;
   loading: boolean;
+  isProcessingLargeDataset?: boolean;
   
   // Filter props
   searchTerm: string;
@@ -100,6 +101,7 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
   isFiltersVisible,
   lastImportName,
   loading,
+  isProcessingLargeDataset,
   searchTerm,
   selectedCategory,
   selectedTown,
@@ -143,12 +145,22 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
 }) => {
   const providerCount = availableProviders.length;
 
-  if (loading) {
+  if (loading || isProcessingLargeDataset) {
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading businesses...</p>
+          <p className="text-slate-600 font-medium">
+            {isProcessingLargeDataset 
+              ? `Processing ${businesses.length.toLocaleString()} businesses...` 
+              : 'Loading businesses...'
+            }
+          </p>
+          {isProcessingLargeDataset && (
+            <p className="text-slate-500 text-sm mt-2">
+              Large dataset detected - optimizing performance
+            </p>
+          )}
         </div>
       </div>
     );
