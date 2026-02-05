@@ -403,18 +403,32 @@ export const ViewRenderer: React.FC<ViewRendererProps> = ({
             <BusinessMap
               key={`map-${viewMode}`}
               businesses={React.useMemo(() => {
-                // Always include the selected business in the map, even if it's filtered out
+                // CRITICAL FIX: Always include the selected business in the map, even if it's filtered out
                 // This prevents markers from disappearing when clicked
-                if (selectedBusiness && !filteredBusinesses.find(b => b.id === selectedBusiness.id)) {
+                const mapBusinesses = [...filteredBusinesses];
+                
+                if (selectedBusiness && !mapBusinesses.find(b => b.id === selectedBusiness.id)) {
                   console.log('🗺️ MAP: Adding selected business to map businesses', {
                     selectedBusinessId: selectedBusiness.id,
                     selectedBusinessName: selectedBusiness.name,
                     filteredCount: filteredBusinesses.length
                   });
-                  return [...filteredBusinesses, selectedBusiness];
+                  mapBusinesses.push(selectedBusiness);
                 }
-                return filteredBusinesses;
-              }, [filteredBusinesses, selectedBusiness])}
+                
+                // Also include any selected businesses from multi-select
+                selectedBusinessIds.forEach(id => {
+                  if (!mapBusinesses.find(b => b.id === id)) {
+                    const business = businesses.find(b => b.id === id);
+                    if (business) {
+                      console.log('🗺️ MAP: Adding multi-selected business to map', business.name);
+                      mapBusinesses.push(business);
+                    }
+                  }
+                });
+                
+                return mapBusinesses;
+              }, [filteredBusinesses, selectedBusiness, selectedBusinessIds, businesses])}
               targetLocation={mapTarget?.center}
               zoom={mapTarget?.zoom}
               fullScreen={true}

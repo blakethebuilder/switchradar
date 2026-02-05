@@ -905,6 +905,145 @@ class ServerDataService {
       };
     }
   }
+
+  // Unshare Operations
+  async getSharedData(token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/share/shared'), {
+        headers: this.getAuthHeaders(token)
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to fetch shared data:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to fetch shared data'
+      };
+    }
+  }
+
+  async unshareTowns(targetUserId: number, towns: string[], token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/share/towns'), {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify({ targetUserId, towns })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to unshare towns:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to unshare towns'
+      };
+    }
+  }
+
+  async unshareBusinesses(targetUserId: number, businessIds: string[], token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl('/api/share/businesses'), {
+        method: 'DELETE',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify({ targetUserId, businessIds })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to unshare businesses:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to unshare businesses'
+      };
+    }
+  }
+
+  // User Password Management
+  async updateUserPassword(userId: number, newPassword: string, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/users/${userId}/password`), {
+        method: 'PUT',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify({ password: newPassword })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to update user password:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update user password'
+      };
+    }
+  }
+
+  async updateUser(userId: number, updates: { username?: string; password?: string }, token: string): Promise<ServerDataResult> {
+    try {
+      const response = await fetch(this.getApiUrl(`/api/users/${userId}`), {
+        method: 'PUT',
+        headers: this.getAuthHeaders(token),
+        body: JSON.stringify(updates)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const result = await response.json();
+
+      return {
+        success: true,
+        data: result
+      };
+    } catch (error) {
+      console.error('Failed to update user:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update user'
+      };
+    }
+  }
 }
 
 export const serverDataService = new ServerDataService();

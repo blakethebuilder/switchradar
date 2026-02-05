@@ -33,6 +33,7 @@ export const UserDataManagement: React.FC = () => {
   const [selectedBusinesses, setSelectedBusinesses] = useState<string[]>([]);
   const [targetUserId, setTargetUserId] = useState<number | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [showSharedDataModal, setShowSharedDataModal] = useState(false);
   const [newBusiness, setNewBusiness] = useState<Partial<Business>>({
     name: '',
     address: '',
@@ -95,7 +96,7 @@ export const UserDataManagement: React.FC = () => {
     
     try {
       const businessToAdd: Business = {
-        id: `business_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `business_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
         name: newBusiness.name || '',
         address: newBusiness.address || '',
         phone: newBusiness.phone || '',
@@ -193,6 +194,38 @@ export const UserDataManagement: React.FC = () => {
     }
   };
 
+  const handleUnshareTowns = async (targetUserId: number, towns: string[]) => {
+    if (!token) return;
+    
+    try {
+      const result = await serverDataService.unshareTowns(targetUserId, towns, token);
+      if (result.success) {
+        alert(`Successfully unshared ${towns.length} towns from user!`);
+        loadUserStats(); // Refresh stats
+      } else {
+        setError(result.error || 'Failed to unshare towns');
+      }
+    } catch (err) {
+      setError('Failed to unshare towns');
+    }
+  };
+
+  const handleUnshareBusinesses = async (targetUserId: number, businessIds: string[]) => {
+    if (!token) return;
+    
+    try {
+      const result = await serverDataService.unshareBusinesses(targetUserId, businessIds, token);
+      if (result.success) {
+        alert(`Successfully unshared ${businessIds.length} businesses from user!`);
+        loadUserStats(); // Refresh stats
+      } else {
+        setError(result.error || 'Failed to unshare businesses');
+      }
+    } catch (err) {
+      setError('Failed to unshare businesses');
+    }
+  };
+
   const openShareModal = (type: 'towns' | 'businesses') => {
     setShareType(type);
     setShowShareModal(true);
@@ -243,6 +276,13 @@ export const UserDataManagement: React.FC = () => {
           
           {/* Share Actions */}
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSharedDataModal(true)}
+              className="flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+            >
+              <Eye className="h-4 w-4" />
+              View Shared Data
+            </button>
             <button
               onClick={() => openShareModal('towns')}
               className="flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
@@ -651,6 +691,60 @@ export const UserDataManagement: React.FC = () => {
                     Share {shareType === 'towns' ? `${selectedTowns.length} Towns` : `${selectedBusinesses.length} Businesses`}
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shared Data Viewing Modal */}
+      {showSharedDataModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-4xl w-full p-6 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Shared Data Overview</h3>
+              <button
+                onClick={() => setShowSharedDataModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {userStats.map((user) => (
+                <div key={user.userId} className="border border-slate-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-semibold text-slate-900">{user.username}</h4>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleUnshareTowns(user.userId, ['example-town'])}
+                        className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                      >
+                        Unshare Towns
+                      </button>
+                      <button
+                        onClick={() => handleUnshareBusinesses(user.userId, ['example-business'])}
+                        className="text-xs px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+                      >
+                        Unshare Businesses
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-sm text-slate-600">
+                    <p>Shared data will be displayed here when the backend API is fully implemented.</p>
+                    <p className="mt-1">This includes shared towns and businesses for each user.</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowSharedDataModal(false)}
+                className="px-4 py-2 bg-slate-600 text-white rounded-lg hover:bg-slate-700 transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

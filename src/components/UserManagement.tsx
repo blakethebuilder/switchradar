@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Trash2, Shield, User as UserIcon, Calendar, CheckCircle } from 'lucide-react';
+import { Users, Plus, Trash2, Shield, User as UserIcon, Calendar, CheckCircle, Edit, Key, X } from 'lucide-react';
 import { serverDataService } from '../services/serverData';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,7 +16,13 @@ export const UserManagement: React.FC = () => {
   const { user: currentUser, isAdmin, token } = useAuth();
   const [users, setUsers] = useState<ServerUser[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<ServerUser | null>(null);
   const [newUser, setNewUser] = useState({
+    username: '',
+    password: ''
+  });
+  const [editUser, setEditUser] = useState({
     username: '',
     password: ''
   });
@@ -121,6 +127,68 @@ export const UserManagement: React.FC = () => {
     }
   };
 
+  const handleEditUser = (user: ServerUser) => {
+    setEditingUser(user);
+    setEditUser({
+      username: user.username,
+      password: ''
+    });
+    setIsEditModalOpen(true);
+    setError('');
+  };
+
+  const handleUpdateUser = async () => {
+    if (!token || !editingUser) return;
+    
+    try {
+      setError('');
+      
+      if (!editUser.username.trim()) {
+        setError('Username is required');
+        return;
+      }
+
+      setLoading(true);
+      console.log('🔄 Updating user:', editingUser.id);
+      
+      const updates: { username?: string; password?: string } = {};
+      
+      // Only update username if it changed
+      if (editUser.username.trim() !== editingUser.username) {
+        updates.username = editUser.username.trim();
+      }
+      
+      // Only update password if provided
+      if (editUser.password.trim()) {
+        updates.password = editUser.password.trim();
+      }
+      
+      if (Object.keys(updates).length === 0) {
+        setError('No changes to save');
+        return;
+      }
+      
+      const result = await serverDataService.updateUser(editingUser.id, updates, token);
+      
+      if (result.success) {
+        setSuccess(`User "${editUser.username}" updated successfully`);
+        setEditUser({ username: '', password: '' });
+        setEditingUser(null);
+        setIsEditModalOpen(false);
+        await loadUsers();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        console.error('❌ Failed to update user:', result.error);
+        setError(result.error || 'Failed to update user');
+      }
+    } catch (error) {
+      console.error('💥 Exception updating user:', error);
+      setError(error instanceof Error ? error.message : 'Failed to update user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
@@ -222,6 +290,16 @@ export const UserManagement: React.FC = () => {
                 </div>
                 
                 <div className="flex items-center gap-2">
+                  {user.id !== currentUser?.id && (
+                    <button
+                      onClick={() => handleEditUser(user)}
+                      disabled={loading}
+                      className="p-2 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Edit User"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                  )}
                   {user.id !== currentUser?.id && user.username.toLowerCase() !== 'blake' && (
                     <button
                       onClick={() => handleDeleteUser(user.id, user.username)}
@@ -296,6 +374,82 @@ export const UserManagement: React.FC = () => {
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Creating...' : 'Add User'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {isEditModalOpen && editingUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">Edit User</h3>
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingUser(null);
+                  setEditUser({ username: '', password: '' });
+                  setError('');
+                }}
+                className="p-2 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Username *</label>
+                <input
+                  type="text"
+                  value={editUser.username}
+                  onChange={(e) => setEditUser({ ...editUser, username: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Enter username"
+                  disabled={loading}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  New Password
+                  <span className="text-slate-500 font-normal"> (leave blank to keep current)</span>
+                </label>
+                <div className="relative">
+                  <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <input
+                    type="password"
+                    value={editUser.password}
+                    onChange={(e) => setEditUser({ ...editUser, password: e.target.value })}
+                    className="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    placeholder="Enter new password (optional)"
+                    disabled={loading}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingUser(null);
+                  setEditUser({ username: '', password: '' });
+                  setError('');
+                }}
+                disabled={loading}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateUser}
+                disabled={loading || !editUser.username.trim()}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Updating...' : 'Update User'}
               </button>
             </div>
           </div>

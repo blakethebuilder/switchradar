@@ -128,22 +128,54 @@ export const useBusinessData = () => {
             });
 
             if (response.ok) {
-                const datasets = await response.json();
-                setAvailableDatasets(datasets.map((d: any) => ({
-                    id: d.id,
-                    name: d.name,
-                    town: d.town
-                })));
+                const result = await response.json();
+                console.log('📊 DATASETS: Raw response:', result);
+                
+                // Handle different response formats with better error handling
+                let datasets = [];
+                if (Array.isArray(result)) {
+                    datasets = result;
+                } else if (result && typeof result === 'object') {
+                    if (Array.isArray(result.data)) {
+                        datasets = result.data;
+                    } else if (Array.isArray(result.datasets)) {
+                        datasets = result.datasets;
+                    } else {
+                        console.warn('📊 DATASETS: No valid datasets array found in response, using empty array');
+                        datasets = [];
+                    }
+                } else {
+                    console.warn('📊 DATASETS: Invalid response format, using empty array');
+                    datasets = [];
+                }
+                
+                console.log('📊 DATASETS: Processed datasets:', datasets);
+                
+                // Safely map datasets with validation
+                const validDatasets = datasets
+                    .filter((d: any) => d && typeof d === 'object' && d.id && d.name)
+                    .map((d: any) => ({
+                        id: d.id,
+                        name: d.name,
+                        town: d.town || ''
+                    }));
+                
+                setAvailableDatasets(validDatasets);
                 
                 // Auto-select all datasets if none selected
-                if (selectedDatasets.length === 0) {
-                    setSelectedDatasets(datasets.map((d: any) => d.id));
+                if (selectedDatasets.length === 0 && validDatasets.length > 0) {
+                    setSelectedDatasets(validDatasets.map((d: any) => d.id));
                 }
+            } else {
+                console.warn('📊 DATASETS: API response not ok:', response.status, response.statusText);
+                setAvailableDatasets([]);
             }
         } catch (err) {
             console.error('Failed to fetch datasets:', err);
+            // Set empty arrays to prevent errors
+            setAvailableDatasets([]);
         }
-    }, [token, isAuthenticated, selectedDatasets.length]);
+    }, [token, isAuthenticated]);
 
     // Auto-fetch on mount and auth changes - Optimized to prevent multiple calls
     useEffect(() => {
@@ -153,12 +185,15 @@ export const useBusinessData = () => {
             const initializeData = async () => {
                 console.log('🚀 DATA: Starting data initialization');
                 try {
-                    // Fetch all data concurrently for better performance
-                    await Promise.all([
-                        fetchBusinesses(true), // Force refresh on auth change
-                        fetchRoutes(),
-                        fetchDatasets()
-                    ]);
+                    // Fetch datasets first to avoid dependency issues
+                    await fetchDatasets();
+                    
+                    // Then fetch businesses
+                    await fetchBusinesses(true); // Force refresh on auth change
+                    
+                    // Finally fetch routes
+                    await fetchRoutes();
+                    
                     console.log('✅ DATA: All data fetched successfully');
                 } catch (error) {
                     console.error('❌ DATA: Error during data initialization:', error);
@@ -174,7 +209,7 @@ export const useBusinessData = () => {
             setSelectedDatasets([]);
             setError(null);
         }
-    }, [token, isAuthenticated]); // Removed function dependencies to prevent loops
+    }, [token, isAuthenticated, fetchBusinesses, fetchRoutes, fetchDatasets]); // Include all fetch functions
 
     // Clear caches when businesses change
     useEffect(() => {
@@ -276,6 +311,8 @@ export const useBusinessData = () => {
         return PerformanceMonitor.measure('filterBusinesses', () => {
             // First filter by selected datasets
             let datasetFilteredBusinesses = businesses;
+            
+            // Only apply dataset filtering if we have both available datasets and selected datasets
             if (selectedDatasets.length > 0 && availableDatasets.length > 0) {
                 const selectedDatasetNames = availableDatasets
                     .filter(d => selectedDatasets.includes(d.id))
@@ -314,7 +351,9 @@ export const useBusinessData = () => {
                     filteredCount: datasetFilteredBusinesses.length
                 });
             } else {
-                console.log('🔍 FILTER: No dataset filtering (no selected datasets or no available datasets)');
+                console.log('🔍 FILTER: No dataset filtering (no selected datasets or no available datasets) - showing all businesses');
+                // If no datasets are configured or selected, show all businesses
+                datasetFilteredBusinesses = businesses;
             }
             
             const finalFiltered = filterBusinesses(datasetFilteredBusinesses, {
@@ -379,13 +418,72 @@ export const useBusinessData = () => {
         refetch: useCallback(async () => {
             console.log('🔄 REFETCH: Manual refetch triggered');
             setLastFetch(null); // Clear cache
-            await Promise.all([
-                fetchBusinesses(true),
-                fetchRoutes(),
-                fetchDatasets()
-            ]);
+            
+            try {
+                // Fetch businesses first
+                const businessResult = await serverDataService.getBusinesses(token || '');
+                if (businessResult.success) {
+                    const businessData = businessResult.data || [];
+                    if (businessData.length > 5000) {
+                        console.log('📊 REFETCH: Large dataset detected, enabling performance mode');
+                        setIsProcessingLargeDataset(true);
+                        setTimeout(() => {
+                            setBusinesses(businessData);
+                            setIsProcessingLargeDataset(false);
+                        }, 100);
+                    } else {
+                        setBusinesses(businessData);
+                    }
+                    setLastFetch(new Date());
+                }
+                
+                // Fetch routes
+                const routeResult = await serverDataService.getRoutes(token || '');
+                if (routeResult.success) {
+                    setRouteItems(routeResult.data || []);
+                }
+                
+                // Fetch datasets
+                try {
+                    const response = await fetch(`${environmentConfig.getApiUrl()}/api/datasets`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        let datasets = [];
+                        if (Array.isArray(result)) {
+                            datasets = result;
+                        } else if (result.data && Array.isArray(result.data)) {
+                            datasets = result.data;
+                        } else if (result.datasets && Array.isArray(result.datasets)) {
+                            datasets = result.datasets;
+                        }
+                        
+                        setAvailableDatasets(datasets.map((d: any) => ({
+                            id: d.id,
+                            name: d.name,
+                            town: d.town
+                        })));
+                        
+                        if (selectedDatasets.length === 0 && datasets.length > 0) {
+                            setSelectedDatasets(datasets.map((d: any) => d.id));
+                        }
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch datasets in refetch:', err);
+                    setAvailableDatasets([]);
+                }
+                
+            } catch (error) {
+                console.error('❌ REFETCH: Error during manual refetch:', error);
+            }
+            
             console.log('✅ REFETCH: Manual refetch completed');
-        }, [fetchBusinesses, fetchRoutes, fetchDatasets]),
+        }, [token, selectedDatasets.length]),
         isDbReady: isAuthenticated && !error,
         dbError: error,
         // Database reset function (for compatibility)
