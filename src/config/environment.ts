@@ -17,12 +17,16 @@ class EnvironmentConfigManager {
 
   private loadConfig(): EnvironmentConfig {
     // Check if we're in production by looking at the hostname
-    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    const isProduction = window.location.hostname !== 'localhost' && 
+                         window.location.hostname !== '127.0.0.1' &&
+                         !window.location.hostname.startsWith('192.168.') &&
+                         !window.location.hostname.startsWith('10.') &&
+                         !window.location.hostname.endsWith('.local');
     
     // In production, use relative paths (Nginx will proxy)
-    // In development, use localhost:5001
+    // In development or local network access, use localhost:5001 as default
     const apiUrl = import.meta.env.VITE_API_URL || 
-                   (isProduction ? '' : 'http://localhost:5001');
+                   (isProduction ? '' : `http://${window.location.hostname}:5001`);
     
     console.log('🔧 Environment config debug:', {
       hostname: window.location.hostname,

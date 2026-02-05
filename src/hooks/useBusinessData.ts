@@ -53,8 +53,6 @@ export const useBusinessData = () => {
         }
         
         if (isAuthenticated && token) {
-            isInitializing.current = true;
-            
             // Check if we have cached data first
             const cachedBusinesses = cacheService.getBusinesses();
             const cachedRoutes = cacheService.getRoutes();
@@ -117,6 +115,9 @@ export const useBusinessData = () => {
             console.log('🔐 DATA: Already initializing, skipping duplicate call');
             return;
         }
+
+        // Set initializing flag to prevent race conditions
+        isInitializing.current = true;
         
         try {
             console.log('🚀 DATA: Starting data initialization', { isBackgroundRefresh });
