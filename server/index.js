@@ -112,13 +112,23 @@ app.get('/api/users', auth, (req, res) => {
     }
 
     try {
-        const users = db.prepare(`
-            SELECT u.id, u.username, u.created_at, u.last_sync, u.total_businesses, u.storage_used_mb,
-                   (SELECT COUNT(*) FROM shared_towns WHERE targetUserId = u.id) as shared_town_count,
-                   (SELECT COUNT(*) FROM shared_businesses WHERE targetUserId = u.id) as shared_business_count
-            FROM users u
-        `).all();
-        res.json({ success: true, data: users });
+        const users = db.prepare('SELECT id, username, created_at, last_sync, total_businesses, storage_used_mb FROM users').all();
+
+        const detailedUsers = users.map(user => {
+            const sharedTowns = db.prepare('SELECT town FROM shared_towns WHERE targetUserId = ?').all(user.id).map(t => t.town);
+            const ownedTowns = db.prepare('SELECT DISTINCT town FROM leads WHERE userId = ? AND town IS NOT NULL AND town != ""').all(user.id).map(t => t.town);
+            const sharedBusinessCount = db.prepare('SELECT COUNT(*) as count FROM shared_businesses WHERE targetUserId = ?').get(user.id).count;
+
+            return {
+                ...user,
+                shared_towns: sharedTowns,
+                owned_towns: ownedTowns,
+                shared_town_count: sharedTowns.length,
+                shared_business_count: sharedBusinessCount
+            };
+        });
+
+        res.json({ success: true, data: detailedUsers });
     } catch (error) {
         console.error('Fetch users error:', error);
         res.status(500).json({ success: false, error: 'Failed to fetch users' });

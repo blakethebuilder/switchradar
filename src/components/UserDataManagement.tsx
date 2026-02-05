@@ -14,6 +14,8 @@ interface UserDataStats {
   storageUsed: number;
   sharedTownCount: number;
   sharedBusinessCount: number;
+  ownedTowns: string[];
+  sharedTowns: string[];
 }
 
 interface AvailableTown {
@@ -75,7 +77,9 @@ export const UserDataManagement: React.FC = () => {
           lastSync: user.last_sync || new Date().toISOString(),
           storageUsed: user.storage_used_mb || 0,
           sharedTownCount: user.shared_town_count || 0,
-          sharedBusinessCount: user.shared_business_count || 0
+          sharedBusinessCount: user.shared_business_count || 0,
+          ownedTowns: user.owned_town_towns || user.owned_towns || [],
+          sharedTowns: user.shared_towns || []
         }));
         setUserStats(stats);
       } else {
@@ -406,23 +410,65 @@ export const UserDataManagement: React.FC = () => {
                 </span>
               </div>
               <div className="pt-2 mt-2 border-t border-slate-100">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Access Rights</span>
-                  <div className="flex gap-1">
-                    {stat.sharedTownCount > 0 && (
-                      <span className="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                        {stat.sharedTownCount} Towns
-                      </span>
-                    )}
-                    {stat.sharedBusinessCount > 0 && (
-                      <span className="bg-blue-100 text-blue-700 text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-                        {stat.sharedBusinessCount} Leads
-                      </span>
-                    )}
-                    {stat.sharedTownCount === 0 && stat.sharedBusinessCount === 0 && (
-                      <span className="text-[10px] text-slate-400 font-medium italic">No shared data</span>
-                    )}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-slate-500 uppercase">Owned Towns</span>
+                    <div className="flex flex-wrap justify-end gap-1 max-w-[60%]">
+                      {stat.ownedTowns.length > 0 ? (
+                        stat.ownedTowns.slice(0, 3).map(town => (
+                          <span key={town} className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px] whitespace-nowrap">
+                            {town}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-slate-400 italic">None</span>
+                      )}
+                      {stat.ownedTowns.length > 3 && <span className="text-[10px] text-slate-400">+{stat.ownedTowns.length - 3} more</span>}
+                    </div>
                   </div>
+
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-semibold text-slate-500 uppercase">Shared Access</span>
+                    <div className="flex flex-wrap justify-end gap-1 max-w-[60%]">
+                      {stat.sharedTowns.length > 0 && (
+                        stat.sharedTowns.map(town => (
+                          <span key={town} className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">
+                            {town}
+                          </span>
+                        ))
+                      )}
+                      {stat.sharedBusinessCount > 0 && (
+                        <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                          {stat.sharedBusinessCount} Leads
+                        </span>
+                      )}
+                      {stat.sharedTownCount === 0 && stat.sharedBusinessCount === 0 && (
+                        <span className="text-slate-400 italic">None</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={() => {
+                      setTargetUserId(stat.userId);
+                      setShareType('towns');
+                      setShowShareModal(true);
+                    }}
+                    className="flex-1 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Share Town
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowSharedDataModal(true);
+                      loadSharedData();
+                    }}
+                    className="px-3 py-1.5 border border-slate-200 text-slate-600 rounded-lg text-xs font-medium hover:bg-slate-50 transition-colors"
+                  >
+                    Manage
+                  </button>
                 </div>
               </div>
             </div>
