@@ -123,7 +123,7 @@ export const UserDataManagement: React.FC = () => {
       setSelectedBusinesses([]);
       if (selectedUserId) loadUserBusinesses(selectedUserId);
       loadUserStats();
-      setError(`Successfully centralized ${successCount} leads to Blake.`);
+      setError(`Successfully centralized ${successCount} leads.`);
     } catch (err) {
       console.error('Bulk transfer error:', err);
       setError('Failed to transfer some leads.');
@@ -651,12 +651,12 @@ export const UserDataManagement: React.FC = () => {
 
               {selectedBusinesses.length > 0 && (
                 <button
-                  onClick={() => handleBulkTransfer(1)}
+                  onClick={() => handleBulkTransfer(5)}
                   disabled={isTransferring}
                   className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-bold hover:bg-amber-700 transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap"
                 >
                   <Database className="h-4 w-4" />
-                  Centralize to Blake ({selectedBusinesses.length})
+                  Centralize ({selectedBusinesses.length})
                 </button>
               )}
             </div>

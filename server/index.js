@@ -225,10 +225,9 @@ app.get('/api/businesses', auth, (req, res) => {
                 WHERE d.is_active = 1 OR l.dataset_id IS NULL
             `).all();
         } else {
-            // Normal users see:
+            // Normal users and admins see:
             // 1. Their own owned leads
             // 2. Leads shared specifically with them (via shared_towns or shared_businesses)
-            // 3. CENTRALIZED DATA: Any lead that belongs to a dataset created by Blake (user ID 1) or any Super Admin
             leads = db.prepare(`
                 SELECT l.* FROM leads l
                 LEFT JOIN datasets d ON l.dataset_id = d.id
@@ -236,7 +235,6 @@ app.get('/api/businesses', auth, (req, res) => {
                     l.userId = ? 
                     OR l.town IN (SELECT town FROM shared_towns WHERE targetUserId = ?)
                     OR l.id IN (SELECT businessId FROM shared_businesses WHERE targetUserId = ?)
-                    OR l.dataset_id IN (SELECT id FROM datasets WHERE created_by IN (SELECT id FROM users WHERE role = 'super_admin' OR id = 1))
                 )
                 AND (d.is_active = 1 OR l.dataset_id IS NULL)
             `).all(req.userData.userId, req.userData.userId, req.userData.userId);
@@ -418,16 +416,20 @@ app.get('/api/datasets', auth, (req, res) => {
                 GROUP BY d.id
             `).all();
         } else {
-            // Normal users see their own datasets AND Blake's or Super Admin's (centralized) datasets
+            // Users see their own datasets + any datasets explicitly shared via the leads they can see
             datasets = db.prepare(`
                 SELECT d.*, COUNT(l.id) as business_count 
                 FROM datasets d 
                 LEFT JOIN leads l ON d.id = l.dataset_id 
                 WHERE d.created_by = ? 
-                   OR d.created_by IN (SELECT id FROM users WHERE role = 'super_admin' OR id = 1) 
-                   OR d.created_by IS NULL
+                   OR d.id IN (
+                       SELECT DISTINCT dataset_id FROM leads 
+                       WHERE userId = ? 
+                       OR town IN (SELECT town FROM shared_towns WHERE targetUserId = ?)
+                       OR id IN (SELECT businessId FROM shared_businesses WHERE targetUserId = ?)
+                   )
                 GROUP BY d.id
-            `).all(userId);
+            `).all(userId, userId, userId, userId);
         }
         res.json({ success: true, datasets });
     } catch (err) {
