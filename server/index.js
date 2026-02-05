@@ -115,23 +115,41 @@ app.get('/api/users', auth, (req, res) => {
         const users = db.prepare('SELECT id, username, created_at, last_sync, total_businesses, storage_used_mb FROM users').all();
 
         const detailedUsers = users.map(user => {
-            const sharedTowns = db.prepare('SELECT town FROM shared_towns WHERE targetUserId = ?').all(user.id).map(t => t.town);
-            const ownedTowns = db.prepare('SELECT DISTINCT town FROM leads WHERE userId = ? AND town IS NOT NULL AND town != ""').all(user.id).map(t => t.town);
-            const sharedBusinessCount = db.prepare('SELECT COUNT(*) as count FROM shared_businesses WHERE targetUserId = ?').get(user.id).count;
+            try {
+                // Use safe queries that don't crash if tables or columns are momentarily missing or locked
+                const sharedTowns = db.prepare('SELECT town FROM shared_towns WHERE targetUserId = ?').all(user.id).map(t => t.town);
+                const ownedTowns = db.prepare('SELECT DISTINCT town FROM leads WHERE userId = ? AND town IS NOT NULL AND town != ""').all(user.id).map(t => t.town);
+                const sharedBusinessRes = db.prepare('SELECT COUNT(*) as count FROM shared_businesses WHERE targetUserId = ?').get(user.id);
+                const sharedBusinessCount = sharedBusinessRes ? sharedBusinessRes.count : 0;
 
-            return {
-                ...user,
-                shared_towns: sharedTowns,
-                owned_towns: ownedTowns,
-                shared_town_count: sharedTowns.length,
-                shared_business_count: sharedBusinessCount
-            };
+                return {
+                    ...user,
+                    shared_towns: sharedTowns || [],
+                    owned_towns: ownedTowns || [],
+                    shared_town_count: (sharedTowns || []).length,
+                    shared_business_count: sharedBusinessCount
+                };
+            } catch (innerError) {
+                console.error(`⚠️ Error enhancing user ${user.username} data:`, innerError.message);
+                return {
+                    ...user,
+                    shared_towns: [],
+                    owned_towns: [],
+                    shared_town_count: 0,
+                    shared_business_count: 0,
+                    error: 'Partial data loaded'
+                };
+            }
         });
 
         res.json({ success: true, data: detailedUsers });
     } catch (error) {
-        console.error('Fetch users error:', error);
-        res.status(500).json({ success: false, error: 'Failed to fetch users' });
+        console.error('❌ CRITICAL: Fetch users error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch users list',
+            details: error.message
+        });
     }
 });
 
@@ -519,26 +537,36 @@ app.get('/api/share/shared', auth, (req, res) => {
     try {
         const users = db.prepare('SELECT id as userId, username FROM users').all();
         const sharedData = users.map(user => {
-            const sharedTowns = db.prepare('SELECT town FROM shared_towns WHERE targetUserId = ?').all(user.userId);
-            const sharedBusIds = db.prepare('SELECT businessId FROM shared_businesses WHERE targetUserId = ?').all(user.userId);
+            try {
+                const sharedTowns = db.prepare('SELECT town FROM shared_towns WHERE targetUserId = ?').all(user.userId);
+                const sharedBusIds = db.prepare('SELECT businessId FROM shared_businesses WHERE targetUserId = ?').all(user.userId);
 
-            let sharedBusinesses = [];
-            if (sharedBusIds.length > 0) {
-                const placeholders = sharedBusIds.map(() => '?').join(',');
-                sharedBusinesses = db.prepare(`SELECT * FROM leads WHERE id IN (${placeholders})`).all(sharedBusIds.map(b => b.businessId));
+                let sharedBusinesses = [];
+                if (sharedBusIds.length > 0) {
+                    const placeholders = sharedBusIds.map(() => '?').join(',');
+                    sharedBusinesses = db.prepare(`SELECT * FROM leads WHERE id IN (${placeholders})`).all(sharedBusIds.map(b => b.businessId));
+                }
+
+                return {
+                    userId: user.userId,
+                    username: user.username,
+                    sharedTowns: sharedTowns.map(t => ({ town: t.town })),
+                    sharedBusinesses
+                };
+            } catch (innerErr) {
+                console.error(`⚠️ Error fetching shared data for user ${user.username}:`, innerErr.message);
+                return {
+                    userId: user.userId,
+                    username: user.username,
+                    sharedTowns: [],
+                    sharedBusinesses: []
+                };
             }
-
-            return {
-                userId: user.userId,
-                username: user.username,
-                sharedTowns: sharedTowns.map(t => ({ town: t.town })),
-                sharedBusinesses
-            };
         });
         res.json({ success: true, data: sharedData });
     } catch (err) {
-        console.error('Shared data fetch error:', err);
-        res.status(500).json({ success: false, error: 'Failed to fetch shared data' });
+        console.error('❌ CRITICAL: Shared data fetch error:', err);
+        res.status(500).json({ success: false, error: 'Failed to fetch shared data overview', details: err.message });
     }
 });
 

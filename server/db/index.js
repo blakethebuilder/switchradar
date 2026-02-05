@@ -15,86 +15,112 @@ const db = new Database(dbPath);
 // Enable WAL mode
 db.pragma('journal_mode = WAL');
 
-// Initialize core tables
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    username TEXT UNIQUE,
-    password TEXT,
-    role TEXT DEFAULT 'user',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_sync DATETIME,
-    total_businesses INTEGER DEFAULT 0,
-    storage_used_mb REAL DEFAULT 0
-  );
+// Initialize core tables individually for better reliability
+const initTables = () => {
+  const tables = [
+    {
+      name: 'users',
+      sql: `CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT,
+        role TEXT DEFAULT 'user',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_sync DATETIME,
+        total_businesses INTEGER DEFAULT 0,
+        storage_used_mb REAL DEFAULT 0
+      )`
+    },
+    {
+      name: 'datasets',
+      sql: `CREATE TABLE IF NOT EXISTS datasets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        town TEXT,
+        province TEXT,
+        created_by INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        business_count INTEGER DEFAULT 0,
+        is_active BOOLEAN DEFAULT 1,
+        FOREIGN KEY(created_by) REFERENCES users(id)
+      )`
+    },
+    {
+      name: 'leads',
+      sql: `CREATE TABLE IF NOT EXISTS leads (
+        id TEXT PRIMARY KEY,
+        userId INTEGER,
+        name TEXT,
+        address TEXT,
+        phone TEXT,
+        email TEXT,
+        website TEXT,
+        provider TEXT,
+        category TEXT,
+        town TEXT,
+        province TEXT,
+        lat REAL,
+        lng REAL,
+        status TEXT,
+        notes TEXT,
+        importedAt DATETIME,
+        source TEXT,
+        metadata TEXT,
+        last_modified DATETIME DEFAULT CURRENT_TIMESTAMP,
+        sync_status TEXT DEFAULT 'synced',
+        dataset_id INTEGER,
+        FOREIGN KEY(userId) REFERENCES users(id),
+        FOREIGN KEY(dataset_id) REFERENCES datasets(id)
+      )`
+    },
+    {
+      name: 'routes',
+      sql: `CREATE TABLE IF NOT EXISTS routes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER,
+        businessId TEXT,
+        "order" INTEGER,
+        addedAt DATETIME,
+        last_modified DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(userId) REFERENCES users(id)
+      )`
+    },
+    {
+      name: 'shared_towns',
+      sql: `CREATE TABLE IF NOT EXISTS shared_towns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        targetUserId INTEGER,
+        town TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(targetUserId) REFERENCES users(id)
+      )`
+    },
+    {
+      name: 'shared_businesses',
+      sql: `CREATE TABLE IF NOT EXISTS shared_businesses (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        targetUserId INTEGER,
+        businessId TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(targetUserId) REFERENCES users(id),
+        FOREIGN KEY(businessId) REFERENCES leads(id)
+      )`
+    }
+  ];
 
-  CREATE TABLE IF NOT EXISTS datasets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    description TEXT,
-    town TEXT,
-    province TEXT,
-    created_by INTEGER,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    business_count INTEGER DEFAULT 0,
-    is_active BOOLEAN DEFAULT 1,
-    FOREIGN KEY(created_by) REFERENCES users(id)
-  );
+  for (const table of tables) {
+    try {
+      db.exec(table.sql);
+      console.log(`✅ Table initialized: ${table.name}`);
+    } catch (err) {
+      console.error(`❌ Failed to initialize table ${table.name}:`, err);
+    }
+  }
+};
 
-  CREATE TABLE IF NOT EXISTS leads (
-    id TEXT PRIMARY KEY,
-    userId INTEGER,
-    name TEXT,
-    address TEXT,
-    phone TEXT,
-    email TEXT,
-    website TEXT,
-    provider TEXT,
-    category TEXT,
-    town TEXT,
-    province TEXT,
-    lat REAL,
-    lng REAL,
-    status TEXT,
-    notes TEXT,
-    importedAt DATETIME,
-    source TEXT,
-    metadata TEXT,
-    last_modified DATETIME DEFAULT CURRENT_TIMESTAMP,
-    sync_status TEXT DEFAULT 'synced',
-    dataset_id INTEGER,
-    FOREIGN KEY(userId) REFERENCES users(id),
-    FOREIGN KEY(dataset_id) REFERENCES datasets(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS routes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    userId INTEGER,
-    businessId TEXT,
-    "order" INTEGER,
-    addedAt DATETIME,
-    last_modified DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(userId) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS shared_towns (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    targetUserId INTEGER,
-    town TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(targetUserId) REFERENCES users(id)
-  );
-
-  CREATE TABLE IF NOT EXISTS shared_businesses (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    targetUserId INTEGER,
-    businessId TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(targetUserId) REFERENCES users(id),
-    FOREIGN KEY(businessId) REFERENCES leads(id)
-  );
-`);
+initTables();
 
 // Migration: Add role column if not exists
 try {
