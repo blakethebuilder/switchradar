@@ -89,6 +89,9 @@ export const useBusinessData = () => {
                     setAvailableDatasets(cachedDatasets);
                     if (cachedDatasets.length > 0) {
                         setSelectedDatasets(prev => prev.length === 0 ? cachedDatasets.map((d: any) => d.id) : prev);
+                        // Force recalculation of derived states if cache loaded successfully
+                        setBusinesses(b => [...b]); // Trigger derived state recalculation on existing businesses
+                    }
                     }
                 }
 
