@@ -94,22 +94,23 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
   const [selectedNoteCategory, setSelectedNoteCategory] = useState<'call' | 'visit' | 'follow-up' | 'general' | 'issue' | 'opportunity'>('general');
   const [showTemplates, setShowTemplates] = useState(false);
   
-  // Auto-refresh notes every 30 seconds when expanded
-  React.useEffect(() => {
-    if (!isExpanded) return;
+    // Auto-refresh notes every 30 seconds when expanded
+  // Removed: See commit message for details.
+  // React.useEffect(() => {
+  //   if (!isExpanded) return;
     
-    const interval = setInterval(() => {
-      // Force a re-render by updating a timestamp in metadata
-      onUpdateBusiness(business.id, { 
-        metadata: { 
-          ...business.metadata, 
-          lastRefresh: new Date().toISOString() 
-        } 
-      });
-    }, 30000); // 30 seconds
+  //   const interval = setInterval(() => {
+  //     // Force a re-render by updating a timestamp in metadata
+  //     onUpdateBusiness(business.id, { 
+  //       metadata: { 
+  //         ...business.metadata, 
+  //         lastRefresh: new Date().toISOString() 
+  //       } 
+  //     });
+  //   }, 30000); // 30 seconds
     
-    return () => clearInterval(interval);
-  }, [isExpanded, business.id, onUpdateBusiness, business.metadata]);
+  //   return () => clearInterval(interval);
+  // }, [isExpanded, business.id, onUpdateBusiness, business.metadata]);
   
   const isMobile = business.phoneTypeOverride
     ? business.phoneTypeOverride === 'mobile'
