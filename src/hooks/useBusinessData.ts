@@ -66,6 +66,7 @@ export const useBusinessData = () => {
         if (initializationRef.current || isInitializing.current) {
             console.log('🔐 DATA: Initialization already completed or in progress, skipping');
             return;
+            return;
         }
 
         if (isAuthenticated && token) {
