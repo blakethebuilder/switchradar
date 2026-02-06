@@ -84,13 +84,13 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
   return (
     <MarkerClusterGroup
       maxClusterRadius={clusterRadius}
-      disableClusteringAtZoom={14} // Adjusted for better mobile scatter
+      disableClusteringAtZoom={17} // Reverted for performance: Keep clustering active longer
       iconCreateFunction={createClusterIcon}
       chunkedLoading={true}
       removeOutsideVisibleBounds={true}
-      animate={businessCount < 2000} // Smooth animations for normal workloads
+      animate={businessCount < 1000} // Reduce animation threshold to prioritise performance
       spiderfyOnMaxZoom={true}
-      spiderfyDistanceMultiplier={2} // Increased spreading distance
+      spiderfyDistanceMultiplier={1} // Reduced spreading distance for manageability
       showCoverageOnHover={false}
       zoomToBoundsOnClick={true}
     >
