@@ -10,6 +10,8 @@ SwitchRadar has been upgraded from a simple frontend-only tracker to a Full-Stac
 2. **Performance Optimizations**:
    - Leaflet is now configured to use `preferCanvas: true`, which significantly improves rendering for 2000+ pins.
    - `MarkerClusterGroup` uses `chunkedLoading` and `removeOutsideVisibleBounds: true`.
+   - **Map Bounds**: Restricted view to South Africa (Cape Point to Limpopo) to prevents panning issues.
+   - **Clustering**: Tuned `disableClusteringAtZoom: 17` and `spiderfyDistanceMultiplier: 1` for optimal mobile performance.
 3. **UI Improvements**:
    - Removed map popups in favor of a dedicated Right Sidebar.
    - Added a "Details" tab handle on the map for quick access when the sidebar is closed.
