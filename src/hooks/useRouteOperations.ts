@@ -15,7 +15,7 @@ export const useRouteOperations = (routeItems: RouteItem[], refetch: () => Promi
       
       const result = await serverDataService.saveRoutes([...routeItems, newRouteItem], token);
       if (result.success) {
-        await refetch();
+        // await refetch();
       }
     } catch (error) {
       console.error('Failed to add to route:', error);
@@ -30,7 +30,7 @@ export const useRouteOperations = (routeItems: RouteItem[], refetch: () => Promi
       
       const result = await serverDataService.saveRoutes(updatedRoutes, token);
       if (result.success) {
-        await refetch();
+        // await refetch();
       }
     } catch (error) {
       console.error('Failed to remove from route:', error);
@@ -43,7 +43,7 @@ export const useRouteOperations = (routeItems: RouteItem[], refetch: () => Promi
     try {
       const result = await serverDataService.saveRoutes([], token);
       if (result.success) {
-        await refetch();
+        // await refetch();
         return true;
       }
     } catch (error) {
@@ -64,7 +64,7 @@ export const useRouteOperations = (routeItems: RouteItem[], refetch: () => Promi
       
       const result = await serverDataService.saveRoutes(newRouteItems, token);
       if (result.success) {
-        await refetch();
+        // await refetch();
         return true;
       }
     } catch (error) {
