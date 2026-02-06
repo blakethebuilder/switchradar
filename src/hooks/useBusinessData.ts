@@ -103,7 +103,7 @@ export const useBusinessData = () => {
                     const backgroundRefreshTimer = setTimeout(() => {
                         console.log('🔄 CACHE: Refreshing data in background');
                         initializeDataFromServer(true); // Background refresh
-                    }, 3000); // Increased delay to prevent immediate refetch
+                    }, 60000); // Increased delay to 1 minute to reduce field refresh frequency
 
                     return () => clearTimeout(backgroundRefreshTimer);
                 }
