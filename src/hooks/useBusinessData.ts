@@ -12,7 +12,7 @@ export const useBusinessData = () => {
     const { token, isAuthenticated } = useAuth();
     const [businesses, setBusinesses] = useState<Business[]>([]);
     const [routeItems, setRouteItems] = useState<RouteItem[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // Default to true to prevent "No Data" flash
     const [error, setError] = useState<string | null>(null);
     const [lastFetch, setLastFetch] = useState<Date | null>(null);
     const [cacheStatus, setCacheStatus] = useState<'loading' | 'cached' | 'fresh' | 'error'>('loading');
@@ -44,6 +44,21 @@ export const useBusinessData = () => {
 
     useEffect(() => {
         console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
+
+        // If not authenticated (and not waiting for auth), stop loading
+        if (!isAuthenticated && !token) {
+            console.log('🔐 DATA: Not authenticated, clearing data');
+            setBusinesses([]);
+            setRouteItems([]);
+            setAvailableDatasets([]);
+            setSelectedDatasets([]);
+            setError(null);
+            setLoading(false);
+            setCacheStatus('loading');
+            initializationRef.current = false;
+            isInitializing.current = false;
+            return;
+        }
 
         // Prevent duplicate initialization
         if (initializationRef.current || isInitializing.current) {
@@ -93,17 +108,6 @@ export const useBusinessData = () => {
             setLoading(true);
             setCacheStatus('loading');
             initializeDataFromServer(false);
-        } else {
-            console.log('🔐 DATA: Not authenticated, clearing data');
-            setBusinesses([]);
-            setRouteItems([]);
-            setAvailableDatasets([]);
-            setSelectedDatasets([]);
-            setError(null);
-            setLoading(false);
-            setCacheStatus('loading');
-            initializationRef.current = false;
-            isInitializing.current = false;
         }
     }, [token, isAuthenticated]); // CRITICAL: Only depend on auth state to prevent infinite loops
 

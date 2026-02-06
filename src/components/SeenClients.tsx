@@ -24,11 +24,28 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
   const [sortBy, setSortBy] = useState<'recent' | 'name' | 'notes'>('recent');
   const [visibleCount, setVisibleCount] = useState(20);
 
-  // Filter businesses that have been "seen" (have rich notes)
+  // Filter businesses that have been "seen" (have rich notes, metadata updates, or specific status)
   const seenBusinesses = useMemo(() => {
-    return businesses.filter(business =>
-      business.richNotes && business.richNotes.length > 0
-    );
+    return businesses.filter(business => {
+      // Has notes
+      const hasNotes = business.richNotes && business.richNotes.length > 0;
+
+      // Has metadata interactions (issues, interest, provider details)
+      const hasMetadataInteraction = business.metadata && (
+        business.metadata.hasIssues !== undefined ||
+        business.metadata.interest !== undefined ||
+        business.metadata.lengthWithCurrentProvider ||
+        business.metadata.ispProvider ||
+        business.metadata.pabxProvider ||
+        business.metadata.isActiveOnCurrentProvider !== undefined ||
+        business.metadata.canContact !== undefined
+      );
+
+      // Has status change (not just 'active')
+      const hasStatusInteraction = business.status !== 'active' && business.status !== 'inactive';
+
+      return hasNotes || hasMetadataInteraction || hasStatusInteraction;
+    });
   }, [businesses]);
 
   // Apply filters and sorting
@@ -231,8 +248,8 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
               key={category.value}
               onClick={() => setSelectedCategory(selectedCategory === category.value ? '' : category.value)}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedCategory === category.value
-                  ? `${category.bg} ${category.color} border border-current`
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? `${category.bg} ${category.color} border border-current`
+                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
             >
               <category.icon className="h-3 w-3" />
@@ -310,6 +327,53 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
                         {business.address}
                       </div>
                     </div>
+
+                    {/* Gathered Information Display */}
+                    {(business.metadata?.hasIssues !== undefined || business.metadata?.interest || business.metadata?.ispProvider || business.metadata?.pabxProvider) && (
+                      <div className="mb-3 p-3 bg-indigo-50/50 rounded-lg border border-indigo-100/50">
+                        <h5 className="text-xs font-bold text-indigo-900 mb-2 uppercase tracking-wide">Gathered Info</h5>
+                        <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
+                          {business.metadata?.interest && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-500 text-xs">Interest:</span>
+                              <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${business.metadata.interest === 'high' ? 'bg-emerald-100 text-emerald-700' :
+                                  business.metadata.interest === 'low' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-rose-100 text-rose-700'
+                                }`}>
+                                {business.metadata.interest.toUpperCase()}
+                              </span>
+                            </div>
+                          )}
+                          {business.metadata?.hasIssues !== undefined && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-500 text-xs">Status:</span>
+                              {business.metadata.hasIssues ? (
+                                <span className="flex items-center gap-1 text-red-600 font-bold bg-red-100 px-1.5 py-0.5 rounded text-xs">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span> Issues
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1 text-emerald-600 font-bold bg-emerald-100 px-1.5 py-0.5 rounded text-xs">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> No Issues
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          {(business.metadata?.ispProvider || business.metadata?.pabxProvider) && (
+                            <div className="col-span-2 flex flex-wrap gap-3 mt-1 pt-1 border-t border-indigo-100">
+                              {business.metadata.ispProvider && (
+                                <span className="text-xs text-slate-700"><span className="text-slate-500">ISP:</span> {business.metadata.ispProvider}</span>
+                              )}
+                              {business.metadata.pabxProvider && (
+                                <span className="text-xs text-slate-700"><span className="text-slate-500">PABX:</span> {business.metadata.pabxProvider}</span>
+                              )}
+                              {business.metadata.lengthWithCurrentProvider && (
+                                <span className="text-xs text-slate-700"><span className="text-slate-500">Term:</span> {business.metadata.lengthWithCurrentProvider}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Category Breakdown */}
                     <div className="flex flex-wrap gap-1 mb-3">

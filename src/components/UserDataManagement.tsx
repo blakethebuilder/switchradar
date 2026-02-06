@@ -500,21 +500,32 @@ export const UserDataManagement: React.FC = () => {
                   <div className="flex justify-between items-center text-xs">
                     <span className="font-semibold text-slate-500 uppercase">Shared Access</span>
                     <div className="flex flex-wrap justify-end gap-1 max-w-[60%]">
-                      {stat.sharedTowns.length > 0 && (
-                        stat.sharedTowns.map(town => (
-                          <span key={town} className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap">
-                            {town}
-                          </span>
-                        ))
-                      )}
-                      {stat.sharedBusinessCount > 0 && (
-                        <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
-                          {stat.sharedBusinessCount} Leads
-                        </span>
-                      )}
-                      {stat.sharedTownCount === 0 && stat.sharedBusinessCount === 0 && (
-                        <span className="text-slate-400 italic">None</span>
-                      )}
+                      {(() => {
+                        // Use sharedDataUsers as source of truth if available
+                        const sharedUser = sharedDataUsers.find(u => u.userId === stat.userId);
+                        const displaySharedTowns = sharedUser?.sharedTowns || stat.sharedTowns || [];
+                        const displaySharedBizCount = sharedUser?.sharedBusinesses?.length || stat.sharedBusinessCount || 0;
+                        const hasSharedContent = displaySharedTowns.length > 0 || displaySharedBizCount > 0;
+
+                        if (!hasSharedContent) {
+                          return <span className="text-slate-400 italic">None</span>;
+                        }
+
+                        return (
+                          <div className="flex gap-2">
+                            {displaySharedTowns.length > 0 && (
+                              <span className="bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                {displaySharedTowns.length} Shared Towns
+                              </span>
+                            )}
+                            {displaySharedBizCount > 0 && (
+                              <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                {displaySharedBizCount} Shared Businesses
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
