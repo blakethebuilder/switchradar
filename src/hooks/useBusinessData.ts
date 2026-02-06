@@ -17,16 +17,14 @@ export const useBusinessData = () => {
     const [lastFetch, setLastFetch] = useState<Date | null>(null);
     const [cacheStatus, setCacheStatus] = useState<'loading' | 'cached' | 'fresh' | 'error'>('loading');
 
-    // Note: fetchBusinesses removed - businesses are now fetched in the initialization effect
-
     const [searchInput, setSearchInput] = useState('');
-    const searchTerm = useDebounce(searchInput, 500); // Increased from 300ms to 500ms to reduce API calls
+    const searchTerm = useDebounce(searchInput, 500);
 
     const [selectedCategoryInput, setSelectedCategoryInput] = useState('');
-    const selectedCategory = useDebounce(selectedCategoryInput, 300); // Debounced Category
+    const selectedCategory = useDebounce(selectedCategoryInput, 300);
 
     const [selectedTownInput, setSelectedTownInput] = useState('');
-    const selectedTown = useDebounce(selectedTownInput, 300); // Debounced Town
+    const selectedTown = useDebounce(selectedTownInput, 300);
 
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
     const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -40,91 +38,16 @@ export const useBusinessData = () => {
     const [droppedPin, setDroppedPin] = useState<{ lat: number, lng: number } | null>(null);
     const [radiusKm, setRadiusKm] = useState<number>(0.5);
 
-    // Auto-fetch on mount and auth changes - Prevent duplicate calls with ref
-    const initializationRef = useRef(false);
-    const isInitializing = useRef(false);
-    const backgroundRefreshScheduled = useRef(false);
-
-    useEffect(() => {
-        console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
-
-        // If not authenticated (and not waiting for auth), stop loading
-        if (!isAuthenticated && !token) {
-            console.log('🔐 DATA: Not authenticated, clearing data');
-            setBusinesses([]);
-            setRouteItems([]);
-            setAvailableDatasets([]);
-            setSelectedDatasets([]);
-            setError(null);
-            setLoading(false);
-            setCacheStatus('loading');
-            initializationRef.current = false;
-            isInitializing.current = false;
-            backgroundRefreshScheduled.current = false;
-            return;
-        }
-
-        // Prevent duplicate initialization
-        if (initializationRef.current || isInitializing.current) {
-            console.log('🔐 DATA: Initialization already completed or in progress, skipping');
-            return;
-        }
-
-        if (isAuthenticated && token) {
-            // Check if we have cached data first
-            const cachedBusinesses = cacheService.getBusinesses();
-            const cachedRoutes = cacheService.getRoutes();
-            const cachedDatasets = cacheService.getDatasets();
-
-            if (cachedBusinesses || cachedRoutes || cachedDatasets) {
-                console.log('📦 CACHE: Found cached data, loading immediately');
-                setCacheStatus('cached');
-
-                if (cachedBusinesses) {
-                    setBusinesses(cachedBusinesses);
-                    setLastFetch(new Date());
-                }
-                if (cachedRoutes) {
-                    setRouteItems(cachedRoutes);
-                }
-                if (cachedDatasets) {
-                    setAvailableDatasets(cachedDatasets);
-                    if (cachedDatasets.length > 0) {
-                        setSelectedDatasets(prev => prev.length === 0 ? cachedDatasets.map((d: any) => d.id) : prev);
-                        // Force recalculation of derived states if cache loaded successfully
-                        setBusinesses(b => [...b]); 
-                    }
-                }
-
-                // Set loading to false since we have cached data
-                setLoading(false);
-                initializationRef.current = true;
-
-                // Optionally fetch fresh data in background after a delay (only once)
-                if (!backgroundRefreshScheduled.current) {
-                    backgroundRefreshScheduled.current = true;
-                    const backgroundRefreshTimer = setTimeout(() => {
-                        console.log('🔄 CACHE: Refreshing data in background');
-                        initializeDataFromServer(true); // Background refresh
-                    }, 60000); // 1 minute delay
-
-                    return () => clearTimeout(backgroundRefreshTimer);
-                }
-            } else {
-                // No cached data, ENSURE loading is true before fetching
-                console.log('📡 DATA: No cached data, fetching from server...');
-                setLoading(true);
-                setCacheStatus('loading');
-                initializeDataFromServer(false);
-            }
-        }
-    }, [token, isAuthenticated]);
-
     const [loadingProgress, setLoadingProgress] = useState<string>('');
 
     const [hasMore, setHasMore] = useState(true);
     const [page, setPage] = useState(1);
     const PAGE_SIZE = 1000;
+
+    // Refs for initialization control
+    const initializationRef = useRef(false);
+    const isInitializing = useRef(false);
+    const backgroundRefreshScheduled = useRef(false);
 
     // Load initial data from Cloud if available
     const initializeDataFromServer = useCallback(async (isBackgroundRefresh = false) => {
@@ -210,6 +133,73 @@ export const useBusinessData = () => {
         }
     }, [token]);
 
+    useEffect(() => {
+        console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
+
+        if (!isAuthenticated && !token) {
+            setBusinesses([]);
+            setRouteItems([]);
+            setAvailableDatasets([]);
+            setSelectedDatasets([]);
+            setError(null);
+            setLoading(false);
+            setCacheStatus('loading');
+            initializationRef.current = false;
+            isInitializing.current = false;
+            backgroundRefreshScheduled.current = false;
+            return;
+        }
+
+        if (initializationRef.current || isInitializing.current) {
+            console.log('🔐 DATA: Initialization already completed or in progress, skipping');
+            return;
+        }
+
+        if (isAuthenticated && token) {
+            const cachedBusinesses = cacheService.getBusinesses();
+            const cachedRoutes = cacheService.getRoutes();
+            const cachedDatasets = cacheService.getDatasets();
+
+            if (cachedBusinesses || cachedRoutes || cachedDatasets) {
+                console.log('📦 CACHE: Found cached data, loading immediately');
+                setCacheStatus('cached');
+
+                if (cachedBusinesses) {
+                    setBusinesses(cachedBusinesses);
+                    setLastFetch(new Date());
+                }
+                if (cachedRoutes) {
+                    setRouteItems(cachedRoutes);
+                }
+                if (cachedDatasets) {
+                    setAvailableDatasets(cachedDatasets);
+                    if (cachedDatasets.length > 0) {
+                        setSelectedDatasets(prev => prev.length === 0 ? cachedDatasets.map((d: any) => d.id) : prev);
+                        setBusinesses(b => [...b]); 
+                    }
+                }
+
+                setLoading(false);
+                initializationRef.current = true;
+
+                if (!backgroundRefreshScheduled.current) {
+                    backgroundRefreshScheduled.current = true;
+                    const backgroundRefreshTimer = setTimeout(() => {
+                        console.log('🔄 CACHE: Refreshing data in background');
+                        initializeDataFromServer(true);
+                    }, 60000);
+
+                    return () => clearTimeout(backgroundRefreshTimer);
+                }
+            } else {
+                console.log('📡 DATA: No cached data, fetching from server...');
+                setLoading(true);
+                setCacheStatus('loading');
+                initializeDataFromServer(false);
+            }
+        }
+    }, [token, isAuthenticated, initializeDataFromServer]);
+
     const loadMore = useCallback(async () => {
         if (!hasMore || loading || !token) return;
 
@@ -232,84 +222,65 @@ export const useBusinessData = () => {
             setLoading(false);
         }
     }, [hasMore, loading, page, token]);
-    // Clear caches when businesses change
+
     useEffect(() => {
         clearFilterCaches();
     }, [businesses.length]);
 
-    // Memoized categories calculation with better performance for large datasets
-    const categories = useMemo(
-        () => {
-            if (!businesses.length) return [];
-            return PerformanceMonitor.measure('calculateCategories', () => {
-                const categorySet = new Set<string>();
-                // For large datasets, limit processing to improve performance and use sampling
-                const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
-                const step = Math.max(1, Math.floor(businesses.length / sampleSize));
+    const categories = useMemo(() => {
+        if (!businesses.length) return [];
+        return PerformanceMonitor.measure('calculateCategories', () => {
+            const categorySet = new Set<string>();
+            const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
+            const step = Math.max(1, Math.floor(businesses.length / sampleSize));
 
-                for (let i = 0; i < businesses.length; i += step) {
-                    const business = businesses[i];
-                    if (business.category) {
-                        categorySet.add(business.category);
-                    }
+            for (let i = 0; i < businesses.length; i += step) {
+                const business = businesses[i];
+                if (business.category) {
+                    categorySet.add(business.category);
                 }
-                const result = Array.from(categorySet).sort();
-                console.log('📊 CATEGORIES: Calculated', result.length, 'categories from', Math.min(sampleSize, businesses.length), 'businesses (sampled)');
-                return result;
-            });
-        },
-        [businesses.length] // Only recalculate when business count changes, not on every business change
-    );
+            }
+            const result = Array.from(categorySet).sort();
+            return result;
+        });
+    }, [businesses.length]);
 
-    // Memoized towns calculation with better performance for large datasets
-    const availableTowns = useMemo(
-        () => {
-            if (!businesses.length) return [];
-            return PerformanceMonitor.measure('calculateTowns', () => {
-                const townSet = new Set<string>();
-                // For large datasets, limit processing to improve performance and use sampling
-                const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
-                const step = Math.max(1, Math.floor(businesses.length / sampleSize));
+    const availableTowns = useMemo(() => {
+        if (!businesses.length) return [];
+        return PerformanceMonitor.measure('calculateTowns', () => {
+            const townSet = new Set<string>();
+            const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
+            const step = Math.max(1, Math.floor(businesses.length / sampleSize));
 
-                for (let i = 0; i < businesses.length; i += step) {
-                    const business = businesses[i];
-                    if (business.town) {
-                        townSet.add(business.town);
-                    }
+            for (let i = 0; i < businesses.length; i += step) {
+                const business = businesses[i];
+                if (business.town) {
+                    townSet.add(business.town);
                 }
-                const result = Array.from(townSet).sort();
-                console.log('🏘️ TOWNS: Calculated', result.length, 'towns from', Math.min(sampleSize, businesses.length), 'businesses (sampled)');
-                return result;
-            });
-        },
-        [businesses.length] // Only recalculate when business count changes
-    );
+            }
+            const result = Array.from(townSet).sort();
+            return result;
+        });
+    }, [businesses.length]);
 
-    // Memoized providers calculation with better performance for large datasets
-    const availableProviders = useMemo(
-        () => {
-            if (!businesses.length) return [];
-            return PerformanceMonitor.measure('calculateProviders', () => {
-                const providerSet = new Set<string>();
-                // For large datasets, limit processing to improve performance and use sampling
-                const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
-                const step = Math.max(1, Math.floor(businesses.length / sampleSize));
+    const availableProviders = useMemo(() => {
+        if (!businesses.length) return [];
+        return PerformanceMonitor.measure('calculateProviders', () => {
+            const providerSet = new Set<string>();
+            const sampleSize = businesses.length > 2000 ? 1000 : businesses.length;
+            const step = Math.max(1, Math.floor(businesses.length / sampleSize));
 
-                for (let i = 0; i < businesses.length; i += step) {
-                    const business = businesses[i];
-                    if (business.provider) {
-                        providerSet.add(business.provider);
-                    }
+            for (let i = 0; i < businesses.length; i += step) {
+                const business = businesses[i];
+                if (business.provider) {
+                    providerSet.add(business.provider);
                 }
-                const result = Array.from(providerSet).sort();
-                console.log('🏢 PROVIDERS: Calculated', result.length, 'providers from', Math.min(sampleSize, businesses.length), 'businesses (sampled)');
-                return result;
-            });
-        },
-        [businesses.length] // Only recalculate when business count changes
-    );
+            }
+            const result = Array.from(providerSet).sort();
+            return result;
+        });
+    }, [businesses.length]);
 
-    // Initialize visibleProviders with all available providers when businesses change
     useEffect(() => {
         if (availableProviders.length > 0 && visibleProviders.length === 0 && !hasUserInteracted) {
             setVisibleProviders(availableProviders);
@@ -317,32 +288,12 @@ export const useBusinessData = () => {
     }, [availableProviders, visibleProviders.length, hasUserInteracted]);
 
     const filteredBusinesses = useMemo(() => {
-        console.log('🔍 FILTER: Starting filteredBusinesses calculation', {
-            businessesCount: businesses.length,
-            searchTerm,
-            selectedCategory,
-            selectedTown,
-            visibleProviders: visibleProviders.length,
-            phoneType
-        });
-
         if (!businesses.length && !loading) {
-            console.log('🔍 FILTER: No businesses, returning empty array');
             return [];
         }
 
-        // For very large datasets (>2000), show loading indicator and defer heavy calculations
-        if (businesses.length > 2000) {
-            console.log('🔍 FILTER: Large dataset detected, optimizing performance');
-        }
-
         return PerformanceMonitor.measure('filterBusinesses', () => {
-            // CRITICAL FIX: Skip dataset filtering for now since it's causing all businesses to be filtered out
-            // The dataset matching logic needs to be fixed on the backend first
-            let datasetFilteredBusinesses = businesses;
-
-            console.log('🔍 FILTER: Skipping dataset filtering - showing all businesses to prevent empty results');
-
+            const datasetFilteredBusinesses = businesses;
             const finalFiltered = filterBusinesses(datasetFilteredBusinesses, {
                 searchTerm,
                 selectedCategory,
@@ -351,16 +302,6 @@ export const useBusinessData = () => {
                 phoneType,
                 droppedPin: droppedPin ?? undefined,
                 radiusKm
-            });
-
-            console.log('🔍 FILTER: Final filtering result:', {
-                afterDatasetFilter: datasetFilteredBusinesses.length,
-                finalCount: finalFiltered.length,
-                sampleBusiness: finalFiltered[0] ? {
-                    id: finalFiltered[0].id,
-                    name: finalFiltered[0].name,
-                    coordinates: finalFiltered[0].coordinates
-                } : null
             });
 
             return finalFiltered;
@@ -389,15 +330,12 @@ export const useBusinessData = () => {
         setDroppedPin,
         radiusKm,
         setRadiusKm,
-        // Dataset management
         availableDatasets,
         selectedDatasets,
         setSelectedDatasets,
-        // Data insights
         totalBusinesses: businesses.length,
         filteredCount: filteredBusinesses.length,
         isLargeDataset: businesses.length > 1000,
-        // Server status
         loading,
         error,
         lastFetch,
@@ -405,17 +343,8 @@ export const useBusinessData = () => {
         hasMore,
         loadMore,
         refetch: useCallback(async (forceRefresh = false) => {
-            console.log('🔄 REFETCH: Manual refetch triggered', { forceRefresh });
-
-            if (isInitializing.current) {
-                console.log('🔄 REFETCH: Already initializing, skipping refetch');
-                return;
-            }
-
-            if (forceRefresh) {
-                cacheService.clearAll();
-                console.log('🗑️ CACHE: Cleared all caches for force refresh');
-            }
+            if (isInitializing.current) return;
+            if (forceRefresh) cacheService.clearAll();
 
             setLastFetch(null);
             setLoading(true);
@@ -424,8 +353,6 @@ export const useBusinessData = () => {
 
             try {
                 setLoadingProgress('Initializing refetch...');
-
-                // 1. Fetch Datasets
                 const datasetsResponse = await fetch(`${environmentConfig.getApiUrl()}/api/datasets`, {
                     headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
                 });
@@ -441,13 +368,9 @@ export const useBusinessData = () => {
                     setSelectedDatasets(prev => prev.length === 0 && validDatasets.length > 0 ? validDatasets.map((d: any) => d.id) : prev);
                 }
 
-                // 2. Fetch Routes
                 const routeResult = await serverDataService.getRoutes(token || '', forceRefresh);
-                if (routeResult.success) {
-                    setRouteItems(routeResult.data || []);
-                }
+                if (routeResult.success) setRouteItems(routeResult.data || []);
 
-                // 3. Progressive Fetch Businesses
                 let allBusinesses: Business[] = [];
                 let page = 1;
                 let hasMore = true;
@@ -467,14 +390,11 @@ export const useBusinessData = () => {
                         hasMore = false;
                     } else {
                         allBusinesses = [...allBusinesses, ...businessesChunk];
-                        // Only update state every 5 chunks (10k items) to prevent UI freezing
-                        if (page % 5 === 0 || businessesChunk.length < chunkSize) {
-                            setBusinesses([...allBusinesses]);
-                        }
+                        if (page % 5 === 0 || businessesChunk.length < chunkSize) setBusinesses([...allBusinesses]);
                         hasMore = businessesChunk.length === chunkSize;
                         page++;
                     }
-                    if (page > 200) break; // Safety limit
+                    if (page > 200) break;
                 }
 
                 setBusinesses(allBusinesses);
@@ -482,7 +402,6 @@ export const useBusinessData = () => {
                 setLastFetch(new Date());
                 setCacheStatus('fresh');
             } catch (error) {
-                console.error('❌ REFETCH: Error during manual refetch:', error);
                 setCacheStatus('error');
                 setError('Failed to refresh data');
             } finally {
@@ -491,17 +410,11 @@ export const useBusinessData = () => {
                 setLoadingProgress('');
             }
         }, [token]),
-        // Lightweight route-only refetch (doesn't refetch businesses)
         refetchRoutes: useCallback(async () => {
             if (!token) return;
-
             try {
-                console.log('🔄 ROUTES: Fetching updated routes only...');
                 const routeResult = await serverDataService.getRoutes(token, true);
-                if (routeResult.success) {
-                    setRouteItems(routeResult.data || []);
-                    console.log('✅ ROUTES: Routes updated successfully');
-                }
+                if (routeResult.success) setRouteItems(routeResult.data || []);
             } catch (error) {
                 console.error('❌ ROUTES: Failed to refetch routes:', error);
             }
@@ -509,13 +422,10 @@ export const useBusinessData = () => {
         isDbReady: isAuthenticated && !error,
         dbError: error,
         loadingProgress,
-        // Database reset function (for compatibility)
         handleDatabaseReset: async () => {
-            // In server-first architecture, this would clear server data
             if (token) {
                 try {
                     await serverDataService.clearWorkspace(token);
-                    // Clear caches and trigger a refetch
                     cacheService.clearAll();
                     setLastFetch(null);
                     setBusinesses([]);
@@ -524,11 +434,7 @@ export const useBusinessData = () => {
                 }
             }
         },
-        // Cache management functions
-        clearCache: () => {
-            cacheService.clearAll();
-            console.log('🗑️ CACHE: Manually cleared all caches');
-        },
+        clearCache: () => cacheService.clearAll(),
         getCacheStats: () => cacheService.getStats(),
         getCacheInfo: (key: 'businesses' | 'routes' | 'datasets') => cacheService.getInfo(key)
     };
