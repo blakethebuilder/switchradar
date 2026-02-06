@@ -21,6 +21,8 @@ import type { ImportMapping } from './types';
 
 // Debug log to verify code is running
 console.log('🚀 APP: App.tsx loaded at', new Date().toISOString());
+// TEMP FORCE COMMIT: CHECK DATA FLOW
+
 
 function App() {
   console.log('🚀 APP: App component rendering at', new Date().toISOString());
