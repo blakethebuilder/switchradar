@@ -323,7 +323,7 @@ export const useBusinessData = () => {
             phoneType
         });
 
-        if (!businesses.length) {
+        if (!businesses.length && !loading) {
             console.log('🔍 FILTER: No businesses, returning empty array');
             return [];
         }
@@ -362,7 +362,7 @@ export const useBusinessData = () => {
 
             return finalFiltered;
         });
-    }, [businesses, searchTerm, selectedCategory, selectedTown, visibleProviders, phoneType, droppedPin, radiusKm]);
+    }, [businesses, searchTerm, selectedCategory, selectedTown, visibleProviders, phoneType, droppedPin, radiusKm, loading]);
 
     return {
         businesses,
