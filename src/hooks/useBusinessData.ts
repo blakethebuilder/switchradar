@@ -160,22 +160,18 @@ export const useBusinessData = () => {
             const cachedRoutes = cacheService.getRoutes();
             const cachedDatasets = cacheService.getDatasets();
 
-            if (cachedBusinesses || cachedRoutes || cachedDatasets) {
-                console.log('📦 CACHE: Found cached data, loading immediately');
+            // Case 1: We have businesses in cache - show them immediately and refresh in background
+            if (cachedBusinesses) {
+                console.log('📦 CACHE: Found cached businesses, loading immediately');
                 setCacheStatus('cached');
-
-                if (cachedBusinesses) {
-                    setBusinesses(cachedBusinesses);
-                    setLastFetch(new Date());
-                }
-                if (cachedRoutes) {
-                    setRouteItems(cachedRoutes);
-                }
+                setBusinesses(cachedBusinesses);
+                setLastFetch(new Date());
+                
+                if (cachedRoutes) setRouteItems(cachedRoutes);
                 if (cachedDatasets) {
                     setAvailableDatasets(cachedDatasets);
                     if (cachedDatasets.length > 0) {
                         setSelectedDatasets(prev => prev.length === 0 ? cachedDatasets.map((d: any) => d.id) : prev);
-                        setBusinesses(b => [...b]); 
                     }
                 }
 
@@ -191,7 +187,25 @@ export const useBusinessData = () => {
 
                     return () => clearTimeout(backgroundRefreshTimer);
                 }
-            } else {
+            } 
+            // Case 2: No businesses in cache, but maybe routes/datasets exist
+            else if (cachedRoutes || cachedDatasets) {
+                console.log('📦 CACHE: Found partial cache (no businesses), loading and fetching remainder...');
+                if (cachedRoutes) setRouteItems(cachedRoutes);
+                if (cachedDatasets) {
+                    setAvailableDatasets(cachedDatasets);
+                    if (cachedDatasets.length > 0) {
+                        setSelectedDatasets(prev => prev.length === 0 ? cachedDatasets.map((d: any) => d.id) : prev);
+                    }
+                }
+                
+                // CRITICAL: Keep loading=true and fetch businesses NOW
+                setLoading(true);
+                setCacheStatus('loading');
+                initializeDataFromServer(false);
+            }
+            // Case 3: No cache at all
+            else {
                 console.log('📡 DATA: No cached data, fetching from server...');
                 setLoading(true);
                 setCacheStatus('loading');
