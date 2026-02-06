@@ -15,7 +15,7 @@ interface WorkspaceFiltersProps {
   onPhoneTypeChange: (type: 'all' | 'landline' | 'mobile') => void;
   categories: string[];
   availableTowns: string[];
-  
+
   // Provider state
   availableProviders: string[];
   visibleProviders: string[];
@@ -23,26 +23,26 @@ interface WorkspaceFiltersProps {
   onSelectAllProviders: () => void;
   onClearProviders: () => void;
   onClearFilters: () => void;
-  
+
   // Dataset state
-  availableDatasets?: Array<{id: number, name: string, town?: string}>;
+  availableDatasets?: Array<{ id: number, name: string, town?: string }>;
   selectedDatasets?: number[];
   onDatasetChange?: (datasetIds: number[]) => void;
-  
+
   // UI state
   isVisible: boolean;
   onToggleVisibility: () => void;
-  
+
   // Optional props for map view
   droppedPin?: { lat: number; lng: number } | null;
   radiusKm?: number;
   setRadiusKm?: (radius: number) => void;
-  
+
   // Styling variant
   variant?: 'table' | 'map';
 }
 
-export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
+export const WorkspaceFiltersComponent: React.FC<WorkspaceFiltersProps> = ({
   searchTerm,
   onSearchChange,
   selectedCategory,
@@ -78,7 +78,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
     phoneType !== 'all' ? phoneType : null,
     visibleProviders.length !== availableProviders.length ? 'providers' : null
   ].filter(Boolean).length;
-  
+
   if (!isMapView) {
     // Table view - keep existing simple layout
     return (
@@ -86,11 +86,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
         {/* Header */}
         <div className="p-4 border-b border-slate-100 bg-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`flex h-8 w-8 items-center justify-center rounded-lg shadow-sm transition-all ${
-              hasActiveFilters 
-                ? 'bg-indigo-100 text-indigo-600 shadow-indigo-100' 
-                : 'bg-slate-50 text-slate-600'
-            }`}>
+            <div className={`flex h-8 w-8 items-center justify-center rounded-lg shadow-sm transition-all ${hasActiveFilters
+              ? 'bg-indigo-100 text-indigo-600 shadow-indigo-100'
+              : 'bg-slate-50 text-slate-600'
+              }`}>
               {hasActiveFilters ? <Filter className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
             </div>
             <div className="flex flex-col">
@@ -104,7 +103,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
               )}
             </div>
           </div>
-          <button 
+          <button
             onClick={onToggleVisibility}
             className="p-2 rounded-lg transition-all duration-200 hover:bg-slate-50 text-slate-600 active:scale-95"
           >
@@ -113,11 +112,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
         </div>
 
         {/* Content - Collapsible */}
-        <div className={`transition-all duration-300 ease-in-out ${
-          isVisible 
-            ? 'max-h-[80vh] md:max-h-[600px] opacity-100 overflow-y-auto' 
-            : 'max-h-0 opacity-0 overflow-hidden'
-        }`}>
+        <div className={`transition-all duration-300 ease-in-out ${isVisible
+          ? 'max-h-[80vh] md:max-h-[600px] opacity-100 overflow-y-auto'
+          : 'max-h-0 opacity-0 overflow-hidden'
+          }`}>
           <div className="bg-white p-4 space-y-4">
             {/* Dataset Selector */}
             {availableDatasets.length > 0 && onDatasetChange && (
@@ -151,11 +149,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                           onDatasetChange([...selectedDatasets, dataset.id]);
                         }
                       }}
-                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${
-                        selectedDatasets.includes(dataset.id)
-                          ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
-                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
-                      }`}
+                      className={`px-2 py-1 rounded-md text-[10px] font-bold transition-all ${selectedDatasets.includes(dataset.id)
+                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                        }`}
                     >
                       {dataset.name.length > 15 ? dataset.name.substring(0, 15) + '...' : dataset.name}
                     </button>
@@ -203,11 +200,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
       {/* Toggle Button - Fixed position for all screen sizes */}
       <button
         onClick={onToggleVisibility}
-        className={`fixed top-24 left-4 z-[60] h-12 w-12 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 ${
-          hasActiveFilters 
-            ? 'bg-indigo-600 text-white shadow-indigo-200' 
-            : 'bg-white/90 backdrop-blur-xl text-slate-700 shadow-slate-200'
-        } ${isVisible ? 'scale-110' : 'hover:scale-105'} active:scale-95`}
+        className={`fixed top-24 left-4 z-[60] h-12 w-12 rounded-2xl shadow-2xl flex items-center justify-center transition-all duration-300 ${hasActiveFilters
+          ? 'bg-indigo-600 text-white shadow-indigo-200'
+          : 'bg-white/90 backdrop-blur-xl text-slate-700 shadow-slate-200'
+          } ${isVisible ? 'scale-110' : 'hover:scale-105'} active:scale-95`}
       >
         {hasActiveFilters ? (
           <div className="relative">
@@ -223,9 +219,9 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
 
       {/* Overlay for all screen sizes when visible */}
       {isVisible && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[50]" 
-          onClick={onToggleVisibility} 
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[50]"
+          onClick={onToggleVisibility}
         />
       )}
 
@@ -240,11 +236,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
         {/* Header - Account for navbar height */}
         <div className="h-16 md:h-20 flex items-center justify-between px-4 border-b border-white/20 bg-white/90 backdrop-blur-xl flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className={`flex h-8 w-8 items-center justify-center rounded-lg shadow-sm transition-all ${
-              hasActiveFilters 
-                ? 'bg-indigo-100 text-indigo-600 shadow-indigo-100' 
-                : 'bg-white/50 text-indigo-600'
-            }`}>
+            <div className={`flex h-8 w-8 items-center justify-center rounded-lg shadow-sm transition-all ${hasActiveFilters
+              ? 'bg-indigo-100 text-indigo-600 shadow-indigo-100'
+              : 'bg-white/50 text-indigo-600'
+              }`}>
               {hasActiveFilters ? <Filter className="h-4 w-4" /> : <SlidersHorizontal className="h-4 w-4" />}
             </div>
             <div className="flex flex-col">
@@ -258,7 +253,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
               )}
             </div>
           </div>
-          <button 
+          <button
             onClick={onToggleVisibility}
             className="p-2 rounded-lg transition-all duration-200 hover:bg-white/50 text-slate-700 active:scale-95"
           >
@@ -301,11 +296,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                           onDatasetChange([...selectedDatasets, dataset.id]);
                         }
                       }}
-                      className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all text-center ${
-                        selectedDatasets.includes(dataset.id)
-                          ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                      }`}
+                      className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all text-center ${selectedDatasets.includes(dataset.id)
+                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                        }`}
                     >
                       {dataset.name.length > 12 ? dataset.name.substring(0, 12) + '...' : dataset.name}
                     </button>
@@ -338,7 +332,7 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                   </button>
                 </div>
               </div>
-              
+
               {/* Provider Pills - Full width grid */}
               <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
                 {availableProviders.map(provider => {
@@ -347,11 +341,10 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
                     <button
                       key={provider}
                       onClick={() => onToggleProvider(provider)}
-                      className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all text-center ${
-                        isActive
-                          ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
-                          : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
-                      }`}
+                      className={`px-3 py-2 rounded-lg text-[10px] font-bold transition-all text-center ${isActive
+                        ? 'bg-indigo-100 text-indigo-700 border border-indigo-200'
+                        : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                        }`}
                     >
                       {provider.length > 12 ? provider.substring(0, 12) + '...' : provider}
                     </button>
@@ -416,3 +409,25 @@ export const WorkspaceFilters: React.FC<WorkspaceFiltersProps> = ({
     </>
   );
 };
+
+// Memoize the component to prevent unnecessary re-renders
+export const WorkspaceFilters = React.memo(WorkspaceFiltersComponent, (prevProps, nextProps) => {
+  // Only re-render if these specific props change
+  // This prevents re-renders when typing in search or changing filters
+  return (
+    prevProps.isVisible === nextProps.isVisible &&
+    prevProps.searchTerm === nextProps.searchTerm &&
+    prevProps.selectedCategory === nextProps.selectedCategory &&
+    prevProps.selectedTown === nextProps.selectedTown &&
+    prevProps.phoneType === nextProps.phoneType &&
+    prevProps.visibleProviders.length === nextProps.visibleProviders.length &&
+    (prevProps.selectedDatasets?.length || 0) === (nextProps.selectedDatasets?.length || 0) &&
+    prevProps.categories.length === nextProps.categories.length &&
+    prevProps.availableTowns.length === nextProps.availableTowns.length &&
+    prevProps.availableProviders.length === nextProps.availableProviders.length &&
+    (prevProps.availableDatasets?.length || 0) === (nextProps.availableDatasets?.length || 0) &&
+    prevProps.variant === nextProps.variant &&
+    prevProps.droppedPin === nextProps.droppedPin &&
+    prevProps.radiusKm === nextProps.radiusKm
+  );
+});

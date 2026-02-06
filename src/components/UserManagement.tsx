@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Users, Plus, Trash2, Shield, User as UserIcon, Calendar, CheckCircle, Edit, Key, X } from 'lucide-react';
 import { serverDataService } from '../services/serverData';
 import { useAuth } from '../context/AuthContext';
@@ -30,9 +30,12 @@ export const UserManagement: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const hasLoadedUsers = useRef(false);
 
   useEffect(() => {
-    if (isAdmin && token) {
+    // Only load users once when component mounts with admin access
+    if (isAdmin && token && !hasLoadedUsers.current) {
+      hasLoadedUsers.current = true;
       loadUsers();
     }
   }, [isAdmin, token]);

@@ -11,11 +11,8 @@ interface MapMarkersProps {
   onBusinessSelect?: (business: Business) => void;
 }
 
-export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
-  businesses,
-  selectedBusinessId,
-  onBusinessSelect
-}) => {
+export const MapMarkers: React.FC<MapMarkersProps> = React.memo((props) => {
+  const { businesses, selectedBusinessId, onBusinessSelect } = props;
   const businessCount = businesses?.length || 0;
   console.log('🗺️ MAPMARKERS: Rendering', businessCount, 'businesses');
 
@@ -118,5 +115,12 @@ export const MapMarkers: React.FC<MapMarkersProps> = React.memo(({
         );
       })}
     </MarkerClusterGroup>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison: only re-render if these specific values change
+  return (
+    prevProps.businesses.length === nextProps.businesses.length &&
+    prevProps.selectedBusinessId === nextProps.selectedBusinessId &&
+    prevProps.onBusinessSelect === nextProps.onBusinessSelect
   );
 });

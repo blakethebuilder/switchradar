@@ -58,6 +58,7 @@ function App() {
     dbError,
     handleDatabaseReset,
     refetch,
+    refetchRoutes,
     loadingProgress,
     cacheStatus,
     hasMore,
@@ -122,7 +123,7 @@ function App() {
     removeFromRoute,
     clearRoute,
     addSelectedToRoute,
-  } = useRouteOperations(routeItems, refetch);
+  } = useRouteOperations(routeItems, refetchRoutes);
 
   console.log('🔐 APP: Auth status check:', {
     isAuthenticated,

@@ -20,7 +20,7 @@ export const useBusinessData = () => {
     // Note: fetchBusinesses removed - businesses are now fetched in the initialization effect
 
     const [searchInput, setSearchInput] = useState('');
-    const searchTerm = useDebounce(searchInput, 300);
+    const searchTerm = useDebounce(searchInput, 500); // Increased from 300ms to 500ms to reduce API calls
 
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedTown, setSelectedTown] = useState('');
@@ -41,6 +41,7 @@ export const useBusinessData = () => {
     // Auto-fetch on mount and auth changes - Prevent duplicate calls with ref
     const initializationRef = useRef(false);
     const isInitializing = useRef(false);
+    const backgroundRefreshScheduled = useRef(false);
 
     useEffect(() => {
         console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
@@ -57,6 +58,7 @@ export const useBusinessData = () => {
             setCacheStatus('loading');
             initializationRef.current = false;
             isInitializing.current = false;
+            backgroundRefreshScheduled.current = false;
             return;
         }
 
@@ -95,19 +97,23 @@ export const useBusinessData = () => {
                 initializationRef.current = true;
                 isInitializing.current = false;
 
-                // Optionally fetch fresh data in background after a delay
-                const backgroundRefreshTimer = setTimeout(() => {
-                    console.log('🔄 CACHE: Refreshing data in background');
-                    initializeDataFromServer(true); // Background refresh
-                }, 2000); // Increased delay to prevent immediate refetch
+                // Optionally fetch fresh data in background after a delay (only once)
+                if (!backgroundRefreshScheduled.current) {
+                    backgroundRefreshScheduled.current = true;
+                    const backgroundRefreshTimer = setTimeout(() => {
+                        console.log('🔄 CACHE: Refreshing data in background');
+                        initializeDataFromServer(true); // Background refresh
+                    }, 3000); // Increased delay to prevent immediate refetch
 
-                return () => clearTimeout(backgroundRefreshTimer);
+                    return () => clearTimeout(backgroundRefreshTimer);
+                }
+            } else {
+                // No cached data, ENSURE loading is true before fetching
+                console.log('📡 DATA: No cached data, fetching from server...');
+                setLoading(true);
+                setCacheStatus('loading');
+                initializeDataFromServer(false);
             }
-
-            // No cached data, show loading and fetch from server
-            setLoading(true);
-            setCacheStatus('loading');
-            initializeDataFromServer(false);
         }
     }, [token, isAuthenticated]); // CRITICAL: Only depend on auth state to prevent infinite loops
 
@@ -119,12 +125,20 @@ export const useBusinessData = () => {
 
     // Load initial data from Cloud if available
     const initializeDataFromServer = useCallback(async (isBackgroundRefresh = false) => {
-        if (isInitializing.current && !isBackgroundRefresh) return;
+        if (isInitializing.current && !isBackgroundRefresh) {
+            console.log('⏭️ DATA: Skipping fetch - already initializing');
+            return;
+        }
+
+        if (!token) {
+            console.log('⏭️ DATA: Skipping fetch - no token');
+            return;
+        }
+
         isInitializing.current = true;
+        console.log('🚀 DATA: Starting server fetch...', { isBackgroundRefresh });
 
         try {
-            console.log('🚀 DATA: Starting server fetch...');
-
             // Fetch first page of businesses
             const businessesResult = await serverDataService.getBusinessesPaginated(token || '', 1, PAGE_SIZE);
 
@@ -472,6 +486,21 @@ export const useBusinessData = () => {
                 isInitializing.current = false;
                 setLoading(false);
                 setLoadingProgress('');
+            }
+        }, [token]),
+        // Lightweight route-only refetch (doesn't refetch businesses)
+        refetchRoutes: useCallback(async () => {
+            if (!token) return;
+
+            try {
+                console.log('🔄 ROUTES: Fetching updated routes only...');
+                const routeResult = await serverDataService.getRoutes(token, true);
+                if (routeResult.success) {
+                    setRouteItems(routeResult.data || []);
+                    console.log('✅ ROUTES: Routes updated successfully');
+                }
+            } catch (error) {
+                console.error('❌ ROUTES: Failed to refetch routes:', error);
             }
         }, [token]),
         isDbReady: isAuthenticated && !error,

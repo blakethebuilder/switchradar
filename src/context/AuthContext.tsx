@@ -46,6 +46,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     const login = (newToken: string, newUser: User) => {
+        // Clear any cached data from previous user
+        localStorage.removeItem('sr_businesses_cache');
+        localStorage.removeItem('sr_routes_cache');
+        localStorage.removeItem('sr_datasets_cache');
+
         setToken(newToken);
         setUser(newUser);
         localStorage.setItem('sr_token', newToken);
@@ -63,11 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isSuperAdmin = user?.role === 'super_admin';
 
     return (
-        <AuthContext.Provider value={{ 
-            user, 
-            token, 
-            login, 
-            logout, 
+        <AuthContext.Provider value={{
+            user,
+            token,
+            login,
+            logout,
             isAuthenticated: !!token,
             isAdmin,
             isSuperAdmin

@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState, useEffect, useRef } from 'react';
 import { Search, X, SlidersHorizontal, Smartphone, Landmark, LayoutGrid, Layers, MapPin } from 'lucide-react';
 
 interface FilterPanelProps {
@@ -28,10 +28,33 @@ const FilterPanelComponent = ({
   availableTowns,
   onClearFilters
 }: FilterPanelProps) => {
+  // Local state to prevent input resets during re-renders
+  const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
+  const isUserTyping = useRef(false);
+
+  // Sync local state with prop changes only when user is not actively typing
+  useEffect(() => {
+    if (!isUserTyping.current) {
+      setLocalSearchTerm(searchTerm);
+    }
+  }, [searchTerm]);
+
+  const handleSearchChange = (value: string) => {
+    isUserTyping.current = true;
+    setLocalSearchTerm(value);
+    onSearchChange(value);
+
+    // Reset typing flag after a delay
+    setTimeout(() => {
+      isUserTyping.current = false;
+    }, 500);
+  };
+
   const hasActiveFilters = searchTerm || selectedCategory || selectedTown || phoneType !== 'all';
 
   const clearSearch = () => {
     console.log('FilterPanel: Clear search');
+    setLocalSearchTerm('');
     onSearchChange('');
   };
 
@@ -78,10 +101,10 @@ const FilterPanelComponent = ({
           type="text"
           placeholder="Search businesses..."
           className="h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-xs font-medium text-slate-700 shadow-sm transition-all focus:border-indigo-300 focus:ring-1 focus:ring-indigo-100 outline-none placeholder:text-slate-400"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
+          value={localSearchTerm}
+          onChange={(e) => handleSearchChange(e.target.value)}
         />
-        {searchTerm && (
+        {localSearchTerm && (
           <button
             onClick={clearSearch}
             className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
