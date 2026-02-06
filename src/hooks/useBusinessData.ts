@@ -40,7 +40,85 @@ export const useBusinessData = () => {
     const [droppedPin, setDroppedPin] = useState<{ lat: number, lng: number } | null>(null);
     const [radiusKm, setRadiusKm] = useState<number>(0.5);
 
-    // Note: fetchDatasets removed - datasets are now fetched in the initialization effect
+    // Auto-fetch on mount and auth changes - Prevent duplicate calls with ref
+    const initializationRef = useRef(false);
+    const isInitializing = useRef(false);
+    const backgroundRefreshScheduled = useRef(false);
+
+    useEffect(() => {
+        console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
+
+        // If not authenticated (and not waiting for auth), stop loading
+        if (!isAuthenticated && !token) {
+            console.log('🔐 DATA: Not authenticated, clearing data');
+            setBusinesses([]);
+            setRouteItems([]);
+            setAvailableDatasets([]);
+            setSelectedDatasets([]);
+            setError(null);
+            setLoading(false);
+            setCacheStatus('loading');
+            initializationRef.current = false;
+            isInitializing.current = false;
+            backgroundRefreshScheduled.current = false;
+            return;
+        }
+
+        // Prevent duplicate initialization
+        if (initializationRef.current || isInitializing.current) {
+            console.log('🔐 DATA: Initialization already completed or in progress, skipping');
+            return;
+        }
+
+        if (isAuthenticated && token) {
+            // Check if we have cached data first
+            const cachedBusinesses = cacheService.getBusinesses();
+            const cachedRoutes = cacheService.getRoutes();
+            const cachedDatasets = cacheService.getDatasets();
+
+            if (cachedBusinesses || cachedRoutes || cachedDatasets) {
+                console.log('📦 CACHE: Found cached data, loading immediately');
+                setCacheStatus('cached');
+
+                if (cachedBusinesses) {
+                    setBusinesses(cachedBusinesses);
+                    setLastFetch(new Date());
+                }
+                if (cachedRoutes) {
+                    setRouteItems(cachedRoutes);
+                }
+                if (cachedDatasets) {
+                    setAvailableDatasets(cachedDatasets);
+                    if (cachedDatasets.length > 0) {
+                        setSelectedDatasets(prev => prev.length === 0 ? cachedDatasets.map((d: any) => d.id) : prev);
+                        // Force recalculation of derived states if cache loaded successfully
+                        setBusinesses(b => [...b]); 
+                    }
+                }
+
+                // Set loading to false since we have cached data
+                setLoading(false);
+                initializationRef.current = true;
+
+                // Optionally fetch fresh data in background after a delay (only once)
+                if (!backgroundRefreshScheduled.current) {
+                    backgroundRefreshScheduled.current = true;
+                    const backgroundRefreshTimer = setTimeout(() => {
+                        console.log('🔄 CACHE: Refreshing data in background');
+                        initializeDataFromServer(true); // Background refresh
+                    }, 60000); // 1 minute delay
+
+                    return () => clearTimeout(backgroundRefreshTimer);
+                }
+            } else {
+                // No cached data, ENSURE loading is true before fetching
+                console.log('📡 DATA: No cached data, fetching from server...');
+                setLoading(true);
+                setCacheStatus('loading');
+                initializeDataFromServer(false);
+            }
+        }
+    }, [token, isAuthenticated]);
 
     const [loadingProgress, setLoadingProgress] = useState<string>('');
 
@@ -298,10 +376,10 @@ export const useBusinessData = () => {
         availableProviders,
         searchTerm: searchInput,
         setSearchTerm: setSearchInput,
-        selectedCategory,
-        setSelectedCategory,
-        selectedTown,
-        setSelectedTown,
+        selectedCategory: selectedCategoryInput,
+        setSelectedCategory: setSelectedCategoryInput,
+        selectedTown: selectedTownInput,
+        setSelectedTown: setSelectedTownInput,
         visibleProviders,
         setVisibleProviders,
         setHasUserInteracted,
