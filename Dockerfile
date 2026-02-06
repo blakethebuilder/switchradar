@@ -3,7 +3,8 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
-COPY . .
+COPY . . # FORCED BUILD INVALIDATION 20260206
+
 RUN npm run build
 
 # Production Stage
