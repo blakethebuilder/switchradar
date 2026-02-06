@@ -171,13 +171,13 @@ export const TopNav = ({
             <StatusIcon className="w-3 h-3" />
             <span className="hidden lg:inline">{statusInfo.text}</span>
           </button>
-          
+
           <div className="hidden lg:block h-8 w-px bg-slate-200" />
-          
+
           {/* Main Actions - Compact on tablet - Admin Only */}
           {isAdmin && (
-            <button 
-              onClick={onImportClick} 
+            <button
+              onClick={onImportClick}
               className="px-2 md:px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs md:text-sm font-semibold hover:bg-indigo-700 active:scale-95 transition-all flex items-center gap-1 md:gap-1.5 shadow-md shadow-indigo-100"
             >
               <Upload className="h-3 w-3 md:h-3.5 md:w-3.5" />
@@ -220,7 +220,7 @@ export const TopNav = ({
                   <UserIcon className="h-7 w-7 md:h-8 md:w-8 p-1.5 rounded-full bg-slate-100 text-slate-500" />
                 </button>
                 {isUserMenuOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-48 md:w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-10 animate-in fade-in zoom-in-95">
+                  <div className="absolute top-full right-0 mt-2 w-48 md:w-64 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-[2000] animate-in fade-in zoom-in-95">
                     {/* Present */}
                     <button
                       onClick={() => { onViewModeChange('present'); setIsUserMenuOpen(false); }}
@@ -229,7 +229,7 @@ export const TopNav = ({
                       <Presentation className="h-4 w-4" />
                       <span>Present</span>
                     </button>
-                    
+
                     {/* Settings - Admin Only */}
                     {isAdmin && (
                       <button
@@ -240,9 +240,9 @@ export const TopNav = ({
                         <span>Admin Console</span>
                       </button>
                     )}
-                    
+
                     <div className="h-px bg-slate-100 my-2" />
-                    
+
                     {/* Sign Out */}
                     <button
                       onClick={() => { logout(); setIsUserMenuOpen(false); }}
@@ -277,7 +277,7 @@ export const TopNav = ({
 
       {/* Mobile Menu Dropdown */}
       {isMenuOpen && (
-        <div className="sm:hidden border-t border-slate-100 bg-white/95 backdrop-blur-md absolute top-full left-0 right-0 shadow-xl p-4 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200 z-40">
+        <div className="sm:hidden border-t border-slate-100 bg-white/95 backdrop-blur-md absolute top-full left-0 right-0 shadow-xl p-4 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200 z-[2000]">
           {isAuthenticated ? (
             <div className="bg-slate-50 p-4 rounded-2xl flex flex-col gap-3">
               <div className="flex items-center justify-between">

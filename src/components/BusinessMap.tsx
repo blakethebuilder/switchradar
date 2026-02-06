@@ -329,6 +329,12 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
     }
   }, [mapInstance, fullScreen]);
 
+  // South Africa Bounds
+  const SA_BOUNDS: L.LatLngBoundsExpression = [
+    [-35.5, 15.0], // Southwest (Cape Point/Alexander Bay area)
+    [-21.5, 34.0]  // Northeast (Musina/Kosi Bay area)
+  ];
+
   return (
     <div className={`relative group transition-all duration-700 ${fullScreen
       ? 'h-full w-full bg-slate-100'
@@ -352,23 +358,25 @@ export const BusinessMap: React.FC<BusinessMapProps> = ({
       )}
 
       <MapContainer
-        center={[-26.2041, 28.0473]} // Johannesburg center - better for SA data
-        zoom={7} // Slightly more zoomed in
+        center={[-29.0, 24.0]} // Geometric center of South Africa
+        zoom={6} // Zoom level to see the whole country
         style={{ height: '100%', width: '100%', borderRadius: fullScreen ? '0' : '1.5rem' }}
         zoomControl={false}
         preferCanvas={true}
-        worldCopyJump={true}
+        worldCopyJump={false} // Disable wrapping for restricted bounds
         minZoom={5}
-        maxZoom={17} // Max zoom 17 for optimal performance and detail
+        maxZoom={18}
         zoomSnap={0.5}
         zoomDelta={0.5}
-        wheelPxPerZoomLevel={100} // Consistent zoom speed across all devices
+        wheelPxPerZoomLevel={100}
         dragging={!isDropMode}
         touchZoom={!isDropMode}
         doubleClickZoom={!isDropMode}
         scrollWheelZoom={!isDropMode}
         boxZoom={!isDropMode}
         keyboard={!isDropMode}
+        maxBounds={SA_BOUNDS} // Restrict view to SA
+        maxBoundsViscosity={1.0} // Hard stop at bounds
       >
         <MapController
           targetLocation={targetLocation}
