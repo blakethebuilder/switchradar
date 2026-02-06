@@ -22,8 +22,12 @@ export const useBusinessData = () => {
     const [searchInput, setSearchInput] = useState('');
     const searchTerm = useDebounce(searchInput, 500); // Increased from 300ms to 500ms to reduce API calls
 
-    const [selectedCategory, setSelectedCategory] = useState('');
-    const [selectedTown, setSelectedTown] = useState('');
+    const [selectedCategoryInput, setSelectedCategoryInput] = useState('');
+    const selectedCategory = useDebounce(selectedCategoryInput, 300); // Debounced Category
+
+    const [selectedTownInput, setSelectedTownInput] = useState('');
+    const selectedTown = useDebounce(selectedTownInput, 300); // Debounced Town
+
     const [visibleProviders, setVisibleProviders] = useState<string[]>([]);
     const [hasUserInteracted, setHasUserInteracted] = useState(false);
     const [phoneType, setPhoneType] = useState<'all' | 'landline' | 'mobile'>('all');
@@ -37,89 +41,6 @@ export const useBusinessData = () => {
     const [radiusKm, setRadiusKm] = useState<number>(0.5);
 
     // Note: fetchDatasets removed - datasets are now fetched in the initialization effect
-
-    // Auto-fetch on mount and auth changes - Prevent duplicate calls with ref
-    const initializationRef = useRef(false);
-    const isInitializing = useRef(false);
-    const backgroundRefreshScheduled = useRef(false);
-
-    useEffect(() => {
-        console.log('🔐 DATA: Auth effect triggered', { isAuthenticated, tokenPresent: !!token });
-
-        // If not authenticated (and not waiting for auth), stop loading
-        if (!isAuthenticated && !token) {
-            console.log('🔐 DATA: Not authenticated, clearing data');
-            setBusinesses([]);
-            setRouteItems([]);
-            setAvailableDatasets([]);
-            setSelectedDatasets([]);
-            setError(null);
-            setLoading(false);
-            setCacheStatus('loading');
-            initializationRef.current = false;
-            isInitializing.current = false;
-            backgroundRefreshScheduled.current = false;
-            return;
-        }
-
-        // Prevent duplicate initialization
-        if (initializationRef.current || isInitializing.current) {
-            console.log('🔐 DATA: Initialization already completed or in progress, skipping');
-            return;
-            return;
-        }
-
-        if (isAuthenticated && token) {
-            // Check if we have cached data first
-            const cachedBusinesses = cacheService.getBusinesses();
-            const cachedRoutes = cacheService.getRoutes();
-            const cachedDatasets = cacheService.getDatasets();
-
-            if (cachedBusinesses || cachedRoutes || cachedDatasets) {
-                console.log('📦 CACHE: Found cached data, loading immediately');
-                setCacheStatus('cached');
-
-                if (cachedBusinesses) {
-                    setBusinesses(cachedBusinesses);
-                    setLastFetch(new Date());
-                }
-                if (cachedRoutes) {
-                    setRouteItems(cachedRoutes);
-                }
-                if (cachedDatasets) {
-                    setAvailableDatasets(cachedDatasets);
-                    if (cachedDatasets.length > 0) {
-                        setSelectedDatasets(prev => prev.length === 0 ? cachedDatasets.map((d: any) => d.id) : prev);
-                        // Force recalculation of derived states if cache loaded successfully
-                        setBusinesses(b => [...b]); // Trigger derived state recalculation on existing businesses
-                    }
-                    }
-                }
-
-                // Set loading to false since we have cached data
-                setLoading(false);
-                initializationRef.current = true;
-                isInitializing.current = false;
-
-                // Optionally fetch fresh data in background after a delay (only once)
-                if (!backgroundRefreshScheduled.current) {
-                    backgroundRefreshScheduled.current = true;
-                    const backgroundRefreshTimer = setTimeout(() => {
-                        console.log('🔄 CACHE: Refreshing data in background');
-                        initializeDataFromServer(true); // Background refresh
-                    }, 60000); // Increased delay to 1 minute to reduce field refresh frequency
-
-                    return () => clearTimeout(backgroundRefreshTimer);
-                }
-            } else {
-                // No cached data, ENSURE loading is true before fetching
-                console.log('📡 DATA: No cached data, fetching from server...');
-                setLoading(true);
-                setCacheStatus('loading');
-                initializeDataFromServer(false);
-            }
-        }
-    }, [token, isAuthenticated]); // CRITICAL: Only depend on auth state to prevent infinite loops
 
     const [loadingProgress, setLoadingProgress] = useState<string>('');
 
