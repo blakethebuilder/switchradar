@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Phone, Mail, MapPin, Building2, Smartphone, Landmark, MessageSquare, Route, Trash2, DollarSign, AlertTriangle, CheckCircle, Loader2, Plus, Smile, Frown, PhoneCall, Calendar, Lightbulb, FileText, ExternalLink } from 'lucide-react';
+import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Phone, Mail, MapPin, Building2, Smartphone, Landmark, MessageSquare, Route, Trash2, DollarSign, AlertTriangle, CheckCircle, Eye, Loader2, Plus, Smile, Frown, PhoneCall, Calendar, Lightbulb, FileText, ExternalLink } from 'lucide-react';
 import type { Business, NoteEntry, BusinessMetadata } from '../types';
 import { isMobileProvider } from '../utils/phoneUtils';
 import { ProviderBadge } from './ProviderBadge';

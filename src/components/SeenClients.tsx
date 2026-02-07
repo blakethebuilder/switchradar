@@ -321,7 +321,7 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
                           </span>
                         )}
                         {/* Notes Count Badge (Similar to admin console pills) */}
-                        {business.richNotes?.length > 0 && (
+                        {business.richNotes && business.richNotes.length > 0 && (
                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-700">
                              <MessageSquare className="h-3 w-3" />
                              {business.richNotes.length} Notes
