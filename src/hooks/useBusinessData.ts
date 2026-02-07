@@ -65,6 +65,11 @@ export const useBusinessData = () => {
         console.log('🚀 DATA: Starting server fetch...', { isBackgroundRefresh });
 
         try {
+            // Fetch first page of businesses as a probe
+            const businessesProbe = await serverDataService.getBusinessesPaginated(token || '', 1, 100);
+            const totalCount = businessesProbe.count || 0;
+            console.log(`📊 DATA: Server reports ${totalCount} total businesses`);
+
             // Fetch ALL businesses in chunks for a full state refresh
             const businessesResult = await serverDataService.getBusinessesChunked(token || '', PAGE_SIZE);
 
