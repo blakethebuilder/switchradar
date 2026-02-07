@@ -380,11 +380,16 @@ export const UserDataManagement: React.FC = () => {
     }
   };
 
-  const filteredBusinesses = Array.isArray(selectedUserBusinesses) ? selectedUserBusinesses.filter(business =>
-    business?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    business?.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    business?.provider?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) : [];
+  const filteredBusinesses = Array.isArray(selectedUserBusinesses) ? selectedUserBusinesses.filter(business => {
+    const name = business?.name || '';
+    const address = business?.address || '';
+    const provider = business?.provider || '';
+    const term = searchTerm.toLowerCase();
+    
+    return name.toLowerCase().includes(term) ||
+      address.toLowerCase().includes(term) ||
+      provider.toLowerCase().includes(term);
+  }) : [];
 
   return (
     <div className="space-y-6">

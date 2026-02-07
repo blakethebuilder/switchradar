@@ -163,10 +163,14 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   // Filter businesses based on search and filters
   const filteredBusinesses = useMemo(() => {
     return businesses.filter((business: any) => {
+      const name = business.name || '';
+      const address = business.address || '';
+      const phone = business.phone || '';
+      
       const matchesSearch = !searchTerm ||
-        business.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        business.address?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        business.phone?.includes(searchTerm);
+        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        phone.includes(searchTerm);
 
       const matchesTown = !selectedTown || business.town === selectedTown;
       const matchesProvider = !selectedProvider || business.provider === selectedProvider;

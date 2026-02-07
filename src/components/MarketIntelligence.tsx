@@ -65,8 +65,9 @@ export const MarketIntelligence: React.FC<MarketIntelligenceProps> = ({
         
         // Apply search filter
         if (searchTerm) {
+            const lowerTerm = searchTerm.toLowerCase();
             result = result.filter(item => 
-                item.name.toLowerCase().includes(searchTerm.toLowerCase())
+                (item.name || '').toLowerCase().includes(lowerTerm)
             );
         }
         

@@ -30,7 +30,7 @@ interface ImportMappingModalProps {
 }
 
 const guessMappingValue = (columns: string[], candidates: string[]) => {
-  const lower = columns.map(col => col.toLowerCase());
+  const lower = columns.map(col => (col || '').toLowerCase());
   const matchIndex = lower.findIndex(col => candidates.some(candidate => col.includes(candidate)));
   return matchIndex >= 0 ? columns[matchIndex] : '';
 };

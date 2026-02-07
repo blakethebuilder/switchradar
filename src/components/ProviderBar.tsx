@@ -23,9 +23,10 @@ const ProviderBarComponent: React.FC<ProviderBarProps> = ({
 
   const filteredProviders = useMemo(() => {
     if (!searchTerm) return availableProviders;
-    return availableProviders.filter(provider =>
-      provider.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return availableProviders.filter(provider => {
+      const p = provider || '';
+      return p.toLowerCase().includes(searchTerm.toLowerCase());
+    });
   }, [availableProviders, searchTerm]);
 
   const selectedCount = visibleProviders.length;

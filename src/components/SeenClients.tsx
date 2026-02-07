@@ -55,14 +55,18 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
     // Search filter
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(business =>
-        business.name.toLowerCase().includes(term) ||
-        business.town.toLowerCase().includes(term) ||
-        business.provider.toLowerCase().includes(term) ||
-        business.richNotes?.some(note =>
-          note.content.toLowerCase().includes(term)
-        )
-      );
+      filtered = filtered.filter(business => {
+        const name = business.name || '';
+        const town = business.town || '';
+        const provider = business.provider || '';
+        
+        return name.toLowerCase().includes(term) ||
+          town.toLowerCase().includes(term) ||
+          provider.toLowerCase().includes(term) ||
+          business.richNotes?.some(note =>
+            (note.content || '').toLowerCase().includes(term)
+          )
+      });
     }
 
     // Category filter

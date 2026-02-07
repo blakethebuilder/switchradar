@@ -294,9 +294,14 @@ const optimizedSearch = (businesses: Business[], searchTerm: string): Business[]
   const lowerSearchTerm = cacheKey;
   const results = businesses.filter(biz => {
     // Early exit optimizations - check most likely matches first
-    return biz.name.toLowerCase().includes(lowerSearchTerm) ||
-      biz.provider.toLowerCase().includes(lowerSearchTerm) ||
-      biz.address.toLowerCase().includes(lowerSearchTerm);
+    // Safely handle null/undefined fields to prevent crashes
+    const name = biz.name || '';
+    const provider = biz.provider || '';
+    const address = biz.address || '';
+    
+    return name.toLowerCase().includes(lowerSearchTerm) ||
+      provider.toLowerCase().includes(lowerSearchTerm) ||
+      address.toLowerCase().includes(lowerSearchTerm);
   });
 
   // Cache results but limit cache size
