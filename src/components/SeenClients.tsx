@@ -34,6 +34,7 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
       const hasMetadataInteraction = business.metadata && (
         business.metadata.hasIssues !== undefined ||
         business.metadata.interest !== undefined ||
+        business.metadata.isManuallySeen !== undefined ||
         business.metadata.lengthWithCurrentProvider ||
         business.metadata.ispProvider ||
         business.metadata.pabxProvider ||
