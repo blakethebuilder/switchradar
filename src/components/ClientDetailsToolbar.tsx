@@ -304,13 +304,13 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
             <div className="flex items-center gap-1">
               {/* Call Button */}
               {business.phone && (
-                <a
-                  href={`tel:${business.phone}`}
-                  className="p-1.5 md:p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
-                  title="Call"
-                >
-                  <Phone className="w-3 h-3 md:w-4 md:h-4" />
-                </a>
+                  <a
+                   href={`tel:${business.phone}`}
+                   className="p-2.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"
+                   title="Call"
+                 >
+                   <Phone className="w-4 h-4" />
+                 </a>
               )}
 
               {/* Google Maps Button */}
@@ -325,73 +325,71 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                   <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
                 </a>
               ) : (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address + ', ' + business.town + ', ' + business.province)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1.5 md:p-2 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                  title="Open in Google Maps"
-                >
-                  <ExternalLink className="w-3 h-3 md:w-4 md:h-4" />
-                </a>
+                  <a
+                   href={business.mapsLink || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(business.address + ', ' + business.town + ', ' + business.province)}`}
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   className="p-2.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                   title="Open in Google Maps"
+                 >
+                   <ExternalLink className="w-4 h-4" />
+                 </a>
               )}
 
-              {/* Add to Route Button */}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id);
-                }}
-                className={`p-1.5 md:p-2 rounded-lg transition-colors ${
-                  isInRoute
-                    ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
-                    : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
-                }`}
-                title={isInRoute ? "Remove from Route" : "Add to Route"}
-              >
-                <Route className="w-3 h-3 md:w-4 md:h-4" />
-              </button>
+               <button
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id);
+                   }}
+                   className={`p-2.5 rounded-lg transition-colors ${
+                     isInRoute
+                       ? 'bg-amber-50 text-amber-600 hover:bg-amber-100'
+                       : 'bg-purple-50 text-purple-600 hover:bg-purple-100'
+                   }`}
+                   title={isInRoute ? "Remove from Route" : "Add to Route"}
+                 >
+                   <Route className="w-4 h-4" />
+                 </button>
 
               {/* Navigation Controls - Hidden on small mobile */}
               {onNavigateNext && onNavigatePrev && totalCount && totalCount > 1 && (
                 <div className="hidden sm:flex items-center bg-slate-50 rounded-lg overflow-hidden ml-1">
                   <button
                     onClick={onNavigatePrev}
-                    className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                    className="p-2.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                     title="Previous Business"
                   >
-                    <ChevronLeft className="w-3 h-3" />
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
                   <div className="px-2 py-1 text-xs font-bold text-slate-600 bg-slate-100">
                     {currentIndex !== undefined ? `${currentIndex + 1}/${totalCount}` : 'Nav'}
                   </div>
                   <button
                     onClick={onNavigateNext}
-                    className="p-1.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                    className="p-2.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
                     title="Next Business"
                   >
-                    <ChevronRight className="w-3 h-3" />
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               )}
               
-              {/* Expand Button */}
-              <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className="p-1.5 md:p-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-                title={isExpanded ? "Collapse" : "Expand"}
-              >
-                {isExpanded ? <ChevronDown className="w-3 h-3 md:w-4 md:h-4" /> : <ChevronUp className="w-3 h-3 md:w-4 md:h-4" />}
-              </button>
+               <button
+                 onClick={() => setIsExpanded(!isExpanded)}
+                 className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                 title={isExpanded ? "Collapse" : "Expand"}
+               >
+                 {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+               </button>
               
-              {/* Close Button */}
-              <button
-                onClick={onClose}
-                className="p-1.5 md:p-2 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                title="Close"
-              >
-                <X className="w-3 h-3 md:w-4 md:h-4" />
-              </button>
+               {/* Close Button */}
+               <button
+                 onClick={onClose}
+                 className="p-2.5 rounded-lg bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                 title="Close"
+               >
+                 <X className="w-4 h-4" />
+               </button>
             </div>
           </div>
         </div>
@@ -531,7 +529,32 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       No Issues
                     </button>
                   </div>
-
+                  
+                  {/* Manual Seen Button */}
+                  <div className="pt-3 border-t border-slate-200">
+                    <button
+                      onClick={() => handleUpdateMetadata('isManuallySeen', business.metadata?.isManuallySeen === true ? null : true)}
+                      disabled={isUpdating === 'metadata-isManuallySeen'}
+                      className={`w-full flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-bold transition-all transform active:scale-95 relative ${
+                        isUpdating === 'metadata-isManuallySeen'
+                          ? 'bg-slate-300 text-slate-600 scale-95 animate-pulse'
+                          : business.metadata?.isManuallySeen === true
+                          ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-300/50 hover:bg-indigo-700'
+                          : 'bg-white text-indigo-600 border-2 border-indigo-200 hover:bg-indigo-50 hover:border-indigo-300 hover:shadow-md'
+                      }`}
+                    >
+                      {business.metadata?.isManuallySeen === true && (
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-400 rounded-full border-2 border-white"></div>
+                      )}
+                      {isUpdating === 'metadata-isManuallySeen' ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                      {business.metadata?.isManuallySeen === true ? 'Marked Seen' : 'Mark as Seen Manually'}
+                    </button>
+                  </div>
+                  
                   {/* Enhanced Contact Fields */}
                   <div className="space-y-3 pt-3 border-t border-slate-200">
                     {/* Active on Current Provider */}
@@ -805,32 +828,32 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                   </div>
                 </div>
 
-                {/* Action Buttons */}
-                <div className="flex gap-3">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id);
-                    }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-colors ${
-                      isInRoute
-                        ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                        : 'bg-green-100 text-green-700 hover:bg-green-200'
-                    }`}
-                  >
-                    <Route className="w-4 h-4" />
-                    {isInRoute ? 'Remove from Route' : 'Add to Route'}
-                  </button>
-                  
-                  {onDelete && (
-                    <button
-                      onClick={() => onDelete(business.id)}
-                      className="px-4 py-3 bg-red-100 text-red-700 rounded-xl font-medium hover:bg-red-200 transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          isInRoute ? onRemoveFromRoute(business.id) : onAddToRoute(business.id);
+                        }}
+                        className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-medium transition-colors ${
+                          isInRoute
+                            ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                      >
+                        <Route className="w-4 h-4" />
+                        {isInRoute ? 'Remove from Route' : 'Add to Route'}
+                      </button>
+                      
+                      {onDelete && (
+                        <button
+                          onClick={() => onDelete(business.id)}
+                          className="px-4 py-3 bg-red-100 text-red-700 rounded-xl font-medium hover:bg-red-200 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
               </div>
             </div>
           </div>

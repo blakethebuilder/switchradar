@@ -312,6 +312,23 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
                       </div>
                     </div>
 
+                    {/* Metadata Interactions Badge */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        {(business.metadata?.hasIssues !== undefined || business.metadata?.interest || business.metadata?.lengthWithCurrentProvider || business.metadata?.ispProvider || business.metadata?.pabxProvider || business.metadata?.isActiveOnCurrentProvider !== undefined || business.metadata?.canContact !== undefined) && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-700">
+                            <Eye className="h-3 w-3" />
+                            {Object.values(business.metadata || {}).filter(v => v !== undefined && v !== null && v !== false).length} Interactions
+                          </span>
+                        )}
+                        {/* Notes Count Badge (Similar to admin console pills) */}
+                        {business.richNotes?.length > 0 && (
+                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold bg-blue-100 text-blue-700">
+                             <MessageSquare className="h-3 w-3" />
+                             {business.richNotes.length} Notes
+                           </span>
+                        )}
+                    </div>
+                    
                     {/* Contact Info */}
                     <div className="flex flex-wrap gap-4 mb-3 text-sm text-slate-600">
                       {business.phone && (
@@ -343,7 +360,7 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
                               <span className={`font-bold px-1.5 py-0.5 rounded text-xs ${business.metadata.interest === 'high' ? 'bg-emerald-100 text-emerald-700' :
                                   business.metadata.interest === 'low' ? 'bg-yellow-100 text-yellow-700' :
                                     'bg-rose-100 text-rose-700'
-                                }`}>
+                                  }`}>
                                 {business.metadata.interest.toUpperCase()}
                               </span>
                             </div>
@@ -391,7 +408,7 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
                         </span>
                       ))}
                     </div>
-
+                    
                     {/* Latest Note Preview */}
                     {latestNote && (
                       <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
