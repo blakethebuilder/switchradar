@@ -1,6 +1,5 @@
-import React from 'react';
-import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Phone, Mail, MapPin, Building2, Smartphone, Landmark, MessageSquare, Route, Trash2, DollarSign, AlertTriangle, CheckCircle, Eye, Loader2, Plus, Smile, Frown, PhoneCall, Calendar, Lightbulb, FileText, ExternalLink } from 'lucide-react';
-import { useClientDetailsManagement, INTEREST_OPTIONS, NOTE_CATEGORIES, NOTE_TEMPLATES } from '../hooks/useClientDetailsManagement';
+import React, { useState } from 'react';
+import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Phone, Mail, MapPin, Building2, Smartphone, Landmark, MessageSquare, Route, Trash2, DollarSign, AlertTriangle, CheckCircle, Loader2, Plus, Smile, Frown, PhoneCall, Calendar, Lightbulb, FileText, ExternalLink, Eye } from 'lucide-react';
 import type { Business, NoteEntry, BusinessMetadata } from '../types';
 import { isMobileProvider } from '../utils/phoneUtils';
 import { ProviderBadge } from './ProviderBadge';
@@ -89,62 +88,124 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
   currentIndex,
   totalCount
 }) => {
-  const {
-    isExpanded,
-    setIsExpanded,
-    isUpdating,
-    newNoteContent,
-    setNewNoteContent,
-    selectedNoteCategory,
-    setSelectedNoteCategory,
-    showTemplates,
-    setShowTemplates,
-    isMobile,
-    handleUpdateInterest,
-    handleUpdateMetadata,
-    handleUpdateTextMetadata,
-    handleAddRichNote,
-    handleUseTemplate,
-    textInputValues,
-  } = useClientDetailsManagement({
-    business,
-    onUpdateBusiness,
-    onTogglePhoneType,
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [selectedNoteCategory, setSelectedNoteCategory] = useState<'call' | 'visit' | 'follow-up' | 'general' | 'issue' | 'opportunity'>('general');
+  const [showTemplates, setShowTemplates] = useState(false);
+  
+  const isMobile = business.phoneTypeOverride
+    ? business.phoneTypeOverride === 'mobile'
+    : isMobileProvider(business.provider, business.phone);
+
+  const handleUpdateInterest = async (interest: string) => {
+    setIsUpdating(`interest-${interest}`);
+    try {
+      await onUpdateBusiness(business.id, { metadata: { ...business.metadata, interest } });
+      setTimeout(() => setIsUpdating(null), 300);
+    } catch (error) {
+      setIsUpdating(null);
+    }
+  };
+
+  const handleUpdateMetadata = async (key: keyof BusinessMetadata, value: any) => {
+    setIsUpdating(`metadata-${key}-${value}`);
+    try {
+      await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
+      setTimeout(() => setIsUpdating(null), 300);
+    } catch (error) {
+      setIsUpdating(null);
+    }
+  };
+
+  // Debounced text input handler to prevent excessive API calls
+  const [textInputValues, setTextInputValues] = useState<Record<string, string>>({
+    lengthWithCurrentProvider: business.metadata?.lengthWithCurrentProvider || '',
+    ispProvider: business.metadata?.ispProvider || '',
+    pabxProvider: business.metadata?.pabxProvider || ''
   });
 
-  const handleUseTemplate = handleUseTemplate; // Keeping reference for JSX if needed (though hook returns it)
-  
-  // NOTE: useEffect blocks for textInputValues synchronization and note auto-refresh have been removed 
-  // as their logic is now internal to useClientDetailsManagement.
-  
-  const handleAddRichNote = handleAddRichNote; // Keep reference for JSX binding
-  
-  const handleUpdateInterest = handleUpdateInterest;
-  const handleUpdateMetadata = handleUpdateMetadata;
-  const handleUpdateTextMetadata = handleUpdateTextMetadata;
-  
-  // Define the dummy function for the use effect that was removed
-  // const isMobile = business.phoneTypeOverride
-  //   ? business.phoneTypeOverride === 'mobile'
-  //   : isMobileProvider(business.provider, business.phone);
+  // Debounce timer ref
+  const debounceTimerRef = React.useRef<Record<string, number>>({});
 
-  // Dummy reference for selectedNoteCategory that the hook returns
-  const selectedNoteCategory = selectedNoteCategory;
-  
-  // Since the hook manages the state and returns textInputValues, we don't need the old useEffect block.
-  // However, we must ensure the JSX still works with the returned handlers and state.
+  const handleUpdateTextMetadata = (key: keyof BusinessMetadata, value: string) => {
+    // Update local state immediately for responsive UI
+    setTextInputValues(prev => ({ ...prev, [key]: value }));
+    
+    // Clear existing timer for this field
+    if (debounceTimerRef.current[key]) {
+      clearTimeout(debounceTimerRef.current[key]);
+    }
+    
+    // Set new timer to update server after user stops typing
+    debounceTimerRef.current[key] = setTimeout(async () => {
+      try {
+        await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
+      } catch (error) {
+        console.error('Error updating metadata:', error);
+        // Revert local state on error
+        setTextInputValues(prev => ({ 
+          ...prev, 
+          [key]: String(business.metadata?.[key] || '') 
+        }));
+      }
+    }, 1000); // 1 second delay
+  };
 
-  const handleAddRichNoteBound = handleAddRichNote;
-  const handleUseTemplateBound = handleUseTemplate;
-  
-  // Dummy function mapping required by JSX (line 762) if not binding directly
-  // const handleAddRichNote = handleAddRichNote; 
+  // Cleanup timers on unmount
+  React.useEffect(() => {
+    return () => {
+      Object.values(debounceTimerRef.current).forEach(timer => {
+        if (timer) clearTimeout(timer);
+      });
+    };
+  }, []);
 
-  // The component JSX binds handlers directly (e.g., onClick={handleAddRichNote}).
-  // Let's make sure we pass the correct functions/state from the hook destructured above.
+  // Update local state when business prop changes
+  React.useEffect(() => {
+    setTextInputValues({
+      lengthWithCurrentProvider: business.metadata?.lengthWithCurrentProvider || '',
+      ispProvider: business.metadata?.ispProvider || '',
+      pabxProvider: business.metadata?.pabxProvider || ''
+    });
+  }, [business.metadata?.lengthWithCurrentProvider, business.metadata?.ispProvider, business.metadata?.pabxProvider]);
 
-  const handleAddRichNoteFinal = handleAddRichNote;
-  const handleUseTemplateFinal = handleUseTemplate;
+  const handleAddRichNote = async () => {
+    if (!newNoteContent.trim()) return;
+    
+    setIsUpdating('add-note');
+    try {
+      const newNote: NoteEntry = {
+        id: Date.now().toString(),
+        content: newNoteContent.trim(),
+        category: selectedNoteCategory,
+        timestamp: new Date()
+      };
+      
+      const currentRichNotes = business.richNotes || [];
+      
+      // Update business with new note
+      await onUpdateBusiness(business.id, { 
+        richNotes: [...currentRichNotes, newNote] 
+      });
+      
+      setNewNoteContent('');
+      setShowTemplates(false);
+      
+      // Show success feedback
+      setTimeout(() => {
+        setIsUpdating(null);
+      }, 500);
+    } catch (error) {
+      console.error('❌ Failed to add note:', error);
+      setIsUpdating(null);
+    }
+  };
+
+  const handleUseTemplate = (template: string) => {
+    setNewNoteContent(template);
+    setShowTemplates(false);
+  };
 
   return (
     <>
@@ -266,37 +327,37 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                    <Route className="w-4 h-4" />
                  </button>
 
-              {/* Navigation Controls - Hidden on small mobile */}
-              {onNavigateNext && onNavigatePrev && totalCount && totalCount > 1 && (
-                <div className="hidden sm:flex items-center bg-slate-50 rounded-lg overflow-hidden ml-1">
-                  <button
-                    onClick={onNavigatePrev}
-                    className="p-2.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-                    title="Previous Business"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <div className="px-2 py-1 text-xs font-bold text-slate-600 bg-slate-100">
-                    {currentIndex !== undefined ? `${currentIndex + 1}/${totalCount}` : 'Nav'}
-                  </div>
-                  <button
-                    onClick={onNavigateNext}
-                    className="p-2.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
-                    title="Next Business"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-              
-               <button
-                 onClick={() => setIsExpanded(!isExpanded)}
-                 className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-                 title={isExpanded ? "Collapse" : "Expand"}
-               >
-                 {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-               </button>
-              
+               {/* Navigation Controls - Hidden on small mobile */}
+               {onNavigateNext && onNavigatePrev && totalCount && totalCount > 1 && (
+                 <div className="hidden sm:flex items-center bg-slate-50 rounded-lg overflow-hidden ml-1">
+                   <button
+                     onClick={onNavigatePrev}
+                     className="p-2.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                     title="Previous Business"
+                   >
+                     <ChevronLeft className="w-4 h-4" />
+                   </button>
+                   <div className="px-2 py-1 text-xs font-bold text-slate-600 bg-slate-100">
+                     {currentIndex !== undefined ? `${currentIndex + 1}/${totalCount}` : 'Nav'}
+                   </div>
+                   <button
+                     onClick={onNavigateNext}
+                     className="p-2.5 text-slate-600 hover:bg-slate-100 hover:text-slate-800 transition-colors"
+                     title="Next Business"
+                   >
+                     <ChevronRight className="w-4 h-4" />
+                   </button>
+                 </div>
+               )}
+               
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="p-2.5 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
+                  title={isExpanded ? "Collapse" : "Expand"}
+                >
+                  {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
+                </button>
+               
                {/* Close Button */}
                <button
                  onClick={onClose}
