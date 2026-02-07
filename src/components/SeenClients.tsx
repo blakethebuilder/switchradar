@@ -80,13 +80,21 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
     filtered.sort((a, b) => {
       switch (sortBy) {
         case 'recent':
-          const aLatest = a.richNotes?.reduce((latest, note) =>
-            new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest
-          );
-          const bLatest = b.richNotes?.reduce((latest, note) =>
-            new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest
-          );
-          return new Date(bLatest?.timestamp || 0).getTime() - new Date(aLatest?.timestamp || 0).getTime();
+          const aNotes = a.richNotes || [];
+          const bNotes = b.richNotes || [];
+          
+          const aLatest = aNotes.length > 0 
+            ? aNotes.reduce((latest, note) => new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest)
+            : null;
+          const bLatest = bNotes.length > 0 
+            ? bNotes.reduce((latest, note) => new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest)
+            : null;
+          
+          if (!aLatest && !bLatest) return 0;
+          if (!aLatest) return 1;
+          if (!bLatest) return -1;
+          
+          return new Date(bLatest.timestamp).getTime() - new Date(aLatest.timestamp).getTime();
         case 'name':
           return a.name.localeCompare(b.name);
         case 'notes':
@@ -144,9 +152,9 @@ export const SeenClients: React.FC<SeenClientsProps> = ({ businesses, onDeleteBu
       provider: business.provider,
       category: business.category,
       totalNotes: business.richNotes?.length || 0,
-      lastNoteDate: business.richNotes?.reduce((latest, note) =>
-        new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest
-      )?.timestamp || '',
+      lastNoteDate: business.richNotes && business.richNotes.length > 0 
+        ? business.richNotes.reduce((latest, note) => new Date(note.timestamp) > new Date(latest.timestamp) ? note : latest).timestamp 
+        : '',
       notes: business.richNotes?.map(note =>
         `[${note.category.toUpperCase()}] ${new Date(note.timestamp).toLocaleDateString()} - ${note.content}`
       ).join(' | ') || ''

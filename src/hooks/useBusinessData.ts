@@ -65,8 +65,8 @@ export const useBusinessData = () => {
         console.log('🚀 DATA: Starting server fetch...', { isBackgroundRefresh });
 
         try {
-            // Fetch first page of businesses
-            const businessesResult = await serverDataService.getBusinessesPaginated(token || '', 1, PAGE_SIZE);
+            // Fetch ALL businesses in chunks for a full state refresh
+            const businessesResult = await serverDataService.getBusinessesChunked(token || '', PAGE_SIZE);
 
             // Fetch datasets and routes in parallel
             const [datasetsResult, routesResult] = await Promise.all([
@@ -108,9 +108,10 @@ export const useBusinessData = () => {
             // Process businesses
             if (businessesResult.success) {
                 const businessData = businessesResult.data || [];
+                console.log(`📥 DATA: Received ${businessData.length} total businesses`);
                 setBusinesses(businessData);
-                setHasMore(businessData.length === PAGE_SIZE);
-                setPage(1);
+                setHasMore(false); // We fetched everything
+                setPage(Math.ceil(businessData.length / PAGE_SIZE) || 1);
                 setLastFetch(new Date());
             }
 
