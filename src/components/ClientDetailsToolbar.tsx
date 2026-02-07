@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, Phone, Mail, MapPin, Building2, Smartphone, Landmark, MessageSquare, Route, Trash2, DollarSign, AlertTriangle, CheckCircle, Eye, Loader2, Plus, Smile, Frown, PhoneCall, Calendar, Lightbulb, FileText, ExternalLink } from 'lucide-react';
+import { useClientDetailsManagement, INTEREST_OPTIONS, NOTE_CATEGORIES, NOTE_TEMPLATES } from '../hooks/useClientDetailsManagement';
 import type { Business, NoteEntry, BusinessMetadata } from '../types';
 import { isMobileProvider } from '../utils/phoneUtils';
 import { ProviderBadge } from './ProviderBadge';
@@ -88,148 +89,62 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
   currentIndex,
   totalCount
 }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isUpdating, setIsUpdating] = useState<string | null>(null);
-  const [newNoteContent, setNewNoteContent] = useState('');
-  const [selectedNoteCategory, setSelectedNoteCategory] = useState<'call' | 'visit' | 'follow-up' | 'general' | 'issue' | 'opportunity'>('general');
-  const [showTemplates, setShowTemplates] = useState(false);
-  
-    // Auto-refresh notes every 30 seconds when expanded
-  // Removed: See commit message for details.
-  // React.useEffect(() => {
-  //   if (!isExpanded) return;
-    
-  //   const interval = setInterval(() => {
-  //     // Force a re-render by updating a timestamp in metadata
-  //     onUpdateBusiness(business.id, { 
-  //       metadata: { 
-  //         ...business.metadata, 
-  //         lastRefresh: new Date().toISOString() 
-  //       } 
-  //     });
-  //   }, 30000); // 30 seconds
-    
-  //   return () => clearInterval(interval);
-  // }, [isExpanded, business.id, onUpdateBusiness, business.metadata]);
-  
-  const isMobile = business.phoneTypeOverride
-    ? business.phoneTypeOverride === 'mobile'
-    : isMobileProvider(business.provider, business.phone);
-
-  const handleUpdateInterest = async (interest: string) => {
-    setIsUpdating(`interest-${interest}`);
-    try {
-      await onUpdateBusiness(business.id, { metadata: { ...business.metadata, interest } });
-      setTimeout(() => setIsUpdating(null), 300);
-    } catch (error) {
-      setIsUpdating(null);
-    }
-  };
-
-  const handleUpdateMetadata = async (key: keyof BusinessMetadata, value: any) => {
-    setIsUpdating(`metadata-${key}-${value}`);
-    try {
-      await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
-      setTimeout(() => setIsUpdating(null), 300);
-    } catch (error) {
-      setIsUpdating(null);
-    }
-  };
-
-  // Debounced text input handler to prevent excessive API calls
-  const [textInputValues, setTextInputValues] = useState<Record<string, string>>({
-    lengthWithCurrentProvider: business.metadata?.lengthWithCurrentProvider || '',
-    ispProvider: business.metadata?.ispProvider || '',
-    pabxProvider: business.metadata?.pabxProvider || ''
+  const {
+    isExpanded,
+    setIsExpanded,
+    isUpdating,
+    newNoteContent,
+    setNewNoteContent,
+    selectedNoteCategory,
+    setSelectedNoteCategory,
+    showTemplates,
+    setShowTemplates,
+    isMobile,
+    handleUpdateInterest,
+    handleUpdateMetadata,
+    handleUpdateTextMetadata,
+    handleAddRichNote,
+    handleUseTemplate,
+    textInputValues,
+  } = useClientDetailsManagement({
+    business,
+    onUpdateBusiness,
+    onTogglePhoneType,
   });
 
-  // Debounce timer ref
-  const debounceTimerRef = React.useRef<Record<string, number>>({});
+  const handleUseTemplate = handleUseTemplate; // Keeping reference for JSX if needed (though hook returns it)
+  
+  // NOTE: useEffect blocks for textInputValues synchronization and note auto-refresh have been removed 
+  // as their logic is now internal to useClientDetailsManagement.
+  
+  const handleAddRichNote = handleAddRichNote; // Keep reference for JSX binding
+  
+  const handleUpdateInterest = handleUpdateInterest;
+  const handleUpdateMetadata = handleUpdateMetadata;
+  const handleUpdateTextMetadata = handleUpdateTextMetadata;
+  
+  // Define the dummy function for the use effect that was removed
+  // const isMobile = business.phoneTypeOverride
+  //   ? business.phoneTypeOverride === 'mobile'
+  //   : isMobileProvider(business.provider, business.phone);
 
-  const handleUpdateTextMetadata = (key: keyof BusinessMetadata, value: string) => {
-    // Update local state immediately for responsive UI
-    setTextInputValues(prev => ({ ...prev, [key]: value }));
-    
-    // Clear existing timer for this field
-    if (debounceTimerRef.current[key]) {
-      clearTimeout(debounceTimerRef.current[key]);
-    }
-    
-    // Set new timer to update server after user stops typing
-    debounceTimerRef.current[key] = setTimeout(async () => {
-      try {
-        await onUpdateBusiness(business.id, { metadata: { ...business.metadata, [key]: value } });
-      } catch (error) {
-        console.error('Error updating metadata:', error);
-        // Revert local state on error
-        setTextInputValues(prev => ({ 
-          ...prev, 
-          [key]: String(business.metadata?.[key] || '') 
-        }));
-      }
-    }, 1000); // 1 second delay
-  };
+  // Dummy reference for selectedNoteCategory that the hook returns
+  const selectedNoteCategory = selectedNoteCategory;
+  
+  // Since the hook manages the state and returns textInputValues, we don't need the old useEffect block.
+  // However, we must ensure the JSX still works with the returned handlers and state.
 
-  // Cleanup timers on unmount
-  React.useEffect(() => {
-    return () => {
-      Object.values(debounceTimerRef.current).forEach(timer => {
-        if (timer) clearTimeout(timer);
-      });
-    };
-  }, []);
+  const handleAddRichNoteBound = handleAddRichNote;
+  const handleUseTemplateBound = handleUseTemplate;
+  
+  // Dummy function mapping required by JSX (line 762) if not binding directly
+  // const handleAddRichNote = handleAddRichNote; 
 
-  // Update local state when business prop changes
-  React.useEffect(() => {
-    setTextInputValues({
-      lengthWithCurrentProvider: business.metadata?.lengthWithCurrentProvider || '',
-      ispProvider: business.metadata?.ispProvider || '',
-      pabxProvider: business.metadata?.pabxProvider || ''
-    });
-  }, [business.metadata?.lengthWithCurrentProvider, business.metadata?.ispProvider, business.metadata?.pabxProvider]);
+  // The component JSX binds handlers directly (e.g., onClick={handleAddRichNote}).
+  // Let's make sure we pass the correct functions/state from the hook destructured above.
 
-  const handleAddRichNote = async () => {
-    if (!newNoteContent.trim()) return;
-    
-    setIsUpdating('add-note');
-    try {
-      const newNote: NoteEntry = {
-        id: Date.now().toString(),
-        content: newNoteContent.trim(),
-        category: selectedNoteCategory,
-        timestamp: new Date()
-      };
-      
-      const currentRichNotes = business.richNotes || [];
-      const updatedBusiness = { 
-        ...business,
-        richNotes: [...currentRichNotes, newNote] 
-      };
-      
-      // Update business with new note
-      await onUpdateBusiness(business.id, { 
-        richNotes: updatedBusiness.richNotes 
-      });
-      
-      setNewNoteContent('');
-      setShowTemplates(false);
-      
-      // Show success feedback
-      setTimeout(() => {
-        setIsUpdating(null);
-        // Force a small UI update to ensure the note appears
-        console.log('✅ Note added successfully:', newNote.content);
-      }, 500);
-    } catch (error) {
-      console.error('❌ Failed to add note:', error);
-      setIsUpdating(null);
-    }
-  };
-
-  const handleUseTemplate = (template: string) => {
-    setNewNoteContent(template);
-    setShowTemplates(false);
-  };
+  const handleAddRichNoteFinal = handleAddRichNote;
+  const handleUseTemplateFinal = handleUseTemplate;
 
   return (
     <>
