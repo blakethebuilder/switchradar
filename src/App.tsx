@@ -134,6 +134,25 @@ function App() {
     timestamp: new Date().toISOString()
   });
 
+  // Global error listener for chunk load failures
+  useEffect(() => {
+    const handleError = (e: any) => {
+      const message = e.reason?.message || e.message || '';
+      if (message.includes('Failed to fetch dynamically imported module') || 
+          message.includes('error loading dynamically imported module')) {
+        console.warn('🔄 APP: Detected dynamic import failure, reloading to get latest version...');
+        window.location.reload();
+      }
+    };
+
+    window.addEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleError);
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleError);
+    };
+  }, []);
+
   // Force map re-render when switching to map view
   useEffect(() => {
     if (viewMode === 'map') {

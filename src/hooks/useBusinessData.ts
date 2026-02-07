@@ -109,10 +109,16 @@ export const useBusinessData = () => {
             if (businessesResult.success) {
                 const businessData = businessesResult.data || [];
                 console.log(`📥 DATA: Received ${businessData.length} total businesses`);
-                setBusinesses(businessData);
-                setHasMore(false); // We fetched everything
-                setPage(Math.ceil(businessData.length / PAGE_SIZE) || 1);
-                setLastFetch(new Date());
+                
+                // Defensive check: Don't overwrite state with empty data during background refresh
+                if (businessData.length > 0 || !isBackgroundRefresh) {
+                    setBusinesses(businessData);
+                    setHasMore(false); // We fetched everything
+                    setPage(Math.ceil(businessData.length / PAGE_SIZE) || 1);
+                    setLastFetch(new Date());
+                } else {
+                    console.warn('⚠️ DATA: Background refresh returned empty, keeping current data');
+                }
             }
 
             // Process routes

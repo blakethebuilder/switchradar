@@ -510,9 +510,9 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                   <div className="pt-3 border-t border-slate-200">
                     <button
                       onClick={() => handleUpdateMetadata('isManuallySeen', business.metadata?.isManuallySeen === true ? null : true)}
-                      disabled={isUpdating === 'metadata-isManuallySeen'}
+                      disabled={!!isUpdating?.startsWith('metadata-isManuallySeen')}
                       className={`w-full flex items-center justify-center gap-2 p-3 rounded-xl text-sm font-bold transition-all transform active:scale-95 relative ${
-                        isUpdating === 'metadata-isManuallySeen'
+                        isUpdating?.startsWith('metadata-isManuallySeen')
                           ? 'bg-slate-300 text-slate-600 scale-95 animate-pulse'
                           : business.metadata?.isManuallySeen === true
                           ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-300/50 hover:bg-indigo-700'
@@ -522,12 +522,12 @@ export const ClientDetailsToolbar: React.FC<ClientDetailsToolbarProps> = ({
                       {business.metadata?.isManuallySeen === true && (
                         <div className="absolute -top-1 -right-1 w-3 h-3 bg-indigo-400 rounded-full border-2 border-white"></div>
                       )}
-                      {isUpdating === 'metadata-isManuallySeen' ? (
+                      {isUpdating?.startsWith('metadata-isManuallySeen') ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
                         <Eye className="h-4 w-4" />
                       )}
-                      {business.metadata?.isManuallySeen === true ? 'Marked Seen' : 'Mark as Seen Manually'}
+                      {business.metadata?.isManuallySeen === true ? 'Seen' : 'Seen'}
                     </button>
                   </div>
                   

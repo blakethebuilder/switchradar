@@ -256,10 +256,16 @@ class ServerDataService {
       let hasMore = true;
 
       while (hasMore) {
+        console.log(`📦 API: Fetching chunked businesses page ${page}`);
         const result = await this.getBusinessesPaginated(token, page, chunkSize);
-        if (!result.success) throw new Error(result.error);
+        if (!result.success) {
+          console.error(`❌ API: Failed to fetch page ${page}:`, result.error);
+          throw new Error(result.error);
+        }
 
         const businesses = result.data || [];
+        console.log(`📦 API: Received ${businesses.length} businesses for page ${page}`);
+        
         if (businesses.length === 0) {
           hasMore = false;
         } else {
@@ -271,7 +277,12 @@ class ServerDataService {
         if (page > 100) break;
       }
 
-      cacheService.setBusinesses(allBusinesses);
+      console.log(`✅ API: Finished chunked fetch, total: ${allBusinesses.length}`);
+      if (allBusinesses.length > 0) {
+        cacheService.setBusinesses(allBusinesses);
+      } else {
+        console.warn('⚠️ API: Chunked fetch returned zero businesses!');
+      }
       return { success: true, data: allBusinesses, count: allBusinesses.length };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch in chunks' };

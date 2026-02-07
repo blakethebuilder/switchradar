@@ -17,6 +17,10 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public static getDerivedStateFromError(error: Error): State {
+    // Force a reload if a chunk fails to load in production
+    if (error.message.includes('Failed to fetch dynamically imported module')) {
+      window.location.reload();
+    }
     return { hasError: true, error };
   }
 
